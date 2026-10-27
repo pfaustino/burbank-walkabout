@@ -1,0 +1,1784 @@
+[
+  {
+    "name": "148",
+    "x": -126.94,
+    "z": -146.73,
+    "kind": "yes"
+  },
+  {
+    "name": "7 Eleven",
+    "x": -286.34,
+    "z": 457.76,
+    "kind": "convenience"
+  },
+  {
+    "name": "A. Bright Idea",
+    "x": 192.72,
+    "z": -26.46,
+    "kind": "advertising_agency"
+  },
+  {
+    "name": "Administrative Services Building",
+    "x": 41.66,
+    "z": -77.42,
+    "kind": "government"
+  },
+  {
+    "name": "Aikan Sushi",
+    "x": -206.41,
+    "z": -89.8,
+    "kind": "restaurant"
+  },
+  {
+    "name": "Air Dental",
+    "x": 440.43,
+    "z": -264.08,
+    "kind": "dentist"
+  },
+  {
+    "name": "All Smiles Dental Group",
+    "x": 225.89,
+    "z": -116.48,
+    "kind": "dentist"
+  },
+  {
+    "name": "Allstate",
+    "x": 426.82,
+    "z": -279.43,
+    "kind": "insurance"
+  },
+  {
+    "name": "Alpha One",
+    "x": 163.5,
+    "z": -4.43,
+    "kind": "dentist"
+  },
+  {
+    "name": "AMC Burbank 16",
+    "x": -368.72,
+    "z": -119.44,
+    "kind": "cinema"
+  },
+  {
+    "name": "AMC Burbank Town Center 6",
+    "x": -674.07,
+    "z": 200.01,
+    "kind": "cinema"
+  },
+  {
+    "name": "AMC Burbank Town Center 8",
+    "x": -381.65,
+    "z": 73.13,
+    "kind": "cinema"
+  },
+  {
+    "name": "Ameci Pizza",
+    "x": -129.47,
+    "z": -135.79,
+    "kind": "fast_food"
+  },
+  {
+    "name": "American Academy of Reflexology",
+    "x": 166.84,
+    "z": 528.76,
+    "kind": "school"
+  },
+  {
+    "name": "Andy's Pet Grooming and Supplies",
+    "x": -144.85,
+    "z": -351.78,
+    "kind": "pet_grooming"
+  },
+  {
+    "name": "Anush Insurance Services",
+    "x": 226.71,
+    "z": -13.49,
+    "kind": "insurance"
+  },
+  {
+    "name": "Apollo Restaurant",
+    "x": -148.67,
+    "z": 250.04,
+    "kind": "fast_food"
+  },
+  {
+    "name": "Aria Meat & BBQ",
+    "x": 26.91,
+    "z": 162.91,
+    "kind": "butcher"
+  },
+  {
+    "name": "Armenta's Barbershop",
+    "x": -17.87,
+    "z": -206.18,
+    "kind": "hairdresser"
+  },
+  {
+    "name": "ART Boutique Cellular",
+    "x": -323.51,
+    "z": -54.88,
+    "kind": "electronics"
+  },
+  {
+    "name": "Artelice Patisserie",
+    "x": -105.01,
+    "z": -219.75,
+    "kind": "bakery"
+  },
+  {
+    "name": "Ashley HomeStore",
+    "x": -531.59,
+    "z": -123.29,
+    "kind": "furniture"
+  },
+  {
+    "name": "Association Of Kenpo Martial Artists",
+    "x": 232.5,
+    "z": -63.99,
+    "kind": "dojo"
+  },
+  {
+    "name": "AT&T",
+    "x": -321.01,
+    "z": 5.86,
+    "kind": "mobile_phone"
+  },
+  {
+    "name": "Baked Pizza and Sandwiches",
+    "x": 308.9,
+    "z": -82.2,
+    "kind": "restaurant"
+  },
+  {
+    "name": "Ballerina Dancewear",
+    "x": 406.79,
+    "z": -276.98,
+    "kind": "clothes"
+  },
+  {
+    "name": "Bank of America",
+    "x": -110.04,
+    "z": -319.28,
+    "kind": "bank"
+  },
+  {
+    "name": "Barnes & Noble",
+    "x": -629.71,
+    "z": 236.31,
+    "kind": "books"
+  },
+  {
+    "name": "Barney's Beanery",
+    "x": -345.81,
+    "z": -200.86,
+    "kind": "restaurant"
+  },
+  {
+    "name": "Bastet Cat Hospital",
+    "x": -138.71,
+    "z": -343.72,
+    "kind": "veterinary"
+  },
+  {
+    "name": "Bellarmine-Jefferson High School",
+    "x": 166.85,
+    "z": 129.6,
+    "kind": "school"
+  },
+  {
+    "name": "Belmont Village Senior Living",
+    "x": 304.07,
+    "z": 54.35,
+    "kind": "social_facility"
+  },
+  {
+    "name": "Ben & Jerry's",
+    "x": -251.93,
+    "z": -107.53,
+    "kind": "ice_cream"
+  },
+  {
+    "name": "Better Homes & Garden - Town Center",
+    "x": -274.25,
+    "z": 375.39,
+    "kind": "estate_agent"
+  },
+  {
+    "name": "BikeStop",
+    "x": -339.36,
+    "z": -492.36,
+    "kind": "bicycle_repair_station"
+  },
+  {
+    "name": "BJ's",
+    "x": -132.76,
+    "z": -464.23,
+    "kind": "restaurant"
+  },
+  {
+    "name": "Black Angus",
+    "x": -70.02,
+    "z": -533.1,
+    "kind": "restaurant"
+  },
+  {
+    "name": "BMO",
+    "x": -43.12,
+    "z": -235.84,
+    "kind": "bank"
+  },
+  {
+    "name": "Bob's Discount Furniture",
+    "x": -733.9,
+    "z": 299.74,
+    "kind": "furniture"
+  },
+  {
+    "name": "Boba Loca",
+    "x": -136.26,
+    "z": -155.89,
+    "kind": "tea"
+  },
+  {
+    "name": "Boys & Girls Club",
+    "x": 199.35,
+    "z": -189.73,
+    "kind": "social_facility"
+  },
+  {
+    "name": "Broken Egg Cafe",
+    "x": 54.2,
+    "z": -132.18,
+    "kind": "cafe"
+  },
+  {
+    "name": "Buffalo Wild Wings",
+    "x": -320.65,
+    "z": -130.37,
+    "kind": "restaurant"
+  },
+  {
+    "name": "Burbank Auto Tech",
+    "x": 554.85,
+    "z": -365.26,
+    "kind": "car_repair"
+  },
+  {
+    "name": "Burbank Central Library",
+    "x": 139.02,
+    "z": 101.14,
+    "kind": "library"
+  },
+  {
+    "name": "Burbank City Hall",
+    "x": -9.54,
+    "z": -102.8,
+    "kind": "townhall"
+  },
+  {
+    "name": "Burbank City Hall Annex",
+    "x": 71.63,
+    "z": -147.38,
+    "kind": "townhall"
+  },
+  {
+    "name": "Burbank County Courts Building",
+    "x": 97.21,
+    "z": -85.98,
+    "kind": "courthouse"
+  },
+  {
+    "name": "Burbank Evening School",
+    "x": -487.85,
+    "z": 406.64,
+    "kind": "school"
+  },
+  {
+    "name": "Burbank Fire Department",
+    "x": -35.62,
+    "z": 39.29,
+    "kind": "government"
+  },
+  {
+    "name": "Burbank Fire Station 11",
+    "x": -9.83,
+    "z": 69.45,
+    "kind": "fire_station"
+  },
+  {
+    "name": "Burbank Hair Cut",
+    "x": -168.07,
+    "z": 225.15,
+    "kind": "hairdresser"
+  },
+  {
+    "name": "Burbank Hair Studio",
+    "x": 414.7,
+    "z": -285.41,
+    "kind": "hairdresser"
+  },
+  {
+    "name": "Burbank High School",
+    "x": -617.96,
+    "z": 580.74,
+    "kind": "school"
+  },
+  {
+    "name": "Burbank Lawn Mower Shop",
+    "x": -143.71,
+    "z": 337.2,
+    "kind": "groundskeeping"
+  },
+  {
+    "name": "Burbank Market and Liquor",
+    "x": 559.3,
+    "z": -277.95,
+    "kind": "alcohol"
+  },
+  {
+    "name": "Burbank Municipal Services Building",
+    "x": -18.48,
+    "z": -106.83,
+    "kind": "yes"
+  },
+  {
+    "name": "Burbank Paint &Hardware",
+    "x": 391.79,
+    "z": -587.37,
+    "kind": "paint"
+  },
+  {
+    "name": "Burbank Pediatric Dentestry",
+    "x": 700.55,
+    "z": -482.67,
+    "kind": "dentist"
+  },
+  {
+    "name": "Burbank Police Deptartment",
+    "x": -61.29,
+    "z": 35.79,
+    "kind": "police"
+  },
+  {
+    "name": "Burbank Post Office Downtown",
+    "x": -157.22,
+    "z": -275.1,
+    "kind": "post_office"
+  },
+  {
+    "name": "Burbank Seventh Day Adventist Church",
+    "x": 757.72,
+    "z": -434.88,
+    "kind": "place_of_worship"
+  },
+  {
+    "name": "Burbank Village Pharmacy",
+    "x": -175.3,
+    "z": 217.33,
+    "kind": "pharmacy"
+  },
+  {
+    "name": "Burbank Washette",
+    "x": 572.31,
+    "z": -364.87,
+    "kind": "dry_cleaning"
+  },
+  {
+    "name": "Burbank YMCA",
+    "x": -227.05,
+    "z": 182.18,
+    "kind": "sports_centre"
+  },
+  {
+    "name": "Burlington",
+    "x": -305.27,
+    "z": 144.51,
+    "kind": "department_store"
+  },
+  {
+    "name": "C Davidson Tax",
+    "x": -219.05,
+    "z": 377.26,
+    "kind": "tax_advisor"
+  },
+  {
+    "name": "CA Finance Group",
+    "x": 65.55,
+    "z": 130.46,
+    "kind": "money_lender"
+  },
+  {
+    "name": "Cafe Grano",
+    "x": -70.2,
+    "z": -213.43,
+    "kind": "cafe"
+  },
+  {
+    "name": "Calidum Cafe",
+    "x": -74.94,
+    "z": -24.99,
+    "kind": "cafe"
+  },
+  {
+    "name": "Califa Burger",
+    "x": -48.48,
+    "z": 237.61,
+    "kind": "fast_food"
+  },
+  {
+    "name": "California Pizza Kitchen",
+    "x": -561.94,
+    "z": 163.5,
+    "kind": "restaurant"
+  },
+  {
+    "name": "Cam Photo & Imaging",
+    "x": -239.14,
+    "z": 347.13,
+    "kind": "camera"
+  },
+  {
+    "name": "Cantina Urban Kalaveras",
+    "x": -211.35,
+    "z": -141.69,
+    "kind": "restaurant"
+  },
+  {
+    "name": "Carrie's Pharmacy",
+    "x": -222.1,
+    "z": 334.26,
+    "kind": "pharmacy"
+  },
+  {
+    "name": "Central Pak & Mail",
+    "x": 224.44,
+    "z": -56.29,
+    "kind": "post_office"
+  },
+  {
+    "name": "Chase",
+    "x": -705.61,
+    "z": 370.92,
+    "kind": "bank"
+  },
+  {
+    "name": "Chevron",
+    "x": 207.24,
+    "z": 17.9,
+    "kind": "fuel"
+  },
+  {
+    "name": "Chipotle",
+    "x": -310.26,
+    "z": -117.08,
+    "kind": "fast_food"
+  },
+  {
+    "name": "Chop N Grill BBQ",
+    "x": 574.88,
+    "z": -289.29,
+    "kind": "restaurant"
+  },
+  {
+    "name": "Chubby Dumplings",
+    "x": -298.18,
+    "z": -147.03,
+    "kind": "fast_food"
+  },
+  {
+    "name": "Citibank",
+    "x": -117.67,
+    "z": 225.39,
+    "kind": "bank"
+  },
+  {
+    "name": "Classic Car Wash",
+    "x": 341.72,
+    "z": -544.07,
+    "kind": "car_wash"
+  },
+  {
+    "name": "Cleaning Place",
+    "x": 227.14,
+    "z": -58.17,
+    "kind": "dry_cleaning"
+  },
+  {
+    "name": "Club Pilates",
+    "x": -142.28,
+    "z": -107.08,
+    "kind": "fitness_centre"
+  },
+  {
+    "name": "Cold Stone Creamery",
+    "x": -315.41,
+    "z": -124.07,
+    "kind": "ice_cream"
+  },
+  {
+    "name": "Community Health Center",
+    "x": 446.14,
+    "z": -258.44,
+    "kind": "clinic"
+  },
+  {
+    "name": "Community Services Building",
+    "x": -10.69,
+    "z": -25.32,
+    "kind": "government"
+  },
+  {
+    "name": "Compton'sShoe Repair",
+    "x": -88.07,
+    "z": -45.11,
+    "kind": "shoe_repair"
+  },
+  {
+    "name": "Coral Path Designs",
+    "x": -252.51,
+    "z": 407.09,
+    "kind": "florist"
+  },
+  {
+    "name": "Corner Bakery",
+    "x": -650.89,
+    "z": 311.99,
+    "kind": "cafe"
+  },
+  {
+    "name": "Crunch Fitness",
+    "x": -656.04,
+    "z": 219.26,
+    "kind": "fitness_centre"
+  },
+  {
+    "name": "Dataflow Company",
+    "x": 351.84,
+    "z": -255.4,
+    "kind": "computer"
+  },
+  {
+    "name": "De Luxe Banquet Hall",
+    "x": -40.81,
+    "z": -161.91,
+    "kind": "events_venue"
+  },
+  {
+    "name": "De Vaze",
+    "x": 426.96,
+    "z": -190.47,
+    "kind": "florist"
+  },
+  {
+    "name": "District Office of Congressman Adam Schiff",
+    "x": -18.11,
+    "z": -148.93,
+    "kind": "government"
+  },
+  {
+    "name": "DJ Law Corp - Los Angeles Injury Attorneys",
+    "x": -188.36,
+    "z": 130.25,
+    "kind": "lawyer"
+  },
+  {
+    "name": "Domino's",
+    "x": -183.56,
+    "z": 293.11,
+    "kind": "fast_food"
+  },
+  {
+    "name": "Don Cuco",
+    "x": -115.54,
+    "z": -123.23,
+    "kind": "restaurant"
+  },
+  {
+    "name": "Downtown Burbank Station",
+    "x": -370.75,
+    "z": -547.53,
+    "kind": "bus_station"
+  },
+  {
+    "name": "Dr. David Burbank DDS",
+    "x": 175.13,
+    "z": 75.03,
+    "kind": "artwork"
+  },
+  {
+    "name": "Dream Liners Insurance Services",
+    "x": 23.8,
+    "z": 165.33,
+    "kind": "insurance"
+  },
+  {
+    "name": "Dunkin'",
+    "x": -294.8,
+    "z": -55.44,
+    "kind": "fast_food"
+  },
+  {
+    "name": "Edmond Melikterminas MD",
+    "x": 346.37,
+    "z": -167.25,
+    "kind": "doctors"
+  },
+  {
+    "name": "El Pollo Loco",
+    "x": -615.78,
+    "z": -23.57,
+    "kind": "fast_food"
+  },
+  {
+    "name": "Emmanuel Evangelical Free Church",
+    "x": -252.88,
+    "z": 589.11,
+    "kind": "place_of_worship"
+  },
+  {
+    "name": "European Wax Center",
+    "x": -30.3,
+    "z": -246.77,
+    "kind": "beauty"
+  },
+  {
+    "name": "F45",
+    "x": -137.78,
+    "z": -101.07,
+    "kind": "fitness_centre"
+  },
+  {
+    "name": "Fantasia Bar",
+    "x": -144.17,
+    "z": -184.72,
+    "kind": "bar"
+  },
+  {
+    "name": "Farmers Insurance",
+    "x": 442.31,
+    "z": -265.8,
+    "kind": "insurance"
+  },
+  {
+    "name": "FedEx Office",
+    "x": 27.75,
+    "z": -155.05,
+    "kind": "copyshop"
+  },
+  {
+    "name": "Finney's Crafthouse",
+    "x": -248,
+    "z": -100.59,
+    "kind": "restaurant"
+  },
+  {
+    "name": "First Assembly of God Church",
+    "x": -366.91,
+    "z": 287.35,
+    "kind": "place_of_worship"
+  },
+  {
+    "name": "First Christian Church",
+    "x": 486.77,
+    "z": 150.48,
+    "kind": "place_of_worship"
+  },
+  {
+    "name": "First Methodist Church of Burbank",
+    "x": -372.2,
+    "z": 561.31,
+    "kind": "place_of_worship"
+  },
+  {
+    "name": "First Presbyterian Church of Burbank",
+    "x": 261.31,
+    "z": 202.53,
+    "kind": "place_of_worship"
+  },
+  {
+    "name": "Flappers Comedy Club",
+    "x": -416.89,
+    "z": -122.84,
+    "kind": "nightclub"
+  },
+  {
+    "name": "Flawless Skin Center",
+    "x": -195.84,
+    "z": 310.45,
+    "kind": "beauty"
+  },
+  {
+    "name": "Floridens Flowers & Gifts",
+    "x": -170.71,
+    "z": 222.44,
+    "kind": "florist"
+  },
+  {
+    "name": "Food Share Box",
+    "x": 456.28,
+    "z": 151.08,
+    "kind": "food_sharing"
+  },
+  {
+    "name": "Formula Automotive Group",
+    "x": 496.84,
+    "z": -218.74,
+    "kind": "car_repair"
+  },
+  {
+    "name": "Fosters Freeze",
+    "x": 261.11,
+    "z": -97.74,
+    "kind": "fast_food"
+  },
+  {
+    "name": "G & M Food Mart",
+    "x": 203.15,
+    "z": 22.3,
+    "kind": "convenience"
+  },
+  {
+    "name": "Gaby's Hair Studio",
+    "x": -266.69,
+    "z": 415.85,
+    "kind": "hairdresser"
+  },
+  {
+    "name": "Gallery Nails & Spa",
+    "x": 10.02,
+    "z": 177.2,
+    "kind": "beauty"
+  },
+  {
+    "name": "Gap Factory",
+    "x": -283.95,
+    "z": -80.66,
+    "kind": "clothes"
+  },
+  {
+    "name": "Gerro & Gerro, Attorneys at Law",
+    "x": 592.93,
+    "z": -323.94,
+    "kind": "lawyer"
+  },
+  {
+    "name": "GetYoked",
+    "x": 20.78,
+    "z": 167.88,
+    "kind": "nutrition_supplements"
+  },
+  {
+    "name": "Gini",
+    "x": 239.03,
+    "z": -24.2,
+    "kind": "alcohol"
+  },
+  {
+    "name": "Glen Herbs",
+    "x": 492.93,
+    "z": -289.14,
+    "kind": "herbalist"
+  },
+  {
+    "name": "Glenoaks Car Wash",
+    "x": 520.12,
+    "z": -255.81,
+    "kind": "car_wash"
+  },
+  {
+    "name": "Glenoaks Rx Pharmacy",
+    "x": 357.12,
+    "z": -178.99,
+    "kind": "pharmacy"
+  },
+  {
+    "name": "Glenoaks Shoe Repair",
+    "x": -252.58,
+    "z": 360.05,
+    "kind": "shoe_repair"
+  },
+  {
+    "name": "Gold union",
+    "x": -156.89,
+    "z": -174.43,
+    "kind": "gold_buyer"
+  },
+  {
+    "name": "Granville",
+    "x": -129.85,
+    "z": -221.1,
+    "kind": "cafe"
+  },
+  {
+    "name": "Guisados",
+    "x": -278.04,
+    "z": -28.97,
+    "kind": "fast_food"
+  },
+  {
+    "name": "Gus's Fried Chicken",
+    "x": 530.16,
+    "z": -329.52,
+    "kind": "restaurant"
+  },
+  {
+    "name": "Gyu-Kaku",
+    "x": -26.43,
+    "z": -250.69,
+    "kind": "restaurant"
+  },
+  {
+    "name": "H&R Block",
+    "x": -243.83,
+    "z": 353.04,
+    "kind": "tax_advisor"
+  },
+  {
+    "name": "Hair By Roxy",
+    "x": -214.83,
+    "z": 372.56,
+    "kind": "hairdresser"
+  },
+  {
+    "name": "Halo 13",
+    "x": -431.31,
+    "z": -33.96,
+    "kind": "collector"
+  },
+  {
+    "name": "Han Korean BBQ House",
+    "x": -372.72,
+    "z": 7.09,
+    "kind": "restaurant"
+  },
+  {
+    "name": "Helix PC",
+    "x": 465.19,
+    "z": -222.12,
+    "kind": "computer"
+  },
+  {
+    "name": "Hilton Garden Inn",
+    "x": 204.4,
+    "z": -536.53,
+    "kind": "hotel"
+  },
+  {
+    "name": "HomeStreet Bank",
+    "x": -96.93,
+    "z": 216.34,
+    "kind": "bank"
+  },
+  {
+    "name": "Hotel Burbank",
+    "x": -1.08,
+    "z": -427.44,
+    "kind": "hotel"
+  },
+  {
+    "name": "House of Cigar",
+    "x": 247.94,
+    "z": -28.91,
+    "kind": "tobacco"
+  },
+  {
+    "name": "Hummus Republic",
+    "x": -297.77,
+    "z": -68.6,
+    "kind": "fast_food"
+  },
+  {
+    "name": "ICON Collective",
+    "x": 34.52,
+    "z": -524.81,
+    "kind": "music_school"
+  },
+  {
+    "name": "Ijalyan Dance Center",
+    "x": 423.24,
+    "z": -187.72,
+    "kind": "dance"
+  },
+  {
+    "name": "Ike's Love and Sandwiches",
+    "x": -254.99,
+    "z": -48.96,
+    "kind": "fast_food"
+  },
+  {
+    "name": "In-N-Out Burger",
+    "x": -745.24,
+    "z": 218.45,
+    "kind": "fast_food"
+  },
+  {
+    "name": "India's Tandoori",
+    "x": -127.99,
+    "z": -163.13,
+    "kind": "fast_food"
+  },
+  {
+    "name": "Ines Tours and Travel",
+    "x": 462.18,
+    "z": -219.97,
+    "kind": "travel_agency"
+  },
+  {
+    "name": "Islands",
+    "x": -284.37,
+    "z": -240.49,
+    "kind": "restaurant"
+  },
+  {
+    "name": "It's Boba Time",
+    "x": -217.64,
+    "z": -80.47,
+    "kind": "cafe"
+  },
+  {
+    "name": "J's Auto Clinic",
+    "x": 297.28,
+    "z": -141.63,
+    "kind": "car_repair"
+  },
+  {
+    "name": "Jam Jam Tea Lab",
+    "x": -292.53,
+    "z": -140.67,
+    "kind": "cafe"
+  },
+  {
+    "name": "Jefferson-Bellarmine Elementary School",
+    "x": 258.11,
+    "z": 277.07,
+    "kind": "school"
+  },
+  {
+    "name": "Kabuki",
+    "x": -194.08,
+    "z": -158.15,
+    "kind": "restaurant"
+  },
+  {
+    "name": "Keating Memorial Gymnasium",
+    "x": 150.58,
+    "z": 145.97,
+    "kind": "sports_hall"
+  },
+  {
+    "name": "Knight Greek Mediterranean",
+    "x": -117.61,
+    "z": -172.82,
+    "kind": "fast_food"
+  },
+  {
+    "name": "Kokoroll Cafe",
+    "x": -27.17,
+    "z": -216.98,
+    "kind": "fast_food"
+  },
+  {
+    "name": "Kopan Ramen",
+    "x": -189.36,
+    "z": -105.5,
+    "kind": "fast_food"
+  },
+  {
+    "name": "L'Orange",
+    "x": 211.19,
+    "z": -45.27,
+    "kind": "events_venue"
+  },
+  {
+    "name": "LA Currency",
+    "x": -76.49,
+    "z": -207.73,
+    "kind": "bureau_de_change"
+  },
+  {
+    "name": "Lana Thai Spa",
+    "x": 146.42,
+    "z": -21.82,
+    "kind": "massage"
+  },
+  {
+    "name": "Lilit Art Fashion Studio",
+    "x": -157.68,
+    "z": 237.45,
+    "kind": "hairdresser"
+  },
+  {
+    "name": "Lily's Cafe",
+    "x": -165.08,
+    "z": 228.54,
+    "kind": "cafe"
+  },
+  {
+    "name": "Logix",
+    "x": -200.98,
+    "z": -324.94,
+    "kind": "bank"
+  },
+  {
+    "name": "Lotus Chinese Restaurant",
+    "x": -227.36,
+    "z": 338.47,
+    "kind": "restaurant"
+  },
+  {
+    "name": "Macy's",
+    "x": -487.66,
+    "z": 123.29,
+    "kind": "department_store"
+  },
+  {
+    "name": "Magnolia Fresh Market",
+    "x": -138.68,
+    "z": 305.71,
+    "kind": "convenience"
+  },
+  {
+    "name": "Make-Up Designery",
+    "x": -21.28,
+    "z": -297.05,
+    "kind": "beauty"
+  },
+  {
+    "name": "Mama Hong's Vietnamese Kitchen",
+    "x": -194.12,
+    "z": -140.67,
+    "kind": "restaurant"
+  },
+  {
+    "name": "Mattress Firm",
+    "x": -698.63,
+    "z": 272.27,
+    "kind": "bed"
+  },
+  {
+    "name": "Media City Church",
+    "x": 446.8,
+    "z": -507.1,
+    "kind": "place_of_worship"
+  },
+  {
+    "name": "Media City Mail Box",
+    "x": 252.78,
+    "z": -34.88,
+    "kind": "kiosk"
+  },
+  {
+    "name": "Media Time",
+    "x": -354.45,
+    "z": 87.69,
+    "kind": "watches"
+  },
+  {
+    "name": "Medical Center",
+    "x": 258.67,
+    "z": -0.07,
+    "kind": "medical"
+  },
+  {
+    "name": "Megeredchian Law",
+    "x": -89.17,
+    "z": 266.93,
+    "kind": "lawyer"
+  },
+  {
+    "name": "Men's Warehouse",
+    "x": -458.9,
+    "z": 68.57,
+    "kind": "clothes"
+  },
+  {
+    "name": "Methodist School",
+    "x": -447.1,
+    "z": 590.15,
+    "kind": "school"
+  },
+  {
+    "name": "MK Beauty Salon",
+    "x": 417.3,
+    "z": -182.44,
+    "kind": "beauty"
+  },
+  {
+    "name": "Moana Hawaiian BBQ",
+    "x": -140.33,
+    "z": -152.1,
+    "kind": "restaurant"
+  },
+  {
+    "name": "Mobil",
+    "x": 390.36,
+    "z": -214.86,
+    "kind": "fuel"
+  },
+  {
+    "name": "Mobil Mart",
+    "x": 382.34,
+    "z": -217.91,
+    "kind": "convenience"
+  },
+  {
+    "name": "Monji Optometry",
+    "x": -159.35,
+    "z": -172.45,
+    "kind": "optician"
+  },
+  {
+    "name": "Mr. Tobacco",
+    "x": -0.16,
+    "z": 188.66,
+    "kind": "tobacco"
+  },
+  {
+    "name": "Natures Moon",
+    "x": -291.12,
+    "z": 365.1,
+    "kind": "massage"
+  },
+  {
+    "name": "Nelly's Bail Bonds",
+    "x": -27.69,
+    "z": 212,
+    "kind": "bail_bond_agent"
+  },
+  {
+    "name": "Nice 'n Clean Too",
+    "x": 580.57,
+    "z": -294.5,
+    "kind": "laundry"
+  },
+  {
+    "name": "Nisha M. Patel, DDS",
+    "x": 214.06,
+    "z": 40.44,
+    "kind": "dentist"
+  },
+  {
+    "name": "Noah's Bagels",
+    "x": -293.16,
+    "z": -72.61,
+    "kind": "fast_food"
+  },
+  {
+    "name": "Oak Massage",
+    "x": 434.84,
+    "z": -269.82,
+    "kind": "massage"
+  },
+  {
+    "name": "Octopus Restaurant",
+    "x": -213.41,
+    "z": -8.37,
+    "kind": "restaurant"
+  },
+  {
+    "name": "Office Depot",
+    "x": -598.28,
+    "z": 411.07,
+    "kind": "stationery"
+  },
+  {
+    "name": "Olivia Restaurant and Event Venue",
+    "x": -18.32,
+    "z": -151.32,
+    "kind": "events_venue"
+  },
+  {
+    "name": "Orangetheory Fitness",
+    "x": -149.88,
+    "z": -179.91,
+    "kind": "fitness_centre"
+  },
+  {
+    "name": "Oriental Orchid",
+    "x": -122.69,
+    "z": 292.5,
+    "kind": "massage"
+  },
+  {
+    "name": "Over/Under Public House",
+    "x": -272.73,
+    "z": -43.27,
+    "kind": "outdoor_seating"
+  },
+  {
+    "name": "Ovrom Community Center",
+    "x": 393.24,
+    "z": -673.4,
+    "kind": "community_centre"
+  },
+  {
+    "name": "Palm Dental Studio",
+    "x": -16.24,
+    "z": 220.58,
+    "kind": "dentist"
+  },
+  {
+    "name": "Palma Restaurant",
+    "x": -166.92,
+    "z": 40.91,
+    "kind": "restaurant"
+  },
+  {
+    "name": "Panda Express",
+    "x": -395.39,
+    "z": 66.82,
+    "kind": "fast_food"
+  },
+  {
+    "name": "Papa's Meat & Seafood Co.",
+    "x": 487.4,
+    "z": -286.42,
+    "kind": "butcher"
+  },
+  {
+    "name": "Phit O Sophy",
+    "x": -129.59,
+    "z": -198.57,
+    "kind": "fitness_centre"
+  },
+  {
+    "name": "Pick & Mix Juice Bar",
+    "x": -298.04,
+    "z": 371.51,
+    "kind": "fast_food"
+  },
+  {
+    "name": "Pinkberry",
+    "x": -303.71,
+    "z": -155.2,
+    "kind": "ice_cream"
+  },
+  {
+    "name": "Pizza Man",
+    "x": 412.41,
+    "z": -177.52,
+    "kind": "restaurant"
+  },
+  {
+    "name": "Pokitomic",
+    "x": -258.36,
+    "z": -47.78,
+    "kind": "fast_food"
+  },
+  {
+    "name": "Powder Beauty Salon",
+    "x": -113.67,
+    "z": 287,
+    "kind": "hairdresser"
+  },
+  {
+    "name": "Purpose LA Men's Grooming Cave",
+    "x": -155,
+    "z": -175.96,
+    "kind": "hairdresser"
+  },
+  {
+    "name": "Quality Window Blinds",
+    "x": 421.34,
+    "z": -288.48,
+    "kind": "window_blind"
+  },
+  {
+    "name": "Ra Organic Spa",
+    "x": -113.64,
+    "z": -213.91,
+    "kind": "beauty"
+  },
+  {
+    "name": "Raffi's Market",
+    "x": 398.57,
+    "z": -144.91,
+    "kind": "supermarket"
+  },
+  {
+    "name": "Red Top Market and Kitchen",
+    "x": 653.59,
+    "z": -370.26,
+    "kind": "supermarket"
+  },
+  {
+    "name": "Republik Coffee",
+    "x": -231.97,
+    "z": -128.24,
+    "kind": "cafe"
+  },
+  {
+    "name": "Residence Inn",
+    "x": 25.96,
+    "z": -607.26,
+    "kind": "hotel"
+  },
+  {
+    "name": "Ribs Against The Machine",
+    "x": 21.14,
+    "z": 175.4,
+    "kind": "restaurant"
+  },
+  {
+    "name": "Richard's Hair Salon",
+    "x": -136.63,
+    "z": -191.95,
+    "kind": "hairdresser"
+  },
+  {
+    "name": "Rock Star Dance Fitness",
+    "x": -233.89,
+    "z": 342.82,
+    "kind": "dancing_school"
+  },
+  {
+    "name": "Rondinella Real Estate Group",
+    "x": -183.27,
+    "z": 346.78,
+    "kind": "estate_agent"
+  },
+  {
+    "name": "Ross",
+    "x": -345.09,
+    "z": -37.42,
+    "kind": "department_store"
+  },
+  {
+    "name": "Round1",
+    "x": -336.66,
+    "z": 111.61,
+    "kind": "bowling_alley"
+  },
+  {
+    "name": "Safe coast Insurance",
+    "x": 186,
+    "z": -22.05,
+    "kind": "insurance"
+  },
+  {
+    "name": "San Marcos Coffee",
+    "x": -160.49,
+    "z": 261.16,
+    "kind": "cafe"
+  },
+  {
+    "name": "Sears",
+    "x": -475.62,
+    "z": -46.08,
+    "kind": "department_store"
+  },
+  {
+    "name": "Season Thai Cuisine",
+    "x": -175.52,
+    "z": -193.28,
+    "kind": "restaurant"
+  },
+  {
+    "name": "Securitax Financial Services",
+    "x": -232.61,
+    "z": 387.58,
+    "kind": "tax_advisor"
+  },
+  {
+    "name": "Shake Shack",
+    "x": -163.08,
+    "z": -127.68,
+    "kind": "fast_food"
+  },
+  {
+    "name": "Shawarma King",
+    "x": -42.6,
+    "z": 233.16,
+    "kind": "fast_food"
+  },
+  {
+    "name": "Short Cut Hair Studio",
+    "x": 580.67,
+    "z": -303.03,
+    "kind": "hairdresser"
+  },
+  {
+    "name": "Silverlake Ramen",
+    "x": -296.87,
+    "z": -99.05,
+    "kind": "fast_food"
+  },
+  {
+    "name": "Skechers",
+    "x": -274.44,
+    "z": -118.55,
+    "kind": "shoes"
+  },
+  {
+    "name": "Slice House By Toni Gemignani",
+    "x": -329.21,
+    "z": -184.94,
+    "kind": "restaurant"
+  },
+  {
+    "name": "Smashed",
+    "x": -85.3,
+    "z": -200.33,
+    "kind": "restaurant"
+  },
+  {
+    "name": "Smog Time",
+    "x": 544.7,
+    "z": -364,
+    "kind": "vehicle_inspection"
+  },
+  {
+    "name": "Spectrum",
+    "x": -174.81,
+    "z": -120.54,
+    "kind": "telecommunication"
+  },
+  {
+    "name": "Springhill Suites Burbank Downtown",
+    "x": 318.29,
+    "z": -616.04,
+    "kind": "hotel"
+  },
+  {
+    "name": "Starbucks",
+    "x": -252.1,
+    "z": -51.9,
+    "kind": "cafe"
+  },
+  {
+    "name": "Stella May Art Studio",
+    "x": 456.05,
+    "z": -215.38,
+    "kind": "art"
+  },
+  {
+    "name": "Story City Church",
+    "x": 204.76,
+    "z": -161.32,
+    "kind": "place_of_worship"
+  },
+  {
+    "name": "Story Tavern",
+    "x": -12.14,
+    "z": -259.9,
+    "kind": "pub"
+  },
+  {
+    "name": "Studio Nail",
+    "x": -258.92,
+    "z": 409.5,
+    "kind": "beauty"
+  },
+  {
+    "name": "Sublime Beauty",
+    "x": 423.57,
+    "z": -284.62,
+    "kind": "beauty"
+  },
+  {
+    "name": "Subway",
+    "x": 430.74,
+    "z": -275.13,
+    "kind": "fast_food"
+  },
+  {
+    "name": "Summer Buffalo",
+    "x": 498.79,
+    "z": -294.68,
+    "kind": "restaurant"
+  },
+  {
+    "name": "SushiStop",
+    "x": -311.72,
+    "z": -165.83,
+    "kind": "fast_food"
+  },
+  {
+    "name": "Sweetie's Candy",
+    "x": -222.59,
+    "z": -118.62,
+    "kind": "confectionery"
+  },
+  {
+    "name": "Swords Fencing Studio",
+    "x": 231.2,
+    "z": -17.4,
+    "kind": "sports_centre"
+  },
+  {
+    "name": "T-Mobile",
+    "x": -284.95,
+    "z": -23.82,
+    "kind": "mobile_phone"
+  },
+  {
+    "name": "Tatik's",
+    "x": 481.1,
+    "z": -282.27,
+    "kind": "restaurant"
+  },
+  {
+    "name": "Teriyaki Tokyo",
+    "x": -409.93,
+    "z": 7.68,
+    "kind": "fast_food"
+  },
+  {
+    "name": "Terrace",
+    "x": -79.24,
+    "z": -206.36,
+    "kind": "bar"
+  },
+  {
+    "name": "The Bar",
+    "x": -38.59,
+    "z": -459.44,
+    "kind": "bar"
+  },
+  {
+    "name": "The Boiling Crab",
+    "x": -283.48,
+    "z": -129.2,
+    "kind": "restaurant"
+  },
+  {
+    "name": "The Burbank Cafe",
+    "x": -9.94,
+    "z": -428.77,
+    "kind": "bar"
+  },
+  {
+    "name": "The Carving Board",
+    "x": -22.64,
+    "z": -211.7,
+    "kind": "fast_food"
+  },
+  {
+    "name": "The Ciderworks @Story Tavern",
+    "x": 6.51,
+    "z": -272.65,
+    "kind": "restaurant"
+  },
+  {
+    "name": "The Coffee Bean",
+    "x": -316.33,
+    "z": 1.81,
+    "kind": "cafe"
+  },
+  {
+    "name": "The Colony Theatre Company",
+    "x": -390.66,
+    "z": 245.05,
+    "kind": "theatre"
+  },
+  {
+    "name": "The Gathering Place",
+    "x": 386.27,
+    "z": 236.14,
+    "kind": "place_of_worship"
+  },
+  {
+    "name": "The Guardians",
+    "x": -49.31,
+    "z": 4.51,
+    "kind": "artwork"
+  },
+  {
+    "name": "The Stage Cafe",
+    "x": 373.9,
+    "z": -570.62,
+    "kind": "restaurant"
+  },
+  {
+    "name": "The UPS Store",
+    "x": -98.2,
+    "z": 2.04,
+    "kind": "copyshop"
+  },
+  {
+    "name": "Thirst Quencher Liquor",
+    "x": -165.04,
+    "z": 332.39,
+    "kind": "alcohol"
+  },
+  {
+    "name": "Tierra Azul",
+    "x": -417.73,
+    "z": 22.94,
+    "kind": "fast_food"
+  },
+  {
+    "name": "Tigawok",
+    "x": -288.04,
+    "z": -134.56,
+    "kind": "fast_food"
+  },
+  {
+    "name": "Tokyoya Sushi",
+    "x": 572.89,
+    "z": -312.75,
+    "kind": "restaurant"
+  },
+  {
+    "name": "Toro Sushi & Poke",
+    "x": -132.07,
+    "z": -159.58,
+    "kind": "fast_food"
+  },
+  {
+    "name": "Tower Pharmacy",
+    "x": 435.21,
+    "z": -195.18,
+    "kind": "pharmacy"
+  },
+  {
+    "name": "Trotta Realty, Inc.",
+    "x": -202.01,
+    "z": 369.91,
+    "kind": "estate_agent"
+  },
+  {
+    "name": "U.S. Bank",
+    "x": -230.74,
+    "z": -66.87,
+    "kind": "bank"
+  },
+  {
+    "name": "Ultimate Tae Kwan Do",
+    "x": -329.82,
+    "z": -49.4,
+    "kind": "dojo"
+  },
+  {
+    "name": "Uncle'z Cafe",
+    "x": 502.63,
+    "z": -300.62,
+    "kind": "cafe"
+  },
+  {
+    "name": "United Group Realty",
+    "x": 228.17,
+    "z": -14.57,
+    "kind": "estate_agent"
+  },
+  {
+    "name": "United Oil",
+    "x": 338.42,
+    "z": -96.82,
+    "kind": "fuel"
+  },
+  {
+    "name": "Universal City Studios Credit Union",
+    "x": -91.06,
+    "z": -233.16,
+    "kind": "bank"
+  },
+  {
+    "name": "Universal Classic Toys",
+    "x": -225.58,
+    "z": 380.9,
+    "kind": "toys"
+  },
+  {
+    "name": "Urban Outfitters",
+    "x": -313.73,
+    "z": 7.69,
+    "kind": "clothes"
+  },
+  {
+    "name": "Urban Press Winery & Restaurant",
+    "x": -291.46,
+    "z": -19.65,
+    "kind": "restaurant"
+  },
+  {
+    "name": "Valenciaga",
+    "x": -133.26,
+    "z": 302.56,
+    "kind": "hairdresser"
+  },
+  {
+    "name": "Vapemods",
+    "x": 436.97,
+    "z": -271.59,
+    "kind": "tobacco"
+  },
+  {
+    "name": "Venice Classic Pastery",
+    "x": 224.49,
+    "z": -9.63,
+    "kind": "bakery"
+  },
+  {
+    "name": "Verdigo Boulders",
+    "x": -251.17,
+    "z": 52.66,
+    "kind": "sports_centre"
+  },
+  {
+    "name": "Village Liquor",
+    "x": -65.6,
+    "z": -203.69,
+    "kind": "alcohol"
+  },
+  {
+    "name": "Water & Ice U Love",
+    "x": -131.1,
+    "z": 324.1,
+    "kind": "water"
+  },
+  {
+    "name": "We The People",
+    "x": 134.91,
+    "z": -38.45,
+    "kind": "notary"
+  },
+  {
+    "name": "Wells Fargo",
+    "x": 21.36,
+    "z": -162.9,
+    "kind": "bank"
+  },
+  {
+    "name": "Wild Cavery",
+    "x": -112.37,
+    "z": -176.82,
+    "kind": "fast_food"
+  },
+  {
+    "name": "Wokcano",
+    "x": 21,
+    "z": -288.22,
+    "kind": "restaurant"
+  },
+  {
+    "name": "Wood Ranch",
+    "x": -235.22,
+    "z": -277.89,
+    "kind": "restaurant"
+  },
+  {
+    "name": "World Market",
+    "x": -425.97,
+    "z": 38.08,
+    "kind": "houseware"
+  },
+  {
+    "name": "Yard House",
+    "x": -336.14,
+    "z": -191.83,
+    "kind": "restaurant"
+  },
+  {
+    "name": "Yum Yum Donuts",
+    "x": 586.75,
+    "z": -378.71,
+    "kind": "fast_food"
+  },
+  {
+    "name": "Zono Sushi",
+    "x": -641.68,
+    "z": 95.71,
+    "kind": "restaurant"
+  }
+]

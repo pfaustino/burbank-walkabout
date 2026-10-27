@@ -1,0 +1,11 @@
+{
+  "spacing": {
+    "primary": 26,
+    "secondary": 32,
+    "tertiary": 36,
+    "residential": 46,
+    "unclassified": 46,
+    "pedestrian": 18
+  },
+  "parkSpacing": 7
+}

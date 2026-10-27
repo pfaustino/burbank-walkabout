@@ -1,0 +1,35 @@
+{
+  "name": "burbank-walkabout",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "description": "Walk downtown Burbank and talk with people on the sidewalk",
+  "scripts": {
+    "dev": "concurrently -k -n web,city -c cyan,green \"vite\" \"tsx watch --include .env server/index.ts\"",
+    "start": "concurrently -k -n web,city \"vite\" \"tsx server/index.ts\"",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:e2e": "playwright test",
+    "test:e2e:headed": "playwright test --headed",
+    "lint": "tsc --noEmit",
+    "check": "npm run lint && npm run test && npm run build"
+  },
+  "dependencies": {
+    "@dgreenheck/ez-tree": "^1.1.0",
+    "three": "^0.186.1",
+    "ws": "^8.18.3"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.63.0",
+    "@types/node": "^22.15.30",
+    "@types/three": "^0.186.0",
+    "@types/ws": "^8.18.1",
+    "concurrently": "^9.2.1",
+    "tsx": "^4.20.6",
+    "typescript": "~6.0.2",
+    "vite": "^8.3.0",
+    "vitest": "^5.0.3"
+  }
+}

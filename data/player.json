@@ -1,0 +1,6 @@
+{
+  "walkSpeed": 4.8,
+  "sprintSpeed": 8,
+  "jumpSpeed": 6.5,
+  "gravity": 22
+}

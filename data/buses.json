@@ -1,0 +1,7 @@
+{
+  "count": 18,
+  "cruise": 9,
+  "dwell": 4.5,
+  "stopEvery": 160,
+  "colors": ["#e07a3d", "#f4f1ea", "#1f4e8c"]
+}

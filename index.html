@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Burbank Walkabout</title>
+  </head>
+  <body>
+    <div id="app">
+      <canvas id="game-canvas"></canvas>
+      <div id="hud">
+        <div id="place">Downtown Burbank</div>
+        <div id="nearby"></div>
+        <div id="status"></div>
+        <div id="net-status">connecting</div>
+        <div id="map-credit">Map data © OpenStreetMap contributors</div>
+      </div>
+      <div id="pause-banner" hidden>PAUSED · Esc to walk</div>
+      <canvas id="wordnet" width="200" height="200" role="button" aria-pressed="false" aria-label="Word stream. Click to enlarge."></canvas>
+      <canvas id="minimap" width="200" height="200" role="img" aria-label="Minimap. North is up."></canvas>
+      <div id="subtitle" aria-live="polite"></div>
+      <div id="transcript" aria-live="polite"></div>
+      <form id="talk-bar">
+        <button id="mic" type="button" aria-pressed="false">Mic</button>
+        <input id="say-input" maxlength="240" autocomplete="off" placeholder="Talk to someone nearby…" />
+        <label class="check"><input id="hear" type="checkbox" checked /> Hear</label>
+        <button id="send" type="submit">Send</button>
+      </form>
+      <div id="dev-panel" hidden></div>
+      <div id="gate">
+        <form id="gate-form">
+          <h1>Burbank Walkabout</h1>
+          <p>Walk a downtown slice. People on the sidewalk will talk back. Friends who open this same server show up beside you. Your mic stays on this computer — the street only hears text.</p>
+          <label>Your name
+            <input id="name-input" maxlength="24" required placeholder="Patrick" />
+          </label>
+          <button type="submit">Start walking</button>
+        </form>
+      </div>
+    </div>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
