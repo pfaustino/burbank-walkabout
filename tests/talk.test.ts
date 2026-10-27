@@ -10,6 +10,11 @@ describe('talk', () => {
     expect(localReply({ id: 'c3', name: 'Sam' }, 'Where is the library?', 'Olive Avenue')).toContain('Glenoaks')
   })
 
+  it('answers how-are-you with a mood', () => {
+    expect(localReply({ id: 'sam', name: 'Sam Reyes' }, 'How are you?', 'Olive Avenue')).toBe('Worse. Keep walking.')
+    expect(localReply({ id: 'c1', name: 'Pat' }, 'How are you?', 'Olive Avenue')).not.toMatch(/^Hey|^Hi/)
+  })
+
   it('answers City Hall from the local script', () => {
     const line = localReply({ id: 'june', name: 'June Alvarez' }, 'Where is City Hall?', 'Olive Avenue')
     expect(line).toContain('Olive Avenue')

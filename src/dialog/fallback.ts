@@ -11,7 +11,7 @@ const WARM = ['Hey.', 'Hi. Nice out.', 'Hello.', 'Good to see you.']
 
 /** Stable across restarts. About two in five people barely talk. */
 export function talkManner(id: string): TalkManner {
-  const n = mix(id) % 5
+  const n = talkHash(id) % 5
   if (n <= 1) return 'brief'
   if (n <= 3) return 'plain'
   return 'warm'
@@ -20,15 +20,15 @@ export function talkManner(id: string): TalkManner {
 /** A bare hello. Real questions return null so they still get an answer. */
 export function greetingLine(speaker: LocalSpeaker, text: string): string | null {
   const q = text.trim().toLowerCase().replace(/[!?.]+$/g, '').replace(/\s+/g, ' ')
-  if (!/^(hi|hey|hello|yo|howdy|hiya|sup|good morning|good afternoon|good evening|how are you|how's it going|hows it going|what's up|whats up|what is up)$/.test(q)) {
+  if (!/^(hi|hey|hello|yo|howdy|hiya|sup|good morning|good afternoon|good evening)$/.test(q)) {
     return null
   }
   const manner = talkManner(speaker.id)
   const lines = manner === 'brief' ? BRIEF : manner === 'plain' ? PLAIN : WARM
-  return lines[mix(`${speaker.id}:${q}`) % lines.length]!
+  return lines[talkHash(`${speaker.id}:${q}`) % lines.length]!
 }
 
-function mix(text: string): number {
+export function talkHash(text: string): number {
   let h = 2166136261
   for (let i = 0; i < text.length; i++) h = Math.imul(h ^ text.charCodeAt(i), 16777619)
   return h >>> 0
@@ -40,6 +40,14 @@ export function localReply(speaker: LocalSpeaker, text: string, place: string): 
   if (greet) return greet
   const q = text.toLowerCase()
 
+  if (/how are you|how'?s it going|hows it going|what'?s up|whats up|what is up/.test(q)) {
+    const manner = talkManner(speaker.id)
+    if (speaker.id === 'sam') return 'Worse. Keep walking.'
+    if (speaker.id === 'kenji') return 'I am fine, which is already too many words, but my feet hurt and I am still out here.'
+    if (manner === 'brief') return 'Tired. Still walking.'
+    if (manner === 'warm') return 'Pretty good. This walk is the decent part of the day.'
+    return 'All right. My feet are sore.'
+  }
   if (/who are you|your name|what'?s your name/.test(q)) {
     return `I'm ${speaker.name}. Just walking ${place}.`
   }

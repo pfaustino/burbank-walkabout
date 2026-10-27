@@ -7,7 +7,7 @@ import mapJson from '../data/map.json' with { type: 'json' }
 import peopleJson from '../data/people.json' with { type: 'json' }
 import { CROWD_SEED, createCrowd, crowdIndex, crowdPose, type CrowdFile } from '../src/actors/crowdSim.ts'
 import { createPeople, stepPeople, type PeopleFile, type PersonSim, type PersonVoice } from '../src/actors/peopleSim.ts'
-import { talkManner } from '../src/dialog/fallback.ts'
+import { talkHash, talkManner } from '../src/dialog/fallback.ts'
 import { npcReply, remember, type DialogTurn } from './dialog.ts'
 import { fishEnabled, fishSpeech } from './fish.ts'
 import {
@@ -205,15 +205,71 @@ function answer(walker: Walker, speaker: Speaker, x: number, z: number, text: st
   })
 }
 
+const CROWD_JOBS = [
+  'open a coffee counter on Olive before the street is busy',
+  'cut hair in a shop on San Fernando',
+  'file permits at City Hall and you are bored of the forms',
+  'stock shoes at the mall and your knees hate the stockroom',
+  'drive a shuttle for a studio lot west of downtown',
+  'teach third grade and you walk here after the kids go home',
+  'wait tables on the weekends and your voice is tired',
+  'sell insurance from a small office and you dislike the pitch',
+  'work nights at the hospital and the daylight feels strange',
+  'run a food stall and you still smell like the grill',
+  'do payroll for a shop on Magnolia',
+  'are between jobs and you are pretending this walk is exercise',
+]
+
+const CROWD_HOMES = [
+  'in a one-bedroom over a shop',
+  'with your mom, who means well',
+  'with a roommate who leaves the dishes',
+  'alone, and you like it',
+  'with a partner who works nights',
+  'in a back house behind your uncle',
+  'with your sister and her kid',
+  'in a place you can barely afford',
+]
+
+const CROWD_MOODS = [
+  'tired, and trying to stay decent about it',
+  'quietly pleased about nothing in particular',
+  'worried about money, and covering it',
+  'sore, and a little short with people',
+  'homesick for a minute',
+  'proud of a small thing that happened this morning',
+  'lonely, and not interested in saying so first',
+  'in a good mood because the weather is easy',
+]
+
+const CROWD_BONDS = [
+  'your kid',
+  'your mother, who calls too often',
+  'your partner',
+  'your dog',
+  'a friend you were supposed to meet',
+  'your brother, who lives out in the Valley',
+  'the fact that nobody is waiting for you',
+  'a coworker you actually like',
+]
+
+function crowdPick(id: string, salt: string, items: readonly string[]): string {
+  return items[talkHash(`${id}:${salt}`) % items.length]!
+}
+
 function crowdPersona(name: string, id: string): string {
   const manner = talkManner(id)
-  if (manner === 'brief') {
-    return `You are ${name}. You speak very little. A greeting is two or three words. A real question gets one short sentence.`
-  }
-  if (manner === 'warm') {
-    return `You are ${name}. Friendly, not a clerk. A greeting is one short sentence. You answer a real question in plain sentences.`
-  }
-  return `You are ${name}, out for a walk. A greeting gets a short hello. A real question gets a sentence or two.`
+  const voice =
+    manner === 'brief'
+      ? 'You speak very little. A greeting is two or three words. A real question gets one short sentence.'
+      : manner === 'warm'
+        ? 'You are friendly, not a clerk. A greeting is one short sentence. You answer a real question in plain sentences.'
+        : 'A greeting gets a short hello. A real question gets a sentence or two.'
+  const job = crowdPick(id, 'job', CROWD_JOBS)
+  const home = crowdPick(id, 'home', CROWD_HOMES)
+  const mood = crowdPick(id, 'mood', CROWD_MOODS)
+  const bond = crowdPick(id, 'bond', CROWD_BONDS)
+  return `You are ${name}. ${voice} You ${job}. You live ${home}. Right now you feel ${mood}. On your mind: ${bond}. This is your private life. Do not announce it. If they ask about you or how you are, answer from it in plain words, with the feeling, not a speech.`
 }
 
 function crowdSpeaker(
