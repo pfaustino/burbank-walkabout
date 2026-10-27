@@ -1,4 +1,6 @@
-import { existsSync, readFileSync } from 'node:fs'
+import { createReadStream, existsSync, readFileSync, statSync } from 'node:fs'
+import { createServer, type IncomingMessage, type ServerResponse } from 'node:http'
+import { extname, join, sep } from 'node:path'
 import { WebSocket, WebSocketServer } from 'ws'
 import crowdJson from '../data/crowd.json' with { type: 'json' }
 import mapJson from '../data/map.json' with { type: 'json' }
@@ -21,7 +23,8 @@ import { buildLayout, describePlace, hitsBuilding, mapBrief, type MapFile } from
 
 loadDotEnv()
 
-const PORT = Number(process.env.CITY_PORT || 8787)
+const PORT = Number(process.env.PORT || process.env.CITY_PORT || 8787)
+const DIST = join(process.cwd(), 'dist')
 const layout = buildLayout(mapJson as MapFile)
 const peopleFile = peopleJson as PeopleFile
 const brief = mapBrief(layout)
@@ -49,7 +52,7 @@ let nextId = 1
 
 const replies = process.env.DIALOG === 'local' || !process.env.OPENROUTER_API_KEY ? 'local' : 'openrouter'
 
-const wss = new WebSocketServer({ port: PORT })
+const wss = openStreet()
 
 wss.on('connection', (socket) => {
   let walker: Walker | null = null
@@ -325,6 +328,76 @@ function loadDotEnv(): void {
   }
 }
 
-console.log(
-  `Burbank street listening on ${PORT} · replies: ${replies}${replies === 'openrouter' ? ` · ${process.env.OPENROUTER_MODEL || 'cognitivecomputations/dolphin-mistral-24b-venice-edition'}` : ''} · voices: ${fishEnabled() ? process.env.FISH_AUDIO_MODEL || 's2.1-pro-free' : 'browser'}`,
-)
+function openStreet(): WebSocketServer {
+  const line = `Burbank street listening on ${PORT} · replies: ${replies}${replies === 'openrouter' ? ` · ${process.env.OPENROUTER_MODEL || 'cognitivecomputations/dolphin-mistral-24b-venice-edition'}` : ''} · voices: ${fishEnabled() ? process.env.FISH_AUDIO_MODEL || 's2.1-pro-free' : 'browser'}`
+  if (!process.env.PORT) {
+    console.log(line)
+    return new WebSocketServer({ port: PORT, host: '0.0.0.0' })
+  }
+  const server = createServer((req, res) => serveWeb(req, res))
+  const sockets = new WebSocketServer({ server, path: '/ws' })
+  server.listen(PORT, '0.0.0.0', () => console.log(`${line} · site: dist`))
+  return sockets
+}
+
+function serveWeb(req: IncomingMessage, res: ServerResponse): void {
+  const url = new URL(req.url || '/', 'http://127.0.0.1')
+  if (url.pathname === '/ws') {
+    res.writeHead(426)
+    res.end()
+    return
+  }
+  let pathname = '/'
+  try {
+    pathname = decodeURIComponent(url.pathname)
+  } catch {
+    res.writeHead(400)
+    res.end()
+    return
+  }
+  const relative = pathname.replace(/^\/+/, '')
+  let file = join(DIST, relative)
+  const rooted = DIST.endsWith(sep) ? DIST : DIST + sep
+  if (file !== DIST && !file.startsWith(rooted)) {
+    res.writeHead(403)
+    res.end()
+    return
+  }
+  if (!existsSync(file) || !statSync(file).isFile()) file = join(DIST, 'index.html')
+  if (!existsSync(file)) {
+    res.writeHead(503)
+    res.end('Site is not built.')
+    return
+  }
+  const cache = file.endsWith('.html') ? 'no-cache' : 'public, max-age=86400'
+  res.writeHead(200, { 'content-type': contentType(file), 'cache-control': cache })
+  createReadStream(file).pipe(res)
+}
+
+function contentType(file: string): string {
+  switch (extname(file)) {
+    case '.html':
+      return 'text/html; charset=utf-8'
+    case '.js':
+    case '.mjs':
+      return 'text/javascript; charset=utf-8'
+    case '.css':
+      return 'text/css; charset=utf-8'
+    case '.json':
+      return 'application/json'
+    case '.svg':
+      return 'image/svg+xml'
+    case '.glb':
+      return 'model/gltf-binary'
+    case '.png':
+      return 'image/png'
+    case '.ico':
+      return 'image/x-icon'
+    case '.webp':
+      return 'image/webp'
+    case '.woff2':
+      return 'font/woff2'
+    default:
+      return 'application/octet-stream'
+  }
+}
