@@ -10,16 +10,16 @@ const VIEW_METERS = 280
 const SIZE = 200
 const PAD = 18
 
-/** North (+z) is up and east (+x) is right, in pixels from the player. */
+/** North (+z) is up. East (+x) is left, matching the street view. */
 export function minimapDelta(dx: number, dz: number, pixelsPerMeter: number): { x: number; y: number } {
-  return { x: dx * pixelsPerMeter, y: -dz * pixelsPerMeter }
+  return { x: -dx * pixelsPerMeter, y: -dz * pixelsPerMeter }
 }
 
 export class Minimap {
   private readonly ctx: CanvasRenderingContext2D
   private readonly bake: HTMLCanvasElement
   private readonly ppm: number
-  private readonly minX: number
+  private readonly maxX: number
   private readonly maxZ: number
 
   constructor(layout: CityLayout) {
@@ -29,7 +29,7 @@ export class Minimap {
     if (!ctx) throw new Error('Missing minimap context')
     this.ctx = ctx
     const { bounds } = layout.file
-    this.minX = bounds.minX
+    this.maxX = bounds.maxX
     this.maxZ = bounds.maxZ
     this.ppm = 0.8
     this.bake = document.createElement('canvas')
@@ -37,7 +37,7 @@ export class Minimap {
     this.bake.height = Math.max(1, Math.ceil((bounds.maxZ - bounds.minZ) * this.ppm))
     const bakeCtx = this.bake.getContext('2d')
     if (!bakeCtx) throw new Error('Missing minimap bake')
-    paintCity(bakeCtx, layout, this.ppm, this.minX, this.maxZ)
+    paintCity(bakeCtx, layout, this.ppm, this.maxX, this.maxZ)
   }
 
   draw(input: {
@@ -63,7 +63,7 @@ export class Minimap {
     ctx.clip()
     ctx.fillStyle = '#1b2c3c'
     ctx.fillRect(PAD, PAD, inner, inner)
-    blit(ctx, this.bake, this.ppm, this.minX, this.maxZ, input.x, input.z, inner)
+    blit(ctx, this.bake, this.ppm, this.maxX, this.maxZ, input.x, input.z, inner)
 
     const project = (x: number, z: number): { sx: number; sy: number } => {
       const delta = minimapDelta(x - input.x, z - input.z, scale)
@@ -84,7 +84,7 @@ export class Minimap {
       if (!inside(spot.sx, spot.sy)) continue
       ctx.save()
       ctx.translate(spot.sx, spot.sy)
-      ctx.rotate(bus.yaw ?? 0)
+      ctx.rotate(-(bus.yaw ?? 0))
       ctx.fillRect(-2, -6, 4, 12)
       ctx.restore()
     }
@@ -116,7 +116,7 @@ export class Minimap {
     const player = project(input.x, input.z)
     ctx.save()
     ctx.translate(player.sx, player.sy)
-    ctx.rotate(input.yaw)
+    ctx.rotate(-input.yaw)
     ctx.fillStyle = '#f6f1e6'
     ctx.beginPath()
     ctx.moveTo(0, -8)
@@ -134,9 +134,9 @@ export class Minimap {
     ctx.textBaseline = 'middle'
     ctx.fillText('N', SIZE / 2, 10)
     ctx.fillStyle = '#f6f1e6'
-    ctx.fillText('E', SIZE - 10, SIZE / 2)
+    ctx.fillText('W', SIZE - 10, SIZE / 2)
     ctx.fillText('S', SIZE / 2, SIZE - 8)
-    ctx.fillText('W', 10, SIZE / 2)
+    ctx.fillText('E', 10, SIZE / 2)
   }
 
   dispose(): void {
@@ -181,42 +181,42 @@ function paintJob(
   ctx.restore()
 }
 
-function paintCity(ctx: CanvasRenderingContext2D, layout: CityLayout, ppm: number, minX: number, maxZ: number): void {
+function paintCity(ctx: CanvasRenderingContext2D, layout: CityLayout, ppm: number, maxX: number, maxZ: number): void {
   const width = ctx.canvas.width
   const height = ctx.canvas.height
   ctx.fillStyle = '#243646'
   ctx.fillRect(0, 0, width, height)
   ctx.fillStyle = '#3d6b45'
-  for (const park of layout.file.parks) fillRing(ctx, park.ring, ppm, minX, maxZ)
+  for (const park of layout.file.parks) fillRing(ctx, park.ring, ppm, maxX, maxZ)
   ctx.fillStyle = '#314556'
-  for (const building of layout.buildings) fillRing(ctx, building.ring, ppm, minX, maxZ)
+  for (const building of layout.buildings) fillRing(ctx, building.ring, ppm, maxX, maxZ)
   ctx.lineCap = 'round'
   ctx.lineJoin = 'round'
   for (const road of layout.file.roads) {
     if (road.kind === 'service' || road.kind === 'pedestrian') continue
     ctx.strokeStyle = road.kind === 'primary' || road.kind === 'secondary' ? '#d5dde6' : '#8b97a3'
     ctx.lineWidth = road.kind === 'primary' ? 2.4 : road.kind === 'secondary' ? 1.8 : 1.1
-    strokeRoad(ctx, road.pts, ppm, minX, maxZ)
+    strokeRoad(ctx, road.pts, ppm, maxX, maxZ)
   }
 }
 
-function fillRing(ctx: CanvasRenderingContext2D, ring: number[], ppm: number, minX: number, maxZ: number): void {
+function fillRing(ctx: CanvasRenderingContext2D, ring: number[], ppm: number, maxX: number, maxZ: number): void {
   if (ring.length < 6) return
   ctx.beginPath()
-  ctx.moveTo(((ring[0] ?? 0) - minX) * ppm, (maxZ - (ring[1] ?? 0)) * ppm)
+  ctx.moveTo((maxX - (ring[0] ?? 0)) * ppm, (maxZ - (ring[1] ?? 0)) * ppm)
   for (let i = 2; i < ring.length; i += 2) {
-    ctx.lineTo(((ring[i] ?? 0) - minX) * ppm, (maxZ - (ring[i + 1] ?? 0)) * ppm)
+    ctx.lineTo((maxX - (ring[i] ?? 0)) * ppm, (maxZ - (ring[i + 1] ?? 0)) * ppm)
   }
   ctx.closePath()
   ctx.fill()
 }
 
-function strokeRoad(ctx: CanvasRenderingContext2D, pts: number[], ppm: number, minX: number, maxZ: number): void {
+function strokeRoad(ctx: CanvasRenderingContext2D, pts: number[], ppm: number, maxX: number, maxZ: number): void {
   if (pts.length < 4) return
   ctx.beginPath()
-  ctx.moveTo(((pts[0] ?? 0) - minX) * ppm, (maxZ - (pts[1] ?? 0)) * ppm)
+  ctx.moveTo((maxX - (pts[0] ?? 0)) * ppm, (maxZ - (pts[1] ?? 0)) * ppm)
   for (let i = 2; i < pts.length; i += 2) {
-    ctx.lineTo(((pts[i] ?? 0) - minX) * ppm, (maxZ - (pts[i + 1] ?? 0)) * ppm)
+    ctx.lineTo((maxX - (pts[i] ?? 0)) * ppm, (maxZ - (pts[i + 1] ?? 0)) * ppm)
   }
   ctx.stroke()
 }
@@ -225,14 +225,14 @@ function blit(
   ctx: CanvasRenderingContext2D,
   bake: HTMLCanvasElement,
   ppm: number,
-  minX: number,
+  maxX: number,
   maxZ: number,
   playerX: number,
   playerZ: number,
   inner: number,
 ): void {
   const srcSize = VIEW_METERS * ppm
-  let sx = (playerX - minX) * ppm - srcSize / 2
+  let sx = (maxX - playerX) * ppm - srcSize / 2
   let sy = (maxZ - playerZ) * ppm - srcSize / 2
   let sw = srcSize
   let sh = srcSize
