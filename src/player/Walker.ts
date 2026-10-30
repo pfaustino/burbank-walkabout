@@ -3,7 +3,7 @@ import playerJson from '../../data/player.json'
 import trafficJson from '../../data/traffic.json'
 import { createFigure, type Figure } from '../actors/figure.ts'
 import { shirtForName } from '../net/protocol.ts'
-import { hitsBody, pushOutOf, type Disc } from '../traffic/bodies.ts'
+import { BodyGrid, hitsBody, overlapsCapsule, pushOutOf, type Disc } from '../traffic/bodies.ts'
 import { BODY_RADIUS, hitsBuilding, slide, type CityLayout } from '../world/layout.ts'
 
 const DIST_MIN = 3.2
@@ -35,6 +35,7 @@ export class Walker {
   private wallCool = 0
   private wallHit = 0
   private readonly driveClear: Disc[] = []
+  private readonly posts = new BodyGrid()
   private flyYaw = 0.4
   private flySpeed = 0
   private lift = 0
@@ -98,6 +99,12 @@ export class Walker {
       yaw: this.flyYaw,
       roll: this.bank,
     }
+  }
+
+  /** Tree trunks and lamp poles. They block like buildings. */
+  setPosts(posts: readonly Disc[]): void {
+    this.posts.clear()
+    for (const post of posts) this.posts.add({ x: post.x, z: post.z, r: post.r })
   }
 
   beginDrive(x: number, z: number, yaw: number): void {
@@ -318,7 +325,7 @@ export class Walker {
     const dz = Math.cos(this.carYaw) * speed * dt
     const pos = this.mesh.position
     const wanted = Math.hypot(dx, dz)
-    const intoWall = wanted > 0 && hitsBuilding(this.layout, pos.x + dx, pos.z + dz, CAR_RADIUS)
+    const intoWall = wanted > 0 && this.solid(pos.x + dx, pos.z + dz, CAR_RADIUS)
     const next = this.place(pos.x, pos.z, pos.x + dx, pos.z + dz, CAR_RADIUS)
     const moved = Math.hypot(next.x - pos.x, next.z - pos.z)
     pos.x = next.x
@@ -396,7 +403,16 @@ export class Walker {
   }
 
   private open(x: number, z: number, radius: number): boolean {
-    return !hitsBuilding(this.layout, x, z, radius) && !hitsBody(this.blockers, x, z, radius, this.ignoreBlocker)
+    return !this.solid(x, z, radius) && !hitsBody(this.blockers, x, z, radius, this.ignoreBlocker)
+  }
+
+  private solid(x: number, z: number, radius: number): boolean {
+    if (hitsBuilding(this.layout, x, z, radius)) return true
+    let hit = false
+    this.posts.near(x, z, radius + 1, (post) => {
+      if (!hit && overlapsCapsule(x, z, 0, 0, radius, post)) hit = true
+    })
+    return hit
   }
 
   private updateCamera(): void {

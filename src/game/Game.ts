@@ -45,7 +45,7 @@ import { type FoliageFile } from '../world/foliage.ts'
 import { Helicopter } from '../world/Helicopter.ts'
 import { tourOver } from '../world/helicopterSim.ts'
 import { buildLayout, describePlace, nearbySpot, type CityLayout, type MapFile } from '../world/layout.ts'
-import { StreetLamps } from '../world/streetlamps.ts'
+import { planLamps, StreetLamps } from '../world/streetlamps.ts'
 import { buildStoreSigns, disposeStoreSigns, type Business } from '../world/storefronts.ts'
 
 const WALK_HINT = 'WASD walk · Shift run · right-drag look · Space hop · E talk · V mic · F drive or ride · H helicopter'
@@ -79,7 +79,12 @@ export class Game {
   private riddenId: string | null = null
   private readonly crowd: CrowdWorld
   private readonly crowdView: CrowdSet
-  private readonly foliage: { root: THREE.Group; update(time: number): void; dispose(): void }
+  private readonly foliage: {
+    root: THREE.Group
+    trunks: { x: number; z: number; r: number }[]
+    update(time: number): void
+    dispose(): void
+  }
   private readonly helicopter: Helicopter
   private readonly minimap: Minimap
   private readonly delivery: DeliveryRun
@@ -216,6 +221,10 @@ export class Game {
     this.minimap = new Minimap(this.layout)
 
     this.walker = new Walker(this.layout, this.camera, this.layout.file.spawn, playerName)
+    this.walker.setPosts([
+      ...this.foliage.trunks,
+      ...planLamps(this.layout).map((post) => ({ x: post.x, z: post.z, r: 0.16 })),
+    ])
     this.scene.add(this.walker.mesh)
     this.citizensView = new PuppetSet(this.scene)
     this.walkersView = new PuppetSet(this.scene)

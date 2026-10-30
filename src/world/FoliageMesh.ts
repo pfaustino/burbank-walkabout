@@ -11,7 +11,7 @@ export function buildFoliage(
   layout: CityLayout,
   file: FoliageFile,
   rng: () => number,
-): { root: THREE.Group; update(time: number): void; dispose(): void } {
+): { root: THREE.Group; trunks: { x: number; z: number; r: number }[]; update(time: number): void; dispose(): void } {
   const plants = placeFoliage(layout, file, rng)
   const root = new THREE.Group()
   root.name = 'foliage'
@@ -42,6 +42,7 @@ export function buildFoliage(
 
   return {
     root,
+    trunks: trees.map((plant) => ({ x: plant.x, z: plant.z, r: 0.3 * plant.scale })),
     update(time: number) {
       for (const material of leafMats) {
         const shader = material.userData.shader as { uniforms?: { uTime?: { value: number } } } | undefined
