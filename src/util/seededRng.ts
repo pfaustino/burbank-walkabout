@@ -8,3 +8,8 @@ export function createSeededRng(seed: number): () => number {
     return ((r ^ (r >>> 14)) >>> 0) / 4294967296
   }
 }
+
+/** Low 32 bits of the clock. A new page load is a new game. */
+export function sessionSeed(now = Date.now()): number {
+  return now >>> 0
+}

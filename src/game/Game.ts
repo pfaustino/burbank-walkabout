@@ -36,7 +36,7 @@ import { createTraffic, parkOnLane, stepTraffic, type CarSim, type TrafficFile }
 import { Hud } from '../ui/Hud.ts'
 import { Minimap } from '../ui/Minimap.ts'
 import { WordRain } from '../ui/WordRain.ts'
-import { createSeededRng } from '../util/seededRng.ts'
+import { createSeededRng, sessionSeed } from '../util/seededRng.ts'
 import { listen, playMp3, speak, type ListenHandle } from '../voice/speech.ts'
 import { buildCityMesh } from '../world/CityMesh.ts'
 import { advanceHour, formatHour, skyAt, START_HOUR } from '../world/daylight.ts'
@@ -172,7 +172,8 @@ export class Game {
     this.canvas = canvas
     this.layout = buildLayout(mapJson as MapFile)
     this.peopleFile = peopleJson as PeopleFile
-    this.rng = createSeededRng(0xb0ba)
+    const gameSeed = sessionSeed()
+    this.rng = createSeededRng(gameSeed ^ 0xb0ba)
     this.sim = createPeople(this.layout, this.peopleFile, this.rng)
 
     this.renderer = new THREE.WebGLRenderer({ canvas, antialias: true })
@@ -205,11 +206,11 @@ export class Game {
     this.scene.add(this.foliage.root)
     this.network = buildNetwork(this.layout)
     this.busFile = busesJson as BusFile
-    this.busRng = createSeededRng(0xb05)
+    this.busRng = createSeededRng(gameSeed ^ 0xb05)
     this.buses = createBuses(this.network, this.busFile, this.busRng)
     this.busView = new BusSet(this.scene)
     this.trafficFile = trafficJson as TrafficFile
-    this.carRng = createSeededRng(0xca5)
+    this.carRng = createSeededRng(gameSeed ^ 0xca5)
     this.cars = createTraffic(this.network, this.trafficFile, this.carRng)
     this.carView = new CarSet(this.scene)
     this.signs = buildSigns(this.network.signs)
@@ -244,7 +245,7 @@ export class Game {
       this.network,
       businessesJson as Business[],
       this.hud,
-      createSeededRng(0xd45e),
+      createSeededRng(gameSeed ^ 0xd45e),
       deliveryJson as DeliveryFile,
     )
 
