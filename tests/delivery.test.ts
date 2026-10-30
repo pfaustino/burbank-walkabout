@@ -1,7 +1,7 @@
 import businessesJson from '../data/businesses.json'
 import deliveryJson from '../data/delivery.json'
 import mapJson from '../data/map.json'
-import { orderLine, parkedOn, planDelivery, type DeliveryFile } from '../src/delivery/orders.ts'
+import { deliveryPay, orderLine, parkedOn, planDelivery, type DeliveryFile } from '../src/delivery/orders.ts'
 import { buildNetwork } from '../src/traffic/network.ts'
 import { createSeededRng } from '../src/util/seededRng.ts'
 import { hitsBuilding, buildLayout, type MapFile } from '../src/world/layout.ts'
@@ -47,5 +47,19 @@ describe('delivery orders', () => {
     expect(hitsBuilding(layout, order!.dropoff.x, order!.dropoff.z, 1)).toBe(false)
     const fromDoor = Math.hypot(order!.pickup.x - spawn.x, order!.pickup.z - spawn.z)
     expect(fromDoor).toBeGreaterThan(20)
+  })
+
+  it('pays a bigger tip for a faster delivery', () => {
+    const fast = deliveryPay(file.tipFast, file)
+    const slow = deliveryPay(file.tipSlow, file)
+    const mid = deliveryPay((file.tipFast + file.tipSlow) / 2, file)
+    expect(fast.fare).toBe(file.fare)
+    expect(fast.tip).toBe(file.tipMax)
+    expect(slow.tip).toBe(file.tipMin)
+    expect(mid.tip).toBeGreaterThan(slow.tip)
+    expect(mid.tip).toBeLessThan(fast.tip)
+    expect(fast.total).toBe(fast.fare + fast.tip)
+    expect(deliveryPay(file.tipFast - 30, file).tip).toBe(file.tipMax)
+    expect(deliveryPay(file.tipSlow + 40, file).tip).toBe(file.tipMin)
   })
 })

@@ -15,6 +15,9 @@ export class Hud {
   private readonly mic: HTMLButtonElement
   private readonly pause: HTMLElement
   private readonly order: HTMLElement
+  private readonly score: HTMLElement
+  private readonly cashPop: HTMLElement
+  private cash = 0
   private subTimer = 0
 
   constructor(handlers: {
@@ -32,6 +35,8 @@ export class Hud {
     this.mic = must('#mic') as HTMLButtonElement
     this.pause = must('#pause-banner')
     this.order = must('#order')
+    this.score = must('#score')
+    this.cashPop = must('#cash-pop')
 
     const form = must('#talk-bar') as HTMLFormElement
     form.addEventListener('submit', (event) => {
@@ -79,6 +84,20 @@ export class Hud {
     this.order.hidden = false
     if (this.order.textContent !== text) this.order.textContent = text
     this.order.classList.toggle('dropoff', dropoff)
+  }
+
+  addPay(total: number, tip: number): void {
+    this.cash += total
+    this.score.textContent = `$${this.cash}`
+    const pop = document.createElement('div')
+    pop.className = 'cash-float'
+    const fare = document.createElement('strong')
+    fare.textContent = `+$${total}`
+    const extra = document.createElement('span')
+    extra.textContent = `tip $${tip}`
+    pop.append(fare, extra)
+    pop.addEventListener('animationend', () => pop.remove())
+    this.cashPop.append(pop)
   }
 
   setDraft(text: string): void {

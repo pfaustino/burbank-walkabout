@@ -106,8 +106,10 @@ describe('traffic', () => {
         len: CAR_HALF_LENGTH,
       }),
     ).toBe(false)
-    const shoved = front.x * fx + front.z * fz - (rearPose.x + fx * gap) * fx - (rearPose.z + fz * gap) * fz
-    expect(shoved).toBeGreaterThan(0.3)
+    const shoved = (front.x - (rearPose.x + fx * gap)) * fx + (front.z - (rearPose.z + fz * gap)) * fz
+    const recoil = (rearPose.x - rear.x) * fx + (rearPose.z - rear.z) * fz
+    expect(shoved).toBeGreaterThan(0.8)
+    expect(Math.abs(shoved - recoil)).toBeLessThan(0.25)
 
     const deep = carOn(lane!.id, 30)
     deep.id = 'c-deep'

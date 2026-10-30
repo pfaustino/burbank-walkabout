@@ -17,6 +17,8 @@ export type CarSim = {
   driver: string | null
   /** Seconds spent stopped off a red light. High values get to creep through a jam. */
   wait?: number
+  /** Seconds the post-hit speed is allowed to carry the car down the lane. */
+  coast?: number
   /** Sideways shove left over from a bump, in meters. It fades back onto the lane. */
   knockX?: number
   knockZ?: number
@@ -153,11 +155,15 @@ export function stepTraffic(
     const lamp = lane.axis === 'ew' ? phase.ew : phase.ns
     desired = Math.min(desired, lightSpeed(lane, car, lamp))
     desired = Math.min(desired, followSpeed(car, lane, byLane, network))
-    const hard = yieldStop(car, self, trafficGrid, (speed) => {
+    let hard = yieldStop(car, self, trafficGrid, (speed) => {
       desired = Math.min(desired, speed)
     })
     if ((car.wait ?? 0) > PATIENCE) desired = Math.min(desired, 4.5)
-    if (hard) desired = 0
+    if ((car.coast ?? 0) > 0) {
+      car.coast = Math.max(0, (car.coast ?? 0) - dt)
+      hard = false
+      desired = Math.max(desired, car.speed)
+    } else if (hard) desired = 0
     const rate = desired >= car.speed ? 7 : 14
     const step = rate * dt
     car.speed += Math.max(-step, Math.min(step, desired - car.speed))

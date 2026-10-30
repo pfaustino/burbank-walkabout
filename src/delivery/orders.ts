@@ -13,6 +13,13 @@ export type DeliveryFile = {
   roadReach: number
   houseHeight: number
   gap: number
+  fare: number
+  tipMin: number
+  tipMax: number
+  /** Seconds or faster pays the full tip. */
+  tipFast: number
+  /** Seconds or slower pays the smallest tip. */
+  tipSlow: number
   kinds: string[]
   customers: string[]
 }
@@ -31,6 +38,14 @@ export type DropPhase = 'pickup' | 'dropoff'
 export function orderLine(order: DeliveryOrder, phase: DropPhase): string {
   if (phase === 'pickup') return `Order for ${order.customer} at ${order.business}`
   return `Deliver to ${order.customer}`
+}
+
+/** Fare plus a tip. The tip is the max at tipFast seconds and the min at tipSlow. */
+export function deliveryPay(seconds: number, file: DeliveryFile): { fare: number; tip: number; total: number } {
+  const span = Math.max(1, file.tipSlow - file.tipFast)
+  const rush = Math.max(0, Math.min(1, (file.tipSlow - seconds) / span))
+  const tip = Math.round(file.tipMin + (file.tipMax - file.tipMin) * rush)
+  return { fare: file.fare, tip, total: file.fare + tip }
 }
 
 /** Stopped in a car, inside the halo. Driving through does not count. */

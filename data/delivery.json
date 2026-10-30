@@ -8,6 +8,11 @@
   "roadReach": 32,
   "houseHeight": 12,
   "gap": 1.8,
+  "fare": 14,
+  "tipMin": 3,
+  "tipMax": 20,
+  "tipFast": 50,
+  "tipSlow": 170,
   "kinds": ["restaurant", "fast_food", "cafe", "bakery", "ice_cream", "convenience", "bar", "pub", "butcher", "tea", "confectionery", "supermarket"],
   "customers": [
     "June Alvarez",

@@ -53,8 +53,9 @@ function separate(cars: CarSim[], layout: CityLayout, restitution: number, impul
       const contact = capsuleContact(car.x, car.z, car.yaw, CAR_HALF_LENGTH, CAR_HALF_WIDTH, other)
       if (contact.gap >= -SLOP) return
       const { nx, nz } = contact
-      if (impulses) pushSpeeds(car, mate, nx, nz, restitution, hits)
-      const push = (-contact.gap) * 0.55
+      let kick = 0
+      if (impulses) kick = pushSpeeds(car, mate, nx, nz, restitution, hits)
+      const push = Math.max(0, -contact.gap) * 0.5 + kick
       shove(car, nx * push, nz * push, layout)
       shove(mate, -nx * push, -nz * push, layout)
       self.x = car.x
@@ -65,17 +66,21 @@ function separate(cars: CarSim[], layout: CityLayout, restitution: number, impul
   }
 }
 
-function pushSpeeds(a: CarSim, b: CarSim, nx: number, nz: number, restitution: number, hits: CarHit[]): void {
+function pushSpeeds(a: CarSim, b: CarSim, nx: number, nz: number, restitution: number, hits: CarHit[]): number {
   const vax = Math.sin(a.yaw) * a.speed
   const vaz = Math.cos(a.yaw) * a.speed
   const vbx = Math.sin(b.yaw) * b.speed
   const vbz = Math.cos(b.yaw) * b.speed
   const rel = (vax - vbx) * nx + (vaz - vbz) * nz
-  if (rel >= -0.2) return
+  if (rel >= -0.2) return 0
   const impulse = -(1 + restitution) * rel * 0.5
   a.speed = clamp(along(vax + impulse * nx, vaz + impulse * nz, a.yaw))
   b.speed = clamp(along(vbx - impulse * nx, vbz - impulse * nz, b.yaw))
-  hits.push({ x: (a.x + b.x) * 0.5, z: (a.z + b.z) * 0.5, impact: -rel })
+  a.coast = 0.55
+  b.coast = 0.55
+  const impact = -rel
+  hits.push({ x: (a.x + b.x) * 0.5, z: (a.z + b.z) * 0.5, impact })
+  return Math.min(2.4, impact * 0.14)
 }
 
 function along(vx: number, vz: number, yaw: number): number {

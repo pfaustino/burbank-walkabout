@@ -4,6 +4,7 @@ import type { Hud } from '../ui/Hud.ts'
 import type { CityLayout } from '../world/layout.ts'
 import type { Business } from '../world/storefronts.ts'
 import {
+  deliveryPay,
   orderLine,
   parkedOn,
   planDelivery,
@@ -26,6 +27,7 @@ export class DeliveryRun {
   private readonly halo: THREE.Group
   private readonly haloMats: THREE.MeshBasicMaterial[]
   private spin = 0
+  private elapsed = 0
   private readonly scene: THREE.Scene
   private readonly layout: CityLayout
   private readonly network: RoadNetwork
@@ -71,6 +73,7 @@ export class DeliveryRun {
 
   update(dt: number, pose: { x: number; z: number; driving: boolean; speed: number }): void {
     this.spin += dt
+    if (this.phase !== 'gap') this.elapsed += dt
     if (this.phase === 'gap') {
       this.wait -= dt
       this.hide()
@@ -86,9 +89,12 @@ export class DeliveryRun {
       this.show(this.order, 'dropoff')
       return
     }
+    const pay = deliveryPay(this.elapsed, this.file)
+    this.hud.addPay(pay.total, pay.tip)
     this.order = null
     this.phase = 'gap'
     this.wait = this.file.gap
+    this.elapsed = 0
     this.hide()
     this.hud.setOrder(null)
   }
@@ -108,6 +114,7 @@ export class DeliveryRun {
     this.order = order
     this.lastCustomer = order.customer
     this.phase = 'pickup'
+    this.elapsed = 0
     this.show(order, 'pickup')
   }
 
