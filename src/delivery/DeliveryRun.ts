@@ -186,7 +186,7 @@ function buildArrow(face: THREE.MeshBasicMaterial): THREE.Group {
   frontHead.position.set(0, 0, 1.15)
   for (const mesh of [backHead, frontHead]) mesh.rotation.x = Math.PI / 2
   group.add(backShaft, backHead, frontShaft, frontHead)
-  group.scale.setScalar(0.18)
+  group.scale.setScalar(0.36)
   return group
 }
 

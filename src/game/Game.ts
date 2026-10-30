@@ -414,6 +414,7 @@ export class Game {
       speed: Math.min(12, moved),
       driving: this.walker.driving,
       driveSpeed: this.walker.driveSpeed,
+      throttle: this.walker.throttle,
       onFoot: !this.walker.driving && !this.walker.flying && !this.walker.riding,
       altitude: this.walker.flying ? pos.y : 0,
       muted: this.paused,

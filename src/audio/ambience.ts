@@ -1,3 +1,5 @@
+import { ENGINE_WORKLET, newGearbox, stepGearbox } from './engineSynth.ts'
+
 type Mover = { x: number; z: number; speed: number }
 
 export type AmbienceWorld = {
@@ -8,6 +10,7 @@ export type AmbienceWorld = {
   speed: number
   driving: boolean
   driveSpeed: number
+  throttle: number
   onFoot: boolean
   altitude: number
   muted: boolean
@@ -35,8 +38,9 @@ export class Ambience {
   private engineGain: GainNode | null = null
   private engineFilter: BiquadFilterNode | null = null
   private engineOsc: OscillatorNode | null = null
-  private engineSrc: AudioBufferSourceNode | null = null
-  private driveHeard = 0
+  private engineSynth: AudioWorkletNode | null = null
+  private readonly gearbox = newGearbox()
+  private load = 0
 
   resume(): void {
     const ctx = this.ensure()
@@ -185,14 +189,13 @@ export class Ambience {
     this.startEngine(ctx)
     const base = import.meta.env.BASE_URL
     // Pixabay Content License: "Sound Effect - Car Crash" by u_mgq59j5ayf,
-    // "coin recieved" by RibhavAgrawal, "muscle car engine idling" by flutie8211.
+    // "coin recieved" by RibhavAgrawal.
     this.loadClip('crash', `${base}sounds/crash.mp3`)
     this.loadClip('coin', `${base}sounds/coin.mp3`)
-    this.loadClip('engine', `${base}sounds/engine.mp3`)
     return ctx
   }
 
-  private loadClip(kind: 'crash' | 'coin' | 'engine', url: string): void {
+  private loadClip(kind: 'crash' | 'coin', url: string): void {
     const ctx = this.ctx
     if (!ctx) return
     void fetch(url)
@@ -203,8 +206,7 @@ export class Ambience {
       .then((data) => ctx.decodeAudioData(data))
       .then((audio) => {
         if (kind === 'crash') this.crashBuf = audio
-        else if (kind === 'coin') this.coinBuf = audio
-        else this.attachEngine(audio)
+        else this.coinBuf = audio
       })
       .catch(() => undefined)
   }
@@ -226,56 +228,48 @@ export class Ambience {
     this.engineFilter = filter
     this.engineGain = amp
     this.engineOsc = osc
+    if (!ctx.audioWorklet) return
+    const url = URL.createObjectURL(new Blob([ENGINE_WORKLET], { type: 'application/javascript' }))
+    void ctx.audioWorklet
+      .addModule(url)
+      .then(() => this.attachSynth(ctx))
+      .catch(() => undefined)
+      .finally(() => URL.revokeObjectURL(url))
   }
 
-  /** Swap the quiet fallback for a looped low idle, played under its recorded pitch. */
-  private attachEngine(buffer: AudioBuffer): void {
-    const ctx = this.ctx
-    if (!ctx || !this.engineFilter || this.engineSrc) return
+  /** Swap the fallback tone for the pulse-train engine once the worklet loads. */
+  private attachSynth(ctx: AudioContext): void {
+    if (!this.engineFilter || this.engineSynth || this.ctx !== ctx) return
+    const synth = new AudioWorkletNode(ctx, 'city-engine', { numberOfInputs: 0, outputChannelCount: [1] })
     const osc = this.engineOsc
     this.engineOsc = null
-    if (osc) {
-      try {
-        osc.stop()
-      } catch {
-        /* already stopped */
-      }
-    }
-    const source = ctx.createBufferSource()
-    source.buffer = buffer
-    source.loop = true
-    source.playbackRate.value = 0.72
-    this.engineFilter.Q.value = 0.5
-    source.connect(this.engineFilter)
-    source.start()
-    this.engineSrc = source
+    osc?.disconnect()
+    osc?.stop()
+    this.engineFilter.frequency.value = 9000
+    synth.connect(this.engineFilter)
+    this.engineSynth = synth
   }
 
   private hearEngine(now: number, dt: number, world: AmbienceWorld): void {
     if (!this.engineGain || !this.engineFilter) return
     if (!world.driving) {
       this.engineGain.gain.setTargetAtTime(0.0001, now, 0.12)
-      this.driveHeard = 0
+      this.gearbox.gear = 0
+      this.gearbox.rpm = 850
       return
     }
-    const speed = Math.abs(world.driveSpeed)
-    const accel = dt > 0 ? (speed - this.driveHeard) / dt : 0
-    this.driveHeard = speed
-    const climb = Math.max(0, Math.min(6, accel))
-    // Idle stays under the recording. Speed and throttle each lift the pitch so a pull away is a rev.
-    const rate = Math.min(1.75, 0.72 + speed * 0.042 + climb * 0.08)
-    let loud: number
-    if (this.engineSrc) {
-      this.engineSrc.playbackRate.setTargetAtTime(rate, now, 0.05)
-      this.engineFilter.frequency.setTargetAtTime(Math.min(4200, 900 + speed * 120 + climb * 220), now, 0.05)
-      // The recording is quiet (about -29 dB RMS), so it needs real gain to be heard.
-      loud = 2.2 + Math.min(0.8, speed * 0.05) + climb * 0.1
-    } else {
-      this.engineOsc?.frequency.setTargetAtTime(22 + speed * 2.2 + climb * 3, now, 0.05)
-      this.engineFilter.frequency.setTargetAtTime(120 + speed * 14, now, 0.05)
-      loud = 0.055 + Math.min(0.09, speed * 0.005) + climb * 0.012
+    const gas = Math.max(0, world.throttle)
+    const rpm = stepGearbox(this.gearbox, world.driveSpeed, gas, dt)
+    this.load += ((world.throttle !== 0 ? 1 : 0.12) - this.load) * Math.min(1, dt * 6)
+    if (this.engineSynth) {
+      this.engineSynth.parameters.get('rpm')?.setTargetAtTime(rpm, now, 0.03)
+      this.engineSynth.parameters.get('load')?.setTargetAtTime(this.load, now, 0.05)
+      this.engineGain.gain.setTargetAtTime(0.36 + this.load * 0.36, now, 0.06)
+      return
     }
-    this.engineGain.gain.setTargetAtTime(loud, now, 0.05)
+    this.engineOsc?.frequency.setTargetAtTime(rpm / 30, now, 0.05)
+    this.engineFilter.frequency.setTargetAtTime(120 + rpm * 0.1, now, 0.05)
+    this.engineGain.gain.setTargetAtTime(0.06 + this.load * 0.05, now, 0.05)
   }
 
   private loop(

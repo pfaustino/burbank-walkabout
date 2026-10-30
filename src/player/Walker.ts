@@ -34,6 +34,7 @@ export class Walker {
   private carSpeed = 0
   private wallCool = 0
   private wallHit = 0
+  private pedal = 0
   private readonly driveClear: Disc[] = []
   private readonly posts = new BodyGrid()
   private flyYaw = 0.4
@@ -84,6 +85,11 @@ export class Walker {
   /** Signed speed while driving. Negative is reverse. */
   get driveSpeed(): number {
     return this.carSpeed
+  }
+
+  /** Gas and brake keys while driving: 1, 0, or -1. */
+  get throttle(): number {
+    return this.driveMode ? this.pedal : 0
   }
 
   get facing(): number {
@@ -314,6 +320,7 @@ export class Walker {
     if (this.keys.has('KeyS') || this.keys.has('ArrowDown')) throttle -= 1
     const boost = this.keys.has('ShiftLeft') || this.keys.has('ShiftRight')
     const maxFwd = boost ? trafficJson.driveBoost : trafficJson.driveMax
+    this.pedal = this.paused ? 0 : throttle
     if (throttle > 0) this.carSpeed = Math.min(maxFwd, this.carSpeed + 8 * dt)
     else if (throttle < 0) this.carSpeed = Math.max(-4.5, this.carSpeed - 16 * dt)
     else this.carSpeed *= Math.max(0, 1 - 1.4 * dt)
