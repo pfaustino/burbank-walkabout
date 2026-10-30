@@ -60,7 +60,7 @@ const raw = await response.json()
 function project(lat, lon) {
   return {
     x: Math.round((lon - LON0) * MX * 100) / 100,
-    z: Math.round((lat - LAT0) * MZ * 100) / 100,
+    z: Math.round((LAT0 - lat) * MZ * 100) / 100,
   }
 }
 

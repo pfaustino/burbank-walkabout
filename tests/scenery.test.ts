@@ -90,12 +90,12 @@ describe('downtown scenery', () => {
     }
   })
 
-  it('maps north up and east to the left, matching the street view', () => {
-    const north = minimapDelta(0, 12, 1)
+  it('maps north up and east to the right', () => {
+    const north = minimapDelta(0, -12, 1)
     const east = minimapDelta(12, 0, 1)
     expect(north.y).toBeLessThan(0)
     expect(north.x).toBeCloseTo(0)
-    expect(east.x).toBeLessThan(0)
+    expect(east.x).toBeGreaterThan(0)
     expect(east.y).toBeCloseTo(0)
   })
 })

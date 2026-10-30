@@ -476,8 +476,8 @@ function offsetPolyline(pts: Vec2[], amount: number, layout: CityLayout): Vec2[]
     const len = Math.hypot(tx, tz) || 1
     tx /= len
     tz /= len
-    // Chase camera looks along travel with west on the right of the screen when
-    // facing north, so this perpendicular is the right-hand lane in view.
+    // Three.js is right-handed with +z south, so this perpendicular is the
+    // right-hand lane as the chase camera looks along travel.
     let x = pts[i]!.x - tz * amount
     let z = pts[i]!.z + tx * amount
     if (hitsBuilding(layout, x, z, 0.8)) {

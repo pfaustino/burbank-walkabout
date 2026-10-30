@@ -17,7 +17,7 @@ const raw = JSON.parse(readFileSync('tmp-downtown.json', 'utf8'))
 function project(lat, lon) {
   return {
     x: round((lon - LON0) * MX),
-    z: round((lat - LAT0) * MZ),
+    z: round((LAT0 - lat) * MZ),
   }
 }
 

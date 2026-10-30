@@ -1,4 +1,4 @@
-/** Downtown Burbank in local meters. +x is east, +z is north, y is up. */
+/** Downtown Burbank in local meters. +x is east, +z is south, y is up (Three.js right-handed). */
 
 export type Vec2 = { x: number; z: number }
 
