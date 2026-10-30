@@ -134,9 +134,9 @@ export class Minimap {
     ctx.textBaseline = 'middle'
     ctx.fillText('N', SIZE / 2, 10)
     ctx.fillStyle = '#f6f1e6'
-    ctx.fillText('W', SIZE - 10, SIZE / 2)
+    ctx.fillText('E', SIZE - 10, SIZE / 2)
     ctx.fillText('S', SIZE / 2, SIZE - 8)
-    ctx.fillText('E', 10, SIZE / 2)
+    ctx.fillText('W', 10, SIZE / 2)
   }
 
   dispose(): void {
