@@ -39,7 +39,6 @@ describe('an offer to walk somewhere', () => {
     const route = routeSidewalk(graph, 28, 140, -316, -2)
     expect(route.length).toBeGreaterThan(4)
     const end = route[route.length - 1]!
-    const startGap = Math.hypot(-316 - 28, -2 - 140)
     expect(Math.hypot(end.x + 316, end.z + 2)).toBeLessThan(25)
     const errand: Errand = {
       x: route[0]!.x,
