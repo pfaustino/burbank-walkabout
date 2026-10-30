@@ -1,0 +1,12 @@
+---
+description: Publish finished Burbank Walkabout changes to Railway
+alwaysApply: true
+---
+
+# Publish to Railway
+
+When a player-facing change is done, commit it and push `main`. Railway deploys from that branch to https://burbank-walkabout-production.up.railway.app.
+
+- Do this without waiting to be asked. A finished fix is not done while it exists only on this machine.
+- Do not commit `.env` or other secrets.
+- Confirm the Railway deployment is Online before saying the change is live.

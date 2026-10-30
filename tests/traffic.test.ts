@@ -31,6 +31,27 @@ describe('traffic', () => {
     }
   })
 
+  it('keeps each direction on the right side of the center line', () => {
+    const roads = layout.file.roads.filter((road) =>
+      ['primary', 'secondary', 'tertiary', 'residential', 'unclassified'].includes(road.kind),
+    )
+    let checked = 0
+    for (const lane of network.lanes) {
+      const pose = sampleLane(lane, lane.length * 0.5)
+      const tx = Math.sin(pose.yaw)
+      const tz = Math.cos(pose.yaw)
+      if (Math.abs(tz) < 0.85) continue
+      const center = nearestRoadPoint(roads, pose.x, pose.z)
+      if (center.dist > 6) continue
+      const screenRight = -tz
+      const shifted = (pose.x - center.x) * screenRight
+      expect(shifted).toBeGreaterThan(0.8)
+      checked++
+      if (checked > 12) break
+    }
+    expect(checked).toBeGreaterThan(3)
+  })
+
   it('stops for red and drives through green', () => {
     const lane = network.lanes.find((entry) => entry.signal !== null && entry.length > 40)
     expect(lane).toBeTruthy()
@@ -217,6 +238,37 @@ function parkedBus(id: string, lane: number, dist: number): BusSim {
     dwell: 0,
     nextStop: dist + 400,
   }
+}
+
+function nearestRoadPoint(
+  roads: { pts: number[] }[],
+  x: number,
+  z: number,
+): { x: number; z: number; dist: number } {
+  let best = Infinity
+  let px = x
+  let pz = z
+  for (const road of roads) {
+    for (let i = 0; i < road.pts.length - 2; i += 2) {
+      const ax = road.pts[i] ?? 0
+      const az = road.pts[i + 1] ?? 0
+      const bx = road.pts[i + 2] ?? 0
+      const bz = road.pts[i + 3] ?? 0
+      const dx = bx - ax
+      const dz = bz - az
+      const len2 = dx * dx + dz * dz || 1
+      const t = Math.max(0, Math.min(1, ((x - ax) * dx + (z - az) * dz) / len2))
+      const qx = ax + dx * t
+      const qz = az + dz * t
+      const dist = Math.hypot(x - qx, z - qz)
+      if (dist < best) {
+        best = dist
+        px = qx
+        pz = qz
+      }
+    }
+  }
+  return { x: px, z: pz, dist: best }
 }
 
 function carOn(lane: number, dist: number): CarSim {
