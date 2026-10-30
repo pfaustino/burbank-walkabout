@@ -35,7 +35,7 @@ export class Ambience {
   private engineGain: GainNode | null = null
   private engineFilter: BiquadFilterNode | null = null
   private engineOsc: OscillatorNode | null = null
-  private engineHarm: OscillatorNode | null = null
+  private engineSrc: AudioBufferSourceNode | null = null
   private driveHeard = 0
 
   resume(): void {
@@ -185,13 +185,14 @@ export class Ambience {
     this.startEngine(ctx)
     const base = import.meta.env.BASE_URL
     // Pixabay Content License: "Sound Effect - Car Crash" by u_mgq59j5ayf,
-    // "coin recieved" by RibhavAgrawal.
+    // "coin recieved" by RibhavAgrawal, "muscle car engine idling" by flutie8211.
     this.loadClip('crash', `${base}sounds/crash.mp3`)
     this.loadClip('coin', `${base}sounds/coin.mp3`)
+    this.loadClip('engine', `${base}sounds/engine.mp3`)
     return ctx
   }
 
-  private loadClip(kind: 'crash' | 'coin', url: string): void {
+  private loadClip(kind: 'crash' | 'coin' | 'engine', url: string): void {
     const ctx = this.ctx
     if (!ctx) return
     void fetch(url)
@@ -202,7 +203,8 @@ export class Ambience {
       .then((data) => ctx.decodeAudioData(data))
       .then((audio) => {
         if (kind === 'crash') this.crashBuf = audio
-        else this.coinBuf = audio
+        else if (kind === 'coin') this.coinBuf = audio
+        else this.attachEngine(audio)
       })
       .catch(() => undefined)
   }
@@ -210,63 +212,66 @@ export class Ambience {
   private startEngine(ctx: AudioContext): void {
     const filter = ctx.createBiquadFilter()
     filter.type = 'lowpass'
-    filter.frequency.value = 280
-    filter.Q.value = 0.7
+    filter.frequency.value = 220
+    filter.Q.value = 0.4
     const amp = ctx.createGain()
     amp.gain.value = 0.0001
     filter.connect(amp)
     amp.connect(this.master!)
     const osc = ctx.createOscillator()
-    osc.type = 'sawtooth'
-    osc.frequency.value = 36
+    osc.type = 'triangle'
+    osc.frequency.value = 20
     osc.connect(filter)
-    const harm = ctx.createOscillator()
-    harm.type = 'square'
-    harm.frequency.value = 72
-    const harmAmp = ctx.createGain()
-    harmAmp.gain.value = 0.15
-    harm.connect(harmAmp)
-    harmAmp.connect(filter)
-    if (this.noise) {
-      const noise = ctx.createBufferSource()
-      noise.buffer = this.noise
-      noise.loop = true
-      const noiseFilter = ctx.createBiquadFilter()
-      noiseFilter.type = 'bandpass'
-      noiseFilter.frequency.value = 140
-      noiseFilter.Q.value = 0.6
-      const noiseAmp = ctx.createGain()
-      noiseAmp.gain.value = 0.28
-      noise.connect(noiseFilter)
-      noiseFilter.connect(noiseAmp)
-      noiseAmp.connect(filter)
-      noise.start()
-    }
     osc.start()
-    harm.start()
     this.engineFilter = filter
     this.engineGain = amp
     this.engineOsc = osc
-    this.engineHarm = harm
+  }
+
+  /** Swap the quiet fallback for a looped low idle, played under its recorded pitch. */
+  private attachEngine(buffer: AudioBuffer): void {
+    const ctx = this.ctx
+    if (!ctx || !this.engineFilter || this.engineSrc) return
+    const osc = this.engineOsc
+    this.engineOsc = null
+    if (osc) {
+      try {
+        osc.stop()
+      } catch {
+        /* already stopped */
+      }
+    }
+    const source = ctx.createBufferSource()
+    source.buffer = buffer
+    source.loop = true
+    source.playbackRate.value = 0.68
+    source.connect(this.engineFilter)
+    source.start()
+    this.engineSrc = source
   }
 
   private hearEngine(now: number, dt: number, world: AmbienceWorld): void {
-    if (!this.engineGain || !this.engineFilter || !this.engineOsc || !this.engineHarm) return
+    if (!this.engineGain || !this.engineFilter) return
     if (!world.driving) {
-      this.engineGain.gain.setTargetAtTime(0.0001, now, 0.08)
+      this.engineGain.gain.setTargetAtTime(0.0001, now, 0.12)
       this.driveHeard = 0
       return
     }
     const speed = Math.abs(world.driveSpeed)
     const accel = dt > 0 ? (speed - this.driveHeard) / dt : 0
     this.driveHeard = speed
-    const climb = Math.max(0, Math.min(8, accel))
-    const rpm = 34 + speed * 6.4 + climb * 8
-    this.engineOsc.frequency.setTargetAtTime(rpm, now, 0.05)
-    this.engineHarm.frequency.setTargetAtTime(rpm * 2.02, now, 0.05)
-    this.engineFilter.frequency.setTargetAtTime(200 + rpm * 8 + climb * 50, now, 0.05)
-    const loud = 0.05 + Math.min(0.14, speed * 0.009) + climb * 0.014
-    this.engineGain.gain.setTargetAtTime(loud, now, 0.04)
+    const climb = Math.max(0, Math.min(6, accel))
+    // Stay below the recording at idle and only a little above it when accelerating.
+    const rate = Math.min(1.05, 0.68 + speed * 0.014 + climb * 0.01)
+    if (this.engineSrc) {
+      this.engineSrc.playbackRate.setTargetAtTime(rate, now, 0.12)
+      this.engineFilter.frequency.setTargetAtTime(240 + speed * 6, now, 0.12)
+    } else if (this.engineOsc) {
+      this.engineOsc.frequency.setTargetAtTime(18 + speed * 1.3 + climb, now, 0.12)
+      this.engineFilter.frequency.setTargetAtTime(90 + speed * 5, now, 0.12)
+    }
+    const loud = 0.05 + Math.min(0.08, speed * 0.004) + climb * 0.006
+    this.engineGain.gain.setTargetAtTime(loud, now, 0.08)
   }
 
   private loop(
