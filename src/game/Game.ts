@@ -31,6 +31,7 @@ import {
 import { createBuses, stepBuses, type BusFile, type BusSim } from '../traffic/busSim.ts'
 import { buildNetwork, type RoadNetwork } from '../traffic/network.ts'
 import { buildSigns, disposeDrawn, setSignGlow } from '../traffic/streetProps.ts'
+import { bumpCars } from '../traffic/bumps.ts'
 import { createTraffic, parkOnLane, stepTraffic, type CarSim, type TrafficFile } from '../traffic/trafficSim.ts'
 import { Hud } from '../ui/Hud.ts'
 import { Minimap } from '../ui/Minimap.ts'
@@ -382,6 +383,8 @@ export class Game {
     )
     if (!this.walker.flying && !this.walker.riding) this.walker.shoveOut(this.vehicleDiscs)
     this.copyDrivenCar(pos.x, pos.z)
+    const hits = bumpCars(this.cars, this.layout, this.trafficFile.restitution)
+    this.keepDrivenBump()
     this.carView.sync(this.cars, dt, this.drivenId)
     this.busView.sync(this.buses, dt)
     this.dayHour = advanceHour(this.dayHour, dt)
@@ -389,6 +392,7 @@ export class Game {
     const moved = dt > 0 ? Math.hypot(pos.x - this.stepX, pos.z - this.stepZ) / dt : 0
     this.stepX = pos.x
     this.stepZ = pos.z
+    this.ambience.crunch(hits, pos.x, pos.z, this.walker.facing, this.trafficFile.crunch)
     this.ambience.update(dt, {
       hour: this.dayHour,
       x: pos.x,
@@ -462,8 +466,10 @@ export class Game {
     for (const player of this.remotes) this.remoteIds.add(player.id)
     const list = this.walkerHold
     list.length = 0
+    const driving = this.walker.driving
     for (const disc of this.blockers) {
       if (disc.id && this.remoteIds.has(disc.id)) continue
+      if (driving && disc.id?.startsWith('car:')) continue
       list.push(disc)
     }
     return list
@@ -549,12 +555,25 @@ export class Game {
     car.x = x
     car.z = z
     car.yaw = this.walker.facing
+    car.speed = this.walker.driveSpeed
     car.driver = 'you'
     const disc = this.vehicleDiscs[index]
     if (!disc) return
     disc.x = x
     disc.z = z
     disc.yaw = car.yaw
+  }
+
+  /** The bump moves the driven car. Keep the player on it, at the new speed. */
+  private keepDrivenBump(): void {
+    if (!this.drivenId) return
+    const car = this.cars.find((entry) => entry.id === this.drivenId)
+    if (!car) return
+    const pos = this.walker.mesh.position
+    const dx = car.x - pos.x
+    const dz = car.z - pos.z
+    if (Math.hypot(dx, dz) < 0.001 && Math.abs(car.speed - this.walker.driveSpeed) < 0.04) return
+    this.walker.nudge(dx, dz, car.speed)
   }
 
   private crowdBlocks(): Disc[] {

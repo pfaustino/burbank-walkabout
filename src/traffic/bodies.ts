@@ -196,6 +196,53 @@ export function overlapsCapsule(
   return dist < radius + other.r
 }
 
+/** Gap between two capsules. Negative means overlap. `nx, nz` pushes the first body away. */
+export function capsuleContact(
+  x: number,
+  z: number,
+  yaw: number,
+  len: number,
+  radius: number,
+  other: Disc,
+): { gap: number; nx: number; nz: number } {
+  const otherLen = other.len ?? 0
+  const otherYaw = other.yaw ?? 0
+  const fx = Math.sin(yaw)
+  const fz = Math.cos(yaw)
+  const ofx = Math.sin(otherYaw)
+  const ofz = Math.cos(otherYaw)
+  const hit = closestSegments(
+    x - fx * len,
+    z - fz * len,
+    x + fx * len,
+    z + fz * len,
+    other.x - ofx * otherLen,
+    other.z - ofz * otherLen,
+    other.x + ofx * otherLen,
+    other.z + ofz * otherLen,
+  )
+  let nx = hit.px - hit.qx
+  let nz = hit.pz - hit.qz
+  let dist = Math.hypot(nx, nz)
+  if (dist < 1e-4) {
+    nx = x - other.x
+    nz = z - other.z
+    const center = Math.hypot(nx, nz)
+    if (center < 1e-4) {
+      nx = fz
+      nz = -fx
+    } else {
+      nx /= center
+      nz /= center
+    }
+    dist = 0
+  } else {
+    nx /= dist
+    nz /= dist
+  }
+  return { gap: dist - radius - other.r, nx, nz }
+}
+
 function escapeCircle(disc: Disc, x: number, z: number, radius: number): { x: number; z: number } | null {
   const len = disc.len ?? 0
   const yaw = disc.yaw ?? 0
@@ -233,27 +280,56 @@ function segmentDistance(
   dx: number,
   dz: number,
 ): number {
-  const abx = bx - ax
-  const abz = bz - az
-  const cdx = dx - cx
-  const cdz = dz - cz
-  const acx = ax - cx
-  const acz = az - cz
-  const abLen2 = abx * abx + abz * abz
-  const cdLen2 = cdx * cdx + cdz * cdz
-  const abDotCd = abx * cdx + abz * cdz
-  const acDotAb = acx * abx + acz * abz
-  const acDotCd = acx * cdx + acz * cdz
+  const hit = closestSegments(ax, az, bx, bz, cx, cz, dx, dz)
+  return Math.hypot(hit.px - hit.qx, hit.pz - hit.qz)
+}
+
+/** Closest points on two segments. Handles a parallel pair, such as a nose-to-tail crash. */
+function closestSegments(
+  ax: number,
+  az: number,
+  bx: number,
+  bz: number,
+  cx: number,
+  cz: number,
+  dx: number,
+  dz: number,
+): { px: number; pz: number; qx: number; qz: number } {
+  const d1x = bx - ax
+  const d1z = bz - az
+  const d2x = dx - cx
+  const d2z = dz - cz
+  const rx = ax - cx
+  const rz = az - cz
+  const a = d1x * d1x + d1z * d1z
+  const e = d2x * d2x + d2z * d2z
+  const f = d2x * rx + d2z * rz
+  const c = d1x * rx + d1z * rz
+  const b = d1x * d2x + d1z * d2z
+  let s = 0
   let t = 0
-  let u = 0
-  if (abLen2 > 1e-6) t = clamp(-acDotAb / abLen2, 0, 1)
-  if (cdLen2 > 1e-6) u = clamp((acDotCd + abDotCd * t) / cdLen2, 0, 1)
-  if (abLen2 > 1e-6) t = clamp((-acDotAb + abDotCd * u) / abLen2, 0, 1)
-  const px = ax + abx * t
-  const pz = az + abz * t
-  const qx = cx + cdx * u
-  const qz = cz + cdz * u
-  return Math.hypot(px - qx, pz - qz)
+  if (a <= 1e-8 && e <= 1e-8) {
+    s = 0
+    t = 0
+  } else if (a <= 1e-8) {
+    s = 0
+    t = clamp(f / e, 0, 1)
+  } else if (e <= 1e-8) {
+    t = 0
+    s = clamp(-c / a, 0, 1)
+  } else {
+    const denom = a * e - b * b
+    s = denom > 1e-8 ? clamp((b * f - c * e) / denom, 0, 1) : clamp(-c / a, 0, 1)
+    t = (b * s + f) / e
+    if (t < 0) {
+      t = 0
+      s = clamp(-c / a, 0, 1)
+    } else if (t > 1) {
+      t = 1
+      s = clamp((b - c) / a, 0, 1)
+    }
+  }
+  return { px: ax + d1x * s, pz: az + d1z * s, qx: cx + d2x * t, qz: cz + d2z * t }
 }
 
 function cellKey(x: number, z: number): number {

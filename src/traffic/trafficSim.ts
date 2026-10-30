@@ -17,6 +17,9 @@ export type CarSim = {
   driver: string | null
   /** Seconds spent stopped off a red light. High values get to creep through a jam. */
   wait?: number
+  /** Sideways shove left over from a bump, in meters. It fades back onto the lane. */
+  knockX?: number
+  knockZ?: number
 }
 
 export type TrafficFile = {
@@ -27,6 +30,10 @@ export type TrafficFile = {
   enterRange: number
   driveMax: number
   driveBoost: number
+  /** Share of a hit that bounces back. 0 is a dead shove, 1 is a full bounce. */
+  restitution: number
+  /** Closing speed, in meters per second, that plays a crunch. */
+  crunch: number
   colors: string[]
 }
 
@@ -185,11 +192,24 @@ export function stepTraffic(
     if (redWait) car.wait = 0
     else if (hard || blocked || car.speed < 0.25) car.wait = (car.wait ?? 0) + dt
     else car.wait = Math.max(0, (car.wait ?? 0) - dt)
+    fadeKnock(car, dt)
     self.x = car.x
     self.z = car.z
     self.yaw = car.yaw
     self.wait = car.wait ?? 0
   }
+}
+
+function fadeKnock(car: CarSim, dt: number): void {
+  const fade = Math.exp(-3.2 * dt)
+  let kx = (car.knockX ?? 0) * fade
+  let kz = (car.knockZ ?? 0) * fade
+  if (Math.abs(kx) < 0.04) kx = 0
+  if (Math.abs(kz) < 0.04) kz = 0
+  car.knockX = kx
+  car.knockZ = kz
+  car.x += kx
+  car.z += kz
 }
 
 function lightSpeed(lane: Lane, car: CarSim, lamp: Lamp): number {

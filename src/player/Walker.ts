@@ -32,6 +32,7 @@ export class Walker {
   private flyMode = false
   private carYaw = 0.4
   private carSpeed = 0
+  private readonly driveClear: Disc[] = []
   private flyYaw = 0.4
   private flySpeed = 0
   private lift = 0
@@ -75,6 +76,11 @@ export class Walker {
 
   get flying(): boolean {
     return this.flyMode
+  }
+
+  /** Signed speed while driving. Negative is reverse. */
+  get driveSpeed(): number {
+    return this.carSpeed
   }
 
   get facing(): number {
@@ -320,12 +326,26 @@ export class Walker {
     return Math.abs(this.carSpeed)
   }
 
+  /** Move the driven car off a hit and take the new forward speed. */
+  nudge(dx: number, dz: number, speed: number): void {
+    if (!this.driveMode) return
+    this.mesh.position.x += dx
+    this.mesh.position.z += dz
+    this.carSpeed = THREE.MathUtils.clamp(speed, -6, trafficJson.driveBoost)
+  }
+
   /** Push the player out of a vehicle that moved into them after they stepped. */
   shoveOut(discs: readonly Disc[]): void {
     if (this.flyMode || this.rideMode) return
+    const blocks = this.driveClear
+    blocks.length = 0
+    for (const disc of discs) {
+      if (this.driveMode && disc.id?.startsWith('car:')) continue
+      blocks.push(disc)
+    }
     const radius = this.driveMode ? CAR_RADIUS : BODY_RADIUS
     const pos = this.mesh.position
-    const next = pushOutOf(discs, pos.x, pos.z, radius, this.ignoreBlocker)
+    const next = pushOutOf(blocks, pos.x, pos.z, radius, this.ignoreBlocker)
     if (!next.hit || hitsBuilding(this.layout, next.x, next.z, radius)) return
     pos.x = next.x
     pos.z = next.z

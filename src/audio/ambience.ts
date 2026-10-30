@@ -26,6 +26,7 @@ export class Ambience {
   private chirpAt = 1.4
   private honkAt = 3
   private hissAt = 2
+  private crunchAt = 0
   private noise: AudioBuffer | null = null
 
   resume(): void {
@@ -93,6 +94,38 @@ export class Ambience {
         this.honkAt = now + 6 + Math.random() * 8
       }
     }
+  }
+
+  /** A metal crunch at a collision, louder when the hit is close and fast. */
+  crunch(
+    hits: readonly { x: number; z: number; impact: number }[],
+    hearX: number,
+    hearZ: number,
+    hearYaw: number,
+    minImpact: number,
+  ): void {
+    const ctx = this.ensure()
+    if (!ctx || !this.master || !this.noise || ctx.state !== 'running') return
+    const now = ctx.currentTime
+    if (now < this.crunchAt) return
+    let bestX = 0
+    let bestZ = 0
+    let best = 0
+    let loud = 0
+    for (const hit of hits) {
+      if (hit.impact < minImpact) continue
+      const dist = Math.hypot(hit.x - hearX, hit.z - hearZ)
+      if (dist > 46) continue
+      const score = hit.impact * (1 - dist / 46)
+      if (score <= best) continue
+      best = score
+      bestX = hit.x
+      bestZ = hit.z
+      loud = Math.min(1, hit.impact / 10)
+    }
+    if (best <= 0) return
+    this.playCrunch(now, crunchPan(bestX - hearX, bestZ - hearZ, hearYaw), loud)
+    this.crunchAt = now + 0.22
   }
 
   dispose(): void {
@@ -221,6 +254,45 @@ export class Ambience {
     }
   }
 
+  private playCrunch(when: number, panValue: number, amount: number): void {
+    const ctx = this.ctx
+    const buffer = this.noise
+    if (!ctx || !buffer || !this.master) return
+    const pan = ctx.createStereoPanner()
+    pan.pan.value = panValue
+    pan.connect(this.master)
+
+    const noise = ctx.createBufferSource()
+    noise.buffer = buffer
+    const filter = ctx.createBiquadFilter()
+    filter.type = 'lowpass'
+    filter.frequency.setValueAtTime(900, when)
+    filter.frequency.exponentialRampToValueAtTime(180, when + 0.16)
+    const noiseAmp = ctx.createGain()
+    const peak = 0.08 + amount * 0.22
+    noiseAmp.gain.setValueAtTime(0.0001, when)
+    noiseAmp.gain.exponentialRampToValueAtTime(peak, when + 0.012)
+    noiseAmp.gain.exponentialRampToValueAtTime(0.0001, when + 0.2)
+    noise.connect(filter)
+    filter.connect(noiseAmp)
+    noiseAmp.connect(pan)
+    noise.start(when)
+    noise.stop(when + 0.22)
+
+    const thud = ctx.createOscillator()
+    thud.type = 'sine'
+    thud.frequency.setValueAtTime(110, when)
+    thud.frequency.exponentialRampToValueAtTime(42, when + 0.14)
+    const thudAmp = ctx.createGain()
+    thudAmp.gain.setValueAtTime(0.0001, when)
+    thudAmp.gain.exponentialRampToValueAtTime(0.12 + amount * 0.16, when + 0.01)
+    thudAmp.gain.exponentialRampToValueAtTime(0.0001, when + 0.18)
+    thud.connect(thudAmp)
+    thudAmp.connect(pan)
+    thud.start(when)
+    thud.stop(when + 0.2)
+  }
+
   private hiss(when: number, panValue: number): void {
     const ctx = this.ctx
     const buffer = this.noise
@@ -264,6 +336,14 @@ function panOf(mover: Mover, world: AmbienceWorld): number {
   const dist = Math.hypot(dx, dz) || 1
   const fx = -Math.sin(world.yaw)
   const fz = -Math.cos(world.yaw)
+  const right = (dx * fz + dz * -fx) / dist
+  return Math.max(-1, Math.min(1, right))
+}
+
+function crunchPan(dx: number, dz: number, yaw: number): number {
+  const dist = Math.hypot(dx, dz) || 1
+  const fx = -Math.sin(yaw)
+  const fz = -Math.cos(yaw)
   const right = (dx * fz + dz * -fx) / dist
   return Math.max(-1, Math.min(1, right))
 }

@@ -3,9 +3,10 @@ import trafficJson from '../data/traffic.json'
 import { createSeededRng } from '../src/util/seededRng.ts'
 import { hitsBuilding, buildLayout, type MapFile } from '../src/world/layout.ts'
 import { buildNetwork, lamps, sampleLane } from '../src/traffic/network.ts'
+import { bumpCars } from '../src/traffic/bumps.ts'
 import { createTraffic, stepTraffic, type CarSim, type TrafficFile } from '../src/traffic/trafficSim.ts'
 import { stepBuses, type BusFile, type BusSim } from '../src/traffic/busSim.ts'
-import { BUS_HALF_LENGTH, BUS_HALF_WIDTH, overlapsCapsule, slideClear } from '../src/traffic/bodies.ts'
+import { BUS_HALF_LENGTH, BUS_HALF_WIDTH, CAR_HALF_LENGTH, CAR_HALF_WIDTH, overlapsCapsule, slideClear } from '../src/traffic/bodies.ts'
 import busesJson from '../data/buses.json'
 import { describe, expect, it } from 'vitest'
 
@@ -71,6 +72,71 @@ describe('traffic', () => {
     }
     const crossed = moving.lane !== lane!.id || moving.dist > lane!.stopAt + 4
     expect(crossed).toBe(true)
+  })
+
+  it('shoves both cars when one drives into the other', () => {
+    const lane = network.lanes.find((entry) => entry.signal === null && entry.length > 80)
+    expect(lane).toBeTruthy()
+    const rearPose = sampleLane(lane!, 30)
+    const fx = Math.sin(rearPose.yaw)
+    const fz = Math.cos(rearPose.yaw)
+    const gap = CAR_HALF_LENGTH * 2 + 0.5
+    const rear = carOn(lane!.id, 30)
+    rear.x = rearPose.x
+    rear.z = rearPose.z
+    rear.yaw = rearPose.yaw
+    rear.speed = 10
+    const front = carOn(lane!.id, 30 + gap)
+    front.id = 'c-front'
+    front.x = rearPose.x + fx * gap
+    front.z = rearPose.z + fz * gap
+    front.yaw = rearPose.yaw
+    front.speed = 0
+    const hits = bumpCars([rear, front], layout, file.restitution)
+    expect(hits.length).toBeGreaterThan(0)
+    expect(hits[0]!.impact).toBeGreaterThan(file.crunch)
+    expect(front.speed).toBeGreaterThan(3)
+    expect(rear.speed).toBeLessThan(8)
+    expect(
+      overlapsCapsule(rear.x, rear.z, rear.yaw, CAR_HALF_LENGTH, CAR_HALF_WIDTH, {
+        x: front.x,
+        z: front.z,
+        yaw: front.yaw,
+        r: CAR_HALF_WIDTH,
+        len: CAR_HALF_LENGTH,
+      }),
+    ).toBe(false)
+    const shoved = front.x * fx + front.z * fz - (rearPose.x + fx * gap) * fx - (rearPose.z + fz * gap) * fz
+    expect(shoved).toBeGreaterThan(0.3)
+
+    const deep = carOn(lane!.id, 30)
+    deep.id = 'c-deep'
+    deep.x = rearPose.x + fx * 2.6
+    deep.z = rearPose.z + fz * 2.6
+    deep.yaw = rearPose.yaw
+    deep.speed = 0
+    rear.x = rearPose.x
+    rear.z = rearPose.z
+    rear.speed = 10
+    const deepHits = bumpCars([rear, deep], layout, file.restitution)
+    expect(deepHits.length).toBeGreaterThan(0)
+    expect(deep.speed).toBeGreaterThan(3)
+  })
+
+  it('keeps a sideways bump beside the lane, then lets it fade', () => {
+    const lane = network.lanes.find((entry) => entry.signal === null && entry.length > 80)
+    expect(lane).toBeTruthy()
+    const car = carOn(lane!.id, 36)
+    car.speed = 0
+    stepTraffic([car], network, file, 1, 0.05, () => 0.2, [])
+    car.speed = 0
+    car.knockX = 2
+    car.knockZ = 0
+    stepTraffic([car], network, file, 1, 0.05, () => 0.2, [])
+    const pose = sampleLane(network.lanes[car.lane] ?? lane!, car.dist)
+    const off = Math.hypot(car.x - pose.x, car.z - pose.z)
+    expect(off).toBeGreaterThan(1.4)
+    expect(off).toBeLessThan(2)
   })
 
   it('stops for a car or person ahead, and ignores someone off to the side', () => {
