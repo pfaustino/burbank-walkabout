@@ -35,6 +35,8 @@ export class Walker {
   private wallCool = 0
   private wallHit = 0
   private pedal = 0
+  private slideYaw = 0.4
+  private skid = 0
   private readonly driveClear: Disc[] = []
   private readonly posts = new BodyGrid()
   private flyYaw = 0.4
@@ -92,6 +94,15 @@ export class Walker {
     return this.driveMode ? this.pedal : 0
   }
 
+  /** 0 is planted, 1 is the tires sliding in a hard turn. */
+  get skidding(): number {
+    return this.driveMode ? this.skid : 0
+  }
+
+  get braking(): boolean {
+    return this.driveMode && this.pedal < 0 && Math.abs(this.carSpeed) > 3.5
+  }
+
   get facing(): number {
     if (this.flyMode) return this.flyYaw
     return this.driveMode ? this.carYaw : this.mesh.rotation.y
@@ -118,6 +129,8 @@ export class Walker {
     this.rideMode = false
     this.flyMode = false
     this.carYaw = yaw
+    this.slideYaw = yaw
+    this.skid = 0
     this.carSpeed = 0
     this.wallCool = 0
     this.wallHit = 0
@@ -325,11 +338,16 @@ export class Walker {
     else if (throttle < 0) this.carSpeed = Math.max(-4.5, this.carSpeed - 16 * dt)
     else this.carSpeed *= Math.max(0, 1 - 1.4 * dt)
     const steer = (this.keys.has('KeyA') || this.keys.has('ArrowLeft') ? 1 : 0) - (this.keys.has('KeyD') || this.keys.has('ArrowRight') ? 1 : 0)
-    const rate = 1.8 * THREE.MathUtils.clamp(Math.abs(this.carSpeed) / 6, 0.3, 1)
-    this.carYaw += steer * rate * dt * Math.sign(this.carSpeed || 1)
+    const fast = Math.abs(this.carSpeed)
+    const wantSkid = Math.abs(steer) > 0 && fast > 7 ? Math.min(1, (fast - 7) / 8) : 0
+    this.skid += (wantSkid - this.skid) * Math.min(1, dt * 5)
+    const rate = 1.8 * THREE.MathUtils.clamp(fast / 6, 0.3, 1)
+    this.carYaw += steer * rate * dt * Math.sign(this.carSpeed || 1) * (1 - this.skid * 0.55)
+    const catchup = 1 - Math.exp(-dt * (this.skid > 0.2 ? 1.6 : 9))
+    this.slideYaw = dampAngle(this.slideYaw, this.carYaw, catchup)
     const speed = this.carSpeed
-    const dx = Math.sin(this.carYaw) * speed * dt
-    const dz = Math.cos(this.carYaw) * speed * dt
+    const dx = Math.sin(this.slideYaw) * speed * dt
+    const dz = Math.cos(this.slideYaw) * speed * dt
     const pos = this.mesh.position
     const wanted = Math.hypot(dx, dz)
     const intoWall = wanted > 0 && this.solid(pos.x + dx, pos.z + dz, CAR_RADIUS)

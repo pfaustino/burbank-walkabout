@@ -13,6 +13,9 @@
   "tipMax": 20,
   "tipFast": 50,
   "tipSlow": 170,
+  "taxiFare": 24,
+  "taxiTipMin": 8,
+  "taxiTipMax": 36,
   "kinds": ["restaurant", "fast_food", "cafe", "bakery", "ice_cream", "convenience", "bar", "pub", "butcher", "tea", "confectionery", "supermarket"],
   "customers": [
     "June Alvarez",

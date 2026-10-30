@@ -1,7 +1,7 @@
 import businessesJson from '../data/businesses.json'
 import deliveryJson from '../data/delivery.json'
 import mapJson from '../data/map.json'
-import { deliveryPay, orderLine, parkedOn, planDelivery, type DeliveryFile } from '../src/delivery/orders.ts'
+import { deliveryPay, orderLine, parkedOn, planDelivery, planTaxi, taxiLine, taxiPay, type DeliveryFile } from '../src/delivery/orders.ts'
 import { buildNetwork } from '../src/traffic/network.ts'
 import { createSeededRng } from '../src/util/seededRng.ts'
 import { hitsBuilding, buildLayout, type MapFile } from '../src/world/layout.ts'
@@ -61,5 +61,18 @@ describe('delivery orders', () => {
     expect(fast.total).toBe(fast.fare + fast.tip)
     expect(deliveryPay(file.tipFast - 30, file).tip).toBe(file.tipMax)
     expect(deliveryPay(file.tipSlow + 40, file).tip).toBe(file.tipMin)
+  })
+
+  it('hails a ride that pays more than a delivery', () => {
+    const ride = planTaxi(layout, network, spawn, createSeededRng(0xd45e), file)
+    expect(ride).toBeTruthy()
+    expect(taxiLine(ride!, 'pickup')).toBe(`${ride!.passenger} is waving for a ride`)
+    expect(taxiLine(ride!, 'dropoff')).toBe(`Take ${ride!.passenger} to ${ride!.street}`)
+    const trip = Math.hypot(ride!.dropoff.x - ride!.pickup.x, ride!.dropoff.z - ride!.pickup.z)
+    expect(trip).toBeGreaterThan(file.minTrip - 1)
+    const fast = taxiPay(file.tipFast, file)
+    expect(fast.fare).toBeGreaterThan(file.fare)
+    expect(fast.tip).toBe(file.taxiTipMax)
+    expect(fast.total).toBeGreaterThan(deliveryPay(file.tipFast, file).total)
   })
 })

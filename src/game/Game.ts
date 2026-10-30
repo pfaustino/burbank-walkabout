@@ -9,7 +9,7 @@ import peopleJson from '../../data/people.json'
 import trafficJson from '../../data/traffic.json'
 import { CrowdSet } from '../actors/CrowdSet.ts'
 import { CROWD_SEED, createCrowd, crowdId, crowdIndex, crowdPose, type CrowdFile, type CrowdWorld } from '../actors/crowdSim.ts'
-import { createPeople, stepPeople, type PeopleFile, type PersonSim } from '../actors/peopleSim.ts'
+import { asideStep, createPeople, stepPeople, type PeopleFile, type PersonSim, type RoadThreat } from '../actors/peopleSim.ts'
 import { PuppetSet } from '../actors/PuppetSet.ts'
 import { Ambience } from '../audio/ambience.ts'
 import { DeliveryRun } from '../delivery/DeliveryRun.ts'
@@ -352,7 +352,7 @@ export class Game {
     this.copyDrivenCar(pos.x, pos.z)
     this.applyRemoteCars()
     this.releaseCrowd(pos.x, pos.z)
-    this.crowdView.update(this.time, this.crowdFreeze, this.crowdBlocks())
+    this.crowdView.update(this.time, this.crowdFreeze, this.crowdBlocks(), this.roadThreat(pos))
     this.syncPeople()
     stepTraffic(this.cars, this.network, this.trafficFile, this.time, dt, this.carRng, this.trafficObstacles())
     stepBuses(this.buses, this.network, this.busFile, this.time, dt, this.busRng, this.busObstacles())
@@ -370,12 +370,12 @@ export class Game {
     this.client.sendMove(pos.x, pos.z, this.walker.facing, this.drivenRide())
     if (!this.live) {
       this.releaseHeld(pos.x, pos.z)
-      stepPeople(this.sim, this.layout, this.peopleFile.speed, dt, this.rng, this.held)
+      stepPeople(this.sim, this.layout, this.peopleFile.speed, dt, this.rng, this.held, this.roadThreat(pos))
       this.citizens = this.sim.map((person) => this.toNet(person))
     }
     this.syncPeople()
     this.syncBlockers()
-    this.citizensView.sync(this.citizens, dt, this.blockers)
+    this.citizensView.sync(this.peopleAside(this.roadThreat(pos)), dt, this.blockers)
     this.walkersView.sync(
       this.remotes.filter((player) => !player.car).map((player) => ({
         id: player.id,
@@ -415,6 +415,8 @@ export class Game {
       driving: this.walker.driving,
       driveSpeed: this.walker.driveSpeed,
       throttle: this.walker.throttle,
+      skid: this.walker.skidding,
+      braking: this.walker.braking,
       onFoot: !this.walker.driving && !this.walker.flying && !this.walker.riding,
       altitude: this.walker.flying ? pos.y : 0,
       muted: this.paused,
@@ -578,6 +580,20 @@ export class Game {
     disc.x = x
     disc.z = z
     disc.yaw = car.yaw
+  }
+
+  private peopleAside(threat: RoadThreat | null): NetPerson[] {
+    if (!threat) return this.citizens
+    return this.citizens.map((person) => {
+      const next = asideStep(person.x, person.z, threat)
+      if (next.x === person.x && next.z === person.z) return person
+      return { ...person, x: next.x, z: next.z }
+    })
+  }
+
+  private roadThreat(pos: THREE.Vector3): RoadThreat | null {
+    if (!this.walker.driving) return null
+    return { x: pos.x, z: pos.z, yaw: this.walker.facing, speed: this.walker.driveSpeed }
   }
 
   /** Screen point of the car the chase camera is following. */

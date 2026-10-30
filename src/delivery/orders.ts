@@ -20,6 +20,9 @@ export type DeliveryFile = {
   tipFast: number
   /** Seconds or slower pays the smallest tip. */
   tipSlow: number
+  taxiFare: number
+  taxiTipMin: number
+  taxiTipMax: number
   kinds: string[]
   customers: string[]
 }
@@ -33,6 +36,15 @@ export type DeliveryOrder = {
   dropoff: Spot
 }
 
+export type TaxiRide = {
+  passenger: string
+  street: string
+  pickup: Spot
+  dropoff: Spot
+  /** Where the passenger stands, just off the lane. */
+  stand: Spot
+}
+
 export type DropPhase = 'pickup' | 'dropoff'
 
 export function orderLine(order: DeliveryOrder, phase: DropPhase): string {
@@ -42,10 +54,30 @@ export function orderLine(order: DeliveryOrder, phase: DropPhase): string {
 
 /** Fare plus a tip. The tip is the max at tipFast seconds and the min at tipSlow. */
 export function deliveryPay(seconds: number, file: DeliveryFile): { fare: number; tip: number; total: number } {
+  return payFor(seconds, file, file.fare, file.tipMin, file.tipMax)
+}
+
+/** A ride pays more than a delivery, and still more when it is fast. */
+export function taxiPay(seconds: number, file: DeliveryFile): { fare: number; tip: number; total: number } {
+  return payFor(seconds, file, file.taxiFare, file.taxiTipMin, file.taxiTipMax)
+}
+
+export function taxiLine(ride: TaxiRide, phase: DropPhase): string {
+  if (phase === 'pickup') return `${ride.passenger} is waving for a ride`
+  return `Take ${ride.passenger} to ${ride.street}`
+}
+
+function payFor(
+  seconds: number,
+  file: DeliveryFile,
+  fare: number,
+  tipMin: number,
+  tipMax: number,
+): { fare: number; tip: number; total: number } {
   const span = Math.max(1, file.tipSlow - file.tipFast)
   const rush = Math.max(0, Math.min(1, (file.tipSlow - seconds) / span))
-  const tip = Math.round(file.tipMin + (file.tipMax - file.tipMin) * rush)
-  return { fare: file.fare, tip, total: file.fare + tip }
+  const tip = Math.round(tipMin + (tipMax - tipMin) * rush)
+  return { fare, tip, total: fare + tip }
 }
 
 /** Stopped in a car, inside the halo. Driving through does not count. */
@@ -105,6 +137,75 @@ export function planDelivery(
     }
   }
   return null
+}
+
+/** A curb hail and a dropoff on another street, far enough to be a ride. */
+export function planTaxi(
+  layout: CityLayout,
+  network: RoadNetwork,
+  player: Spot,
+  rng: () => number,
+  file: DeliveryFile,
+  avoidPassenger = '',
+): TaxiRide | null {
+  const picks: { lane: number; dist: number }[] = []
+  for (const lane of network.lanes) {
+    if (lane.length < 24) continue
+    for (let dist = 10; dist < lane.length - 10; dist += 30) {
+      const spot = sampleLane(lane, dist)
+      const away = Math.hypot(spot.x - player.x, spot.z - player.z)
+      if (away < file.minPickup || away > file.maxPickup) continue
+      if (hitsBuilding(layout, spot.x, spot.z, 1.2)) continue
+      picks.push({ lane: lane.id, dist })
+    }
+  }
+  shuffle(picks, rng)
+  const tries = Math.min(picks.length, 16)
+  for (let i = 0; i < tries; i++) {
+    const pick = picks[i]!
+    const lane = network.lanes[pick.lane]
+    if (!lane) continue
+    const pose = sampleLane(lane, pick.dist)
+    const drop = taxiDrop(network, layout, pose, lane.name, rng, file)
+    if (!drop) continue
+    return {
+      passenger: pickName(file.customers, rng, avoidPassenger),
+      street: drop.street,
+      pickup: { x: pose.x, z: pose.z },
+      dropoff: drop.spot,
+      stand: sidewalk(pose.x, pose.z, pose.yaw, layout),
+    }
+  }
+  return null
+}
+
+function taxiDrop(
+  network: RoadNetwork,
+  layout: CityLayout,
+  pickup: { x: number; z: number; yaw: number },
+  fromStreet: string,
+  rng: () => number,
+  file: DeliveryFile,
+): { spot: Spot; street: string } | null {
+  const lanes = network.lanes.filter((lane) => lane.name !== fromStreet && lane.length > 24)
+  shuffle(lanes, rng)
+  for (const lane of lanes.slice(0, 14)) {
+    const dist = 10 + rng() * Math.max(1, lane.length - 20)
+    const pose = sampleLane(lane, dist)
+    const trip = Math.hypot(pose.x - pickup.x, pose.z - pickup.z)
+    if (trip < file.minTrip || trip > file.maxTrip) continue
+    if (hitsBuilding(layout, pose.x, pose.z, 1.2)) continue
+    return { spot: { x: pose.x, z: pose.z }, street: lane.name }
+  }
+  return null
+}
+
+function sidewalk(x: number, z: number, yaw: number, layout: CityLayout): Spot {
+  const tx = Math.sin(yaw)
+  const tz = Math.cos(yaw)
+  const stand = { x: x - tz * 2.6, z: z + tx * 2.6 }
+  if (hitsBuilding(layout, stand.x, stand.z, 0.4)) return { x, z }
+  return stand
 }
 
 function houseSpot(

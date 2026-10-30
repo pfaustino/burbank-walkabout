@@ -1,4 +1,5 @@
 import * as THREE from 'three'
+import { asideStep, type RoadThreat } from './peopleSim.ts'
 import { separatePeople, pushClear, type Disc } from '../traffic/bodies.ts'
 import { crowdId, crowdIndex, crowdPose, type CrowdWorld } from './crowdSim.ts'
 import { createFigure, type Figure } from './figure.ts'
@@ -40,7 +41,7 @@ export class CrowdSet {
     this.update(0)
   }
 
-  update(time: number, frozen?: ReadonlyMap<number, number>, blocks: readonly Disc[] = []): void {
+  update(time: number, frozen?: ReadonlyMap<number, number>, blocks: readonly Disc[] = [], threat?: RoadThreat | null): void {
     const dt = Math.min(0.05, Math.max(0, time - this.lastTime))
     this.lastTime = time
     const people = this.world.people
@@ -54,6 +55,13 @@ export class CrowdSet {
       this.xy[i * 2 + 1] = pose.z
     }
     separatePeople(this.xy, blocks)
+    if (threat) {
+      for (let i = 0; i < people.length; i++) {
+        const next = asideStep(this.xy[i * 2]!, this.xy[i * 2 + 1]!, threat)
+        this.xy[i * 2] = next.x
+        this.xy[i * 2 + 1] = next.z
+      }
+    }
     for (let i = 0; i < people.length; i++) {
       const person = people[i]!
       const root = this.figures[i]!.root

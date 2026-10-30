@@ -22,6 +22,13 @@ export type CarSim = {
   /** Sideways shove left over from a bump, in meters. It fades back onto the lane. */
   knockX?: number
   knockZ?: number
+  /** Seconds left on a cut-off honk. Fresh values are above 1.4. */
+  horn?: number
+}
+
+/** True when a driven car is close in front and this car should brake and honk. */
+export function cutsOff(ahead: number, side: number, speed: number, half: number): boolean {
+  return speed > 3 && ahead > 0.5 && ahead < 10 && Math.abs(side) < half + 1.5
 }
 
 export type TrafficFile = {
@@ -148,6 +155,7 @@ export function stepTraffic(
   for (let i = 0; i < cars.length; i++) {
     const car = cars[i]!
     if (car.driver) continue
+    if ((car.horn ?? 0) > 0) car.horn = Math.max(0, (car.horn ?? 0) - dt)
     const self = bodyPool[i]!
     const lane = network.lanes[car.lane]
     if (!lane) continue
@@ -270,6 +278,11 @@ function yieldStop(car: CarSim, self: Body, grid: BodyGrid, slow: (speed: number
     const half = CAR_HALF_WIDTH + body.r + 0.25
     const overlap = overlapsCapsule(car.x, car.z, car.yaw, CAR_HALF_LENGTH, CAR_HALF_WIDTH, body)
     const close = ahead > 0.35 && ahead < reach && Math.abs(side) < half
+    if (body.priority && body.order >= 0 && cutsOff(ahead, side, car.speed, half)) {
+      if ((car.horn ?? 0) <= 0) car.horn = 1.8
+      if (ahead < 4.5) hard = true
+      else slow(Math.max(0, (ahead - stopLine) * 0.35))
+    }
     const boarding = body.id === 'you' && ahead > -CAR_HALF_LENGTH && dx * dx + dz * dz < 13
     if (!overlap && !close && !boarding) return
     if (boarding) {

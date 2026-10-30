@@ -5,7 +5,8 @@ import { hitsBuilding, buildLayout, type MapFile } from '../src/world/layout.ts'
 import { buildNetwork, lamps, sampleLane } from '../src/traffic/network.ts'
 import { bumpCars } from '../src/traffic/bumps.ts'
 import { wallBounce } from '../src/player/Walker.ts'
-import { createTraffic, stepTraffic, type CarSim, type TrafficFile } from '../src/traffic/trafficSim.ts'
+import { asideStep } from '../src/actors/peopleSim.ts'
+import { createTraffic, cutsOff, stepTraffic, type CarSim, type TrafficFile } from '../src/traffic/trafficSim.ts'
 import { stepBuses, type BusFile, type BusSim } from '../src/traffic/busSim.ts'
 import { BUS_HALF_LENGTH, BUS_HALF_WIDTH, CAR_HALF_LENGTH, CAR_HALF_WIDTH, overlapsCapsule, slideClear } from '../src/traffic/bodies.ts'
 import busesJson from '../data/buses.json'
@@ -16,6 +17,15 @@ const layout = buildLayout(mapJson as MapFile)
 const network = buildNetwork(layout)
 
 describe('traffic', () => {
+  it('brakes and steps aside when a car cuts through', () => {
+    expect(cutsOff(3, 0.4, 8, 1.8)).toBe(true)
+    expect(cutsOff(18, 0, 8, 1.8)).toBe(false)
+    expect(cutsOff(3, 0, 1, 1.8)).toBe(false)
+    const moved = asideStep(0, 4, { x: 0, z: 0, yaw: 0, speed: 10 })
+    expect(Math.abs(moved.x)).toBeGreaterThan(1.5)
+    expect(asideStep(12, 4, { x: 0, z: 0, yaw: 0, speed: 10 })).toEqual({ x: 12, z: 4 })
+  })
+
   it('bounces a car back off a building', () => {
     const hit = wallBounce(12)
     expect(hit).not.toBeNull()

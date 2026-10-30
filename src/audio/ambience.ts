@@ -1,6 +1,6 @@
 import { ENGINE_WORKLET, newGearbox, stepGearbox } from './engineSynth.ts'
 
-type Mover = { x: number; z: number; speed: number }
+type Mover = { id?: string; x: number; z: number; speed: number; horn?: number }
 
 export type AmbienceWorld = {
   hour: number
@@ -11,6 +11,8 @@ export type AmbienceWorld = {
   driving: boolean
   driveSpeed: number
   throttle: number
+  skid: number
+  braking: boolean
   onFoot: boolean
   altitude: number
   muted: boolean
@@ -41,6 +43,10 @@ export class Ambience {
   private engineSynth: AudioWorkletNode | null = null
   private readonly gearbox = newGearbox()
   private load = 0
+  private tireGain: GainNode | null = null
+  private tireFilter: BiquadFilterNode | null = null
+  private brakeGain: GainNode | null = null
+  private readonly horned = new Set<string>()
 
   resume(): void {
     const ctx = this.ensure()
@@ -94,6 +100,8 @@ export class Ambience {
     if (!day) this.chirpAt = 2
 
     this.hearEngine(now, dt, world)
+    this.hearTires(now, world)
+    this.hearHorns(now, world)
 
     if (now > this.honkAt) {
       let pick: Mover | null = null
@@ -186,6 +194,7 @@ export class Ambience {
     const bus = this.loop(ctx, this.noise, 90, 'lowpass', 0)
     this.busGain = bus.gain
     this.busPan = bus.pan
+    this.startTires(ctx)
     this.startEngine(ctx)
     const base = import.meta.env.BASE_URL
     // Pixabay Content License: "Sound Effect - Car Crash" by u_mgq59j5ayf,
@@ -209,6 +218,59 @@ export class Ambience {
         else this.coinBuf = audio
       })
       .catch(() => undefined)
+  }
+
+  private startTires(ctx: AudioContext): void {
+    if (!this.noise || !this.master) return
+    const tire = ctx.createBiquadFilter()
+    tire.type = 'bandpass'
+    tire.frequency.value = 800
+    tire.Q.value = 0.8
+    const tireAmp = ctx.createGain()
+    tireAmp.gain.value = 0
+    const brake = ctx.createBiquadFilter()
+    brake.type = 'bandpass'
+    brake.frequency.value = 2400
+    brake.Q.value = 7
+    const brakeAmp = ctx.createGain()
+    brakeAmp.gain.value = 0
+    const source = ctx.createBufferSource()
+    source.buffer = this.noise
+    source.loop = true
+    source.connect(tire)
+    tire.connect(tireAmp)
+    tireAmp.connect(this.master)
+    const squeal = ctx.createBufferSource()
+    squeal.buffer = this.noise
+    squeal.loop = true
+    squeal.connect(brake)
+    brake.connect(brakeAmp)
+    brakeAmp.connect(this.master)
+    source.start()
+    squeal.start()
+    this.tireFilter = tire
+    this.tireGain = tireAmp
+    this.brakeGain = brakeAmp
+  }
+
+  private hearTires(now: number, world: AmbienceWorld): void {
+    if (!this.tireGain || !this.tireFilter || !this.brakeGain) return
+    const moving = world.driving ? Math.min(1, Math.abs(world.driveSpeed) / 8) : 0
+    this.tireFilter.frequency.setTargetAtTime(650 + world.skid * 1100 + moving * 200, now, 0.05)
+    this.tireGain.gain.setTargetAtTime(moving * 0.012 + world.skid * 0.2, now, 0.04)
+    this.brakeGain.gain.setTargetAtTime(world.braking ? 0.11 : 0.0001, now, 0.03)
+  }
+
+  private hearHorns(now: number, world: AmbienceWorld): void {
+    for (const car of world.cars) {
+      const id = car.id
+      if (!id) continue
+      if ((car.horn ?? 0) > 1.4 && !this.horned.has(id)) {
+        this.honk(now, panOf(car, world))
+        this.horned.add(id)
+      }
+      if ((car.horn ?? 0) <= 0) this.horned.delete(id)
+    }
   }
 
   private startEngine(ctx: AudioContext): void {

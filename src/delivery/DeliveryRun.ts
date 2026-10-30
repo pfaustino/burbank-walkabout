@@ -1,4 +1,6 @@
 import * as THREE from 'three'
+import { createFigure, type Figure } from '../actors/figure.ts'
+import { shirtForName } from '../net/protocol.ts'
 import type { RoadNetwork } from '../traffic/network.ts'
 import type { Hud } from '../ui/Hud.ts'
 import type { CityLayout } from '../world/layout.ts'
@@ -8,17 +10,25 @@ import {
   orderLine,
   parkedOn,
   planDelivery,
+  planTaxi,
+  taxiLine,
+  taxiPay,
   type DeliveryFile,
   type DeliveryOrder,
   type DropPhase,
   type Spot,
+  type TaxiRide,
 } from './orders.ts'
 
 const PICKUP = 0xffc107
 const DROPOFF = 0x3ddc84
+const HAIL = 0x3d9eff
 
 export class DeliveryRun {
   private order: DeliveryOrder | null = null
+  private ride: TaxiRide | null = null
+  private passenger: Figure | null = null
+  private wantTaxi = true
   private lastCustomer = ''
   private phase: DropPhase | 'gap' = 'gap'
   private wait = 0.6
@@ -67,7 +77,7 @@ export class DeliveryRun {
 
   get marker(): { x: number; z: number; dropoff: boolean } | null {
     const spot = this.goal()
-    if (!spot || !this.order) return null
+    if (!spot || (!this.order && !this.ride)) return null
     return { x: spot.x, z: spot.z, dropoff: this.phase === 'dropoff' }
   }
 
@@ -81,17 +91,21 @@ export class DeliveryRun {
       return
     }
     const spot = this.goal()
-    if (!this.order || !spot) return
+    if ((!this.order && !this.ride) || !spot) return
     this.placeCue(pose.x, pose.z, spot)
+    this.wave(dt, pose.x, pose.z)
     if (!parkedOn(pose.driving, pose.speed, pose.x, pose.z, spot, this.file.haloRadius, this.file.parkSpeed)) return
     if (this.phase === 'pickup') {
       this.phase = 'dropoff'
-      this.show(this.order, 'dropoff')
+      this.clearPassenger()
+      if (this.ride) this.showRide(this.ride, 'dropoff')
+      else if (this.order) this.show(this.order, 'dropoff')
       return
     }
-    const pay = deliveryPay(this.elapsed, this.file)
+    const pay = this.ride ? taxiPay(this.elapsed, this.file) : deliveryPay(this.elapsed, this.file)
     this.hud.addPay(pay.fare, pay.tip)
     this.order = null
+    this.ride = null
     this.phase = 'gap'
     this.wait = this.file.gap
     this.elapsed = 0
@@ -100,17 +114,35 @@ export class DeliveryRun {
   }
 
   dispose(): void {
+    this.clearPassenger()
     this.scene.remove(this.arrow, this.halo)
     disposeDrawn(this.arrow)
     disposeDrawn(this.halo)
   }
 
   private offer(pose: Spot): void {
+    const taxi = this.wantTaxi
+    this.wantTaxi = !this.wantTaxi
+    if (taxi) {
+      const ride = planTaxi(this.layout, this.network, pose, this.rng, this.file, this.lastCustomer)
+      if (ride) {
+        this.order = null
+        this.ride = ride
+        this.lastCustomer = ride.passenger
+        this.phase = 'pickup'
+        this.elapsed = 0
+        this.showRide(ride, 'pickup')
+        this.seatPassenger(ride)
+        return
+      }
+    }
     const order = planDelivery(this.layout, this.network, this.businesses, pose, this.rng, this.file, this.lastCustomer)
     if (!order) {
       this.wait = 2
       return
     }
+    this.ride = null
+    this.clearPassenger()
     this.order = order
     this.lastCustomer = order.customer
     this.phase = 'pickup'
@@ -119,8 +151,49 @@ export class DeliveryRun {
   }
 
   private goal(): Spot | null {
+    if (this.ride) return this.phase === 'dropoff' ? this.ride.dropoff : this.ride.pickup
     if (!this.order) return null
     return this.phase === 'dropoff' ? this.order.dropoff : this.order.pickup
+  }
+
+  private showRide(ride: TaxiRide, phase: DropPhase): void {
+    const color = phase === 'dropoff' ? DROPOFF : HAIL
+    this.arrowFace.color.setHex(color)
+    for (const mat of this.haloMats) mat.color.setHex(color)
+    this.hud.setOrder(taxiLine(ride, phase), phase === 'dropoff')
+  }
+
+  private seatPassenger(ride: TaxiRide): void {
+    this.clearPassenger()
+    const figure = createFigure({
+      name: ride.passenger,
+      voice: ride.passenger.length % 2 === 0 ? 'female' : 'male',
+      shirt: shirtForName(ride.passenger),
+      pants: '#243044',
+      skin: '#e0b090',
+      hair: '#2a2118',
+      showName: true,
+    })
+    figure.root.position.set(ride.stand.x, 0, ride.stand.z)
+    this.scene.add(figure.root)
+    this.passenger = figure
+  }
+
+  private wave(dt: number, x: number, z: number): void {
+    const ride = this.ride
+    const figure = this.passenger
+    if (!ride || !figure || this.phase !== 'pickup') return
+    figure.root.position.set(ride.stand.x, 0, ride.stand.z)
+    figure.root.rotation.y = Math.atan2(x - ride.stand.x, z - ride.stand.z)
+    figure.update(dt, 0)
+  }
+
+  private clearPassenger(): void {
+    const figure = this.passenger
+    if (!figure) return
+    this.scene.remove(figure.root)
+    figure.dispose()
+    this.passenger = null
   }
 
   private show(order: DeliveryOrder, phase: DropPhase): void {

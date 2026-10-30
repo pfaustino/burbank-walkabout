@@ -60,6 +60,23 @@ export function createPeople(layout: CityLayout, file: PeopleFile, rng: () => nu
   return people
 }
 
+export type RoadThreat = { x: number; z: number; yaw: number; speed: number }
+
+/** Step off the nose of a car that is about to drive through this spot. */
+export function asideStep(x: number, z: number, car: RoadThreat): { x: number; z: number } {
+  if (Math.abs(car.speed) < 2.5) return { x, z }
+  const fx = Math.sin(car.yaw)
+  const fz = Math.cos(car.yaw)
+  const dx = x - car.x
+  const dz = z - car.z
+  const ahead = dx * fx + dz * fz
+  const side = dx * -fz + dz * fx
+  if (ahead < -1.2 || ahead > 7.5 || Math.abs(side) > 2.1) return { x, z }
+  const sign = side >= 0 ? 1 : -1
+  const push = 2.35 - Math.abs(side)
+  return { x: x + -fz * sign * push, z: z + fx * sign * push }
+}
+
 export function stepPeople(
   people: PersonSim[],
   layout: CityLayout,
@@ -67,9 +84,15 @@ export function stepPeople(
   dt: number,
   rng: () => number,
   held?: ReadonlySet<string>,
+  threat?: RoadThreat | null,
 ): void {
   for (const person of people) {
     if (held?.has(person.id)) continue
+    if (threat) {
+      const next = asideStep(person.x, person.z, threat)
+      person.x = next.x
+      person.z = next.z
+    }
     const loop = sidewalkLoop(layout, person.street, person.part)
     if (loop.length < 2) continue
     if (person.pause > 0) {
