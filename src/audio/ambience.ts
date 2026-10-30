@@ -261,17 +261,17 @@ export class Ambience {
     const accel = dt > 0 ? (speed - this.driveHeard) / dt : 0
     this.driveHeard = speed
     const climb = Math.max(0, Math.min(6, accel))
-    // Stay below the recording at idle and only a little above it when accelerating.
-    const rate = Math.min(1.05, 0.68 + speed * 0.014 + climb * 0.01)
+    // Idle stays under the recording. Speed and throttle each lift the pitch so a pull away is a rev.
+    const rate = Math.min(1.75, 0.72 + speed * 0.042 + climb * 0.08)
     if (this.engineSrc) {
-      this.engineSrc.playbackRate.setTargetAtTime(rate, now, 0.12)
-      this.engineFilter.frequency.setTargetAtTime(240 + speed * 6, now, 0.12)
+      this.engineSrc.playbackRate.setTargetAtTime(rate, now, 0.05)
+      this.engineFilter.frequency.setTargetAtTime(Math.min(980, 260 + speed * 24 + climb * 40), now, 0.05)
     } else if (this.engineOsc) {
-      this.engineOsc.frequency.setTargetAtTime(18 + speed * 1.3 + climb, now, 0.12)
-      this.engineFilter.frequency.setTargetAtTime(90 + speed * 5, now, 0.12)
+      this.engineOsc.frequency.setTargetAtTime(22 + speed * 2.2 + climb * 3, now, 0.05)
+      this.engineFilter.frequency.setTargetAtTime(120 + speed * 14, now, 0.05)
     }
-    const loud = 0.05 + Math.min(0.08, speed * 0.004) + climb * 0.006
-    this.engineGain.gain.setTargetAtTime(loud, now, 0.08)
+    const loud = 0.055 + Math.min(0.09, speed * 0.005) + climb * 0.012
+    this.engineGain.gain.setTargetAtTime(loud, now, 0.05)
   }
 
   private loop(
