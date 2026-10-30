@@ -1,0 +1,30 @@
+{
+  "haloRadius": 4.2,
+  "parkSpeed": 1.4,
+  "minPickup": 40,
+  "maxPickup": 480,
+  "minTrip": 80,
+  "maxTrip": 560,
+  "roadReach": 32,
+  "houseHeight": 12,
+  "gap": 1.8,
+  "kinds": ["restaurant", "fast_food", "cafe", "bakery", "ice_cream", "convenience", "bar", "pub", "butcher", "tea", "confectionery", "supermarket"],
+  "customers": [
+    "June Alvarez",
+    "Marcus Bell",
+    "Priya Shah",
+    "Luis Ortega",
+    "Aisha Coleman",
+    "Kenji Mori",
+    "Rosa Nguyen",
+    "Sam Reyes",
+    "Elena Vasquez",
+    "Noah Park",
+    "Diane Cho",
+    "Chris Adelman",
+    "Holly Grant",
+    "Victor Lang",
+    "Maya Ellison",
+    "Andre Brooks"
+  ]
+}

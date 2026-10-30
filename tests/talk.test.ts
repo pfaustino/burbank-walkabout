@@ -35,6 +35,14 @@ describe('talk', () => {
       t: 3.5,
     })
     expect(parseClientMessage({ type: 'move', x: 1, z: 2 })).toBeNull()
+    expect(parseClientMessage({ type: 'move', x: 1, z: 2, yaw: 0.5, car: { model: 'suv', color: '#2457c5' } })).toEqual({
+      type: 'move',
+      x: 1,
+      z: 2,
+      yaw: 0.5,
+      car: { model: 'suv', color: '#2457c5' },
+    })
+    expect(parseClientMessage({ type: 'move', x: 1, z: 2, yaw: 0 })).toMatchObject({ car: null })
   })
 
   it('cleans names', () => {

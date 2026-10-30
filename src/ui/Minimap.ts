@@ -48,6 +48,7 @@ export class Minimap {
     crowdXY: Float32Array
     people: MinimapMarker[]
     heli: MinimapMarker
+    job?: { x: number; z: number; dropoff: boolean } | null
   }): void {
     const ctx = this.ctx
     const inner = SIZE - PAD * 2
@@ -110,6 +111,8 @@ export class Minimap {
       ctx.fill()
     }
 
+    if (input.job) paintJob(ctx, project(input.job.x, input.job.z), input.job.dropoff, PAD, inner)
+
     const player = project(input.x, input.z)
     ctx.save()
     ctx.translate(player.sx, player.sy)
@@ -139,6 +142,43 @@ export class Minimap {
   dispose(): void {
     this.ctx.clearRect(0, 0, SIZE, SIZE)
   }
+}
+
+function paintJob(
+  ctx: CanvasRenderingContext2D,
+  spot: { sx: number; sy: number },
+  dropoff: boolean,
+  pad: number,
+  inner: number,
+): void {
+  const cx = pad + inner / 2
+  const cy = pad + inner / 2
+  const dx = spot.sx - cx
+  const dy = spot.sy - cy
+  const limit = inner / 2 - 10
+  const dist = Math.hypot(dx, dy) || 1
+  const clamped = dist > limit
+  const sx = clamped ? cx + (dx / dist) * limit : spot.sx
+  const sy = clamped ? cy + (dy / dist) * limit : spot.sy
+  ctx.save()
+  ctx.translate(sx, sy)
+  ctx.fillStyle = dropoff ? '#3ddc84' : '#ffc107'
+  if (!clamped) {
+    ctx.strokeStyle = ctx.fillStyle
+    ctx.lineWidth = 2
+    ctx.beginPath()
+    ctx.arc(0, 0, 8, 0, Math.PI * 2)
+    ctx.stroke()
+  }
+  ctx.rotate(Math.atan2(dx, -dy))
+  ctx.beginPath()
+  ctx.moveTo(0, -8)
+  ctx.lineTo(5, 5)
+  ctx.lineTo(0, 2)
+  ctx.lineTo(-5, 5)
+  ctx.closePath()
+  ctx.fill()
+  ctx.restore()
 }
 
 function paintCity(ctx: CanvasRenderingContext2D, layout: CityLayout, ppm: number, minX: number, maxZ: number): void {

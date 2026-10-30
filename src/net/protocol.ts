@@ -1,8 +1,13 @@
 import type { PersonVoice } from '../actors/peopleSim.ts'
 
+export type NetCarRide = {
+  model: 'sedan' | 'suv' | 'sport' | 'taxi'
+  color: string
+}
+
 export type ClientMsg =
   | { type: 'hello'; name: string }
-  | { type: 'move'; x: number; z: number; yaw: number }
+  | { type: 'move'; x: number; z: number; yaw: number; car: NetCarRide | null }
   | { type: 'talk'; npcId: string; text: string; x: number; z: number; t?: number }
   | { type: 'say'; text: string; x: number; z: number }
 
@@ -26,6 +31,8 @@ export type NetPlayer = {
   x: number
   z: number
   yaw: number
+  /** Set while this player is driving. Absent on an older snapshot. */
+  car?: NetCarRide | null
 }
 
 export type SpeechMsg = {
@@ -79,7 +86,7 @@ export function parseClientMessage(value: unknown): ClientMsg | null {
     const z = finite(rec.z)
     const yaw = finite(rec.yaw)
     if (x === null || z === null || yaw === null) return null
-    return { type: 'move', x, z, yaw }
+    return { type: 'move', x, z, yaw, car: parseRide(rec.car) }
   }
   if (rec.type === 'talk') {
     const x = finite(rec.x)
@@ -102,6 +109,16 @@ export function parseClientMessage(value: unknown): ClientMsg | null {
     return { type: 'say', text, x, z }
   }
   return null
+}
+
+const CAR_MODELS = new Set(['sedan', 'suv', 'sport', 'taxi'])
+
+function parseRide(value: unknown): NetCarRide | null {
+  if (!value || typeof value !== 'object') return null
+  const rec = value as Record<string, unknown>
+  if (typeof rec.model !== 'string' || !CAR_MODELS.has(rec.model)) return null
+  if (typeof rec.color !== 'string' || !/^#[0-9a-fA-F]{6}$/.test(rec.color)) return null
+  return { model: rec.model as NetCarRide['model'], color: rec.color }
 }
 
 function finite(value: unknown): number | null {

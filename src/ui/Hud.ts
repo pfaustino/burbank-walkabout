@@ -14,6 +14,7 @@ export class Hud {
   private readonly input: HTMLInputElement
   private readonly mic: HTMLButtonElement
   private readonly pause: HTMLElement
+  private readonly order: HTMLElement
   private subTimer = 0
 
   constructor(handlers: {
@@ -30,6 +31,7 @@ export class Hud {
     this.input = must('#say-input') as HTMLInputElement
     this.mic = must('#mic') as HTMLButtonElement
     this.pause = must('#pause-banner')
+    this.order = must('#order')
 
     const form = must('#talk-bar') as HTMLFormElement
     form.addEventListener('submit', (event) => {
@@ -65,6 +67,18 @@ export class Hud {
 
   setPaused(paused: boolean): void {
     this.pause.hidden = !paused
+  }
+
+  setOrder(text: string | null, dropoff = false): void {
+    if (!text) {
+      this.order.hidden = true
+      this.order.textContent = ''
+      this.order.classList.remove('dropoff')
+      return
+    }
+    this.order.hidden = false
+    if (this.order.textContent !== text) this.order.textContent = text
+    this.order.classList.toggle('dropoff', dropoff)
   }
 
   setDraft(text: string): void {

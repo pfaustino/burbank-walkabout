@@ -63,6 +63,26 @@ html, body, #app {
   letter-spacing: 0.08em;
 }
 
+#order {
+  position: fixed;
+  top: 72px;
+  left: 50%;
+  z-index: 5;
+  transform: translateX(-50%);
+  max-width: min(640px, calc(100% - 280px));
+  padding: 12px 18px;
+  background: rgba(16, 28, 40, 0.9);
+  border: 3px solid #ffc107;
+  border-radius: 12px;
+  font-size: 22px;
+  font-weight: 750;
+  text-align: center;
+  pointer-events: none;
+  text-shadow: 0 1px 2px #000;
+}
+
+#order.dropoff { border-color: #3ddc84; }
+
 #subtitle {
   position: fixed;
   left: 50%;

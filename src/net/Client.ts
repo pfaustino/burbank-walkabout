@@ -1,4 +1,4 @@
-import type { ClientMsg, NetPerson, NetPlayer, ServerMsg, SpeechMsg } from './protocol.ts'
+import type { ClientMsg, NetCarRide, NetPerson, NetPlayer, ServerMsg, SpeechMsg } from './protocol.ts'
 
 export class CityClient {
   id = ''
@@ -69,8 +69,8 @@ export class CityClient {
     if (this.queue.length < 20) this.queue.push(msg)
   }
 
-  sendMove(x: number, z: number, yaw: number): void {
-    this.pendingMove = { type: 'move', x, z, yaw }
+  sendMove(x: number, z: number, yaw: number, car: NetCarRide | null = null): void {
+    this.pendingMove = { type: 'move', x, z, yaw, car }
     const now = performance.now()
     if (now - this.moveTimer < 50) return
     this.flushMove()

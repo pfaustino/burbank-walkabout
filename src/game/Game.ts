@@ -1,5 +1,6 @@
 import * as THREE from 'three'
 import busesJson from '../../data/buses.json'
+import deliveryJson from '../../data/delivery.json'
 import businessesJson from '../../data/businesses.json'
 import crowdJson from '../../data/crowd.json'
 import foliageJson from '../../data/foliage.json'
@@ -11,9 +12,11 @@ import { CROWD_SEED, createCrowd, crowdId, crowdIndex, crowdPose, type CrowdFile
 import { createPeople, stepPeople, type PeopleFile, type PersonSim } from '../actors/peopleSim.ts'
 import { PuppetSet } from '../actors/PuppetSet.ts'
 import { Ambience } from '../audio/ambience.ts'
+import { DeliveryRun } from '../delivery/DeliveryRun.ts'
+import type { DeliveryFile } from '../delivery/orders.ts'
 import { mountDevPanel } from '../dev/DevPanel.ts'
 import { CityClient, clientUrl } from '../net/Client.ts'
-import type { NetPerson, NetPlayer, SpeechMsg } from '../net/protocol.ts'
+import type { NetCarRide, NetPerson, NetPlayer, SpeechMsg } from '../net/protocol.ts'
 import { Walker } from '../player/Walker.ts'
 import { BusSet } from '../traffic/BusSet.ts'
 import { CarSet } from '../traffic/CarSet.ts'
@@ -78,6 +81,7 @@ export class Game {
   private readonly foliage: { root: THREE.Group; update(time: number): void; dispose(): void }
   private readonly helicopter: Helicopter
   private readonly minimap: Minimap
+  private readonly delivery: DeliveryRun
   private readonly wordnet = new WordRain()
   private readonly client: CityClient
   private readonly sun: THREE.DirectionalLight
@@ -222,6 +226,15 @@ export class Game {
         this.hear = enabled
       },
     })
+    this.delivery = new DeliveryRun(
+      this.scene,
+      this.layout,
+      this.network,
+      businessesJson as Business[],
+      this.hud,
+      createSeededRng(0xd45e),
+      deliveryJson as DeliveryFile,
+    )
 
     this.client = new CityClient(clientUrl(), playerName, {
       onPeople: (people) => {
@@ -297,6 +310,7 @@ export class Game {
     this.crowdView.dispose()
     this.foliage.dispose()
     this.helicopter.dispose()
+    this.delivery.dispose()
     this.minimap.dispose()
     this.wordnet.dispose()
     this.scene.remove(this.foliage.root, this.helicopter.root, this.storefronts, this.lamps.root)
@@ -324,6 +338,7 @@ export class Game {
     const pos = this.walker.mesh.position
     this.time += dt
     this.copyDrivenCar(pos.x, pos.z)
+    this.applyRemoteCars()
     this.releaseCrowd(pos.x, pos.z)
     this.crowdView.update(this.time, this.crowdFreeze, this.crowdBlocks())
     this.syncPeople()
@@ -340,7 +355,7 @@ export class Game {
       this.helicopter.board()
       this.hud.setStatus(FLY_HINT)
     }
-    this.client.sendMove(pos.x, pos.z, this.walker.facing)
+    this.client.sendMove(pos.x, pos.z, this.walker.facing, this.drivenRide())
     if (!this.live) {
       this.releaseHeld(pos.x, pos.z)
       stepPeople(this.sim, this.layout, this.peopleFile.speed, dt, this.rng, this.held)
@@ -350,7 +365,7 @@ export class Game {
     this.syncBlockers()
     this.citizensView.sync(this.citizens, dt, this.blockers)
     this.walkersView.sync(
-      this.remotes.map((player) => ({
+      this.remotes.filter((player) => !player.car).map((player) => ({
         id: player.id,
         name: player.name,
         voice: 'male',
@@ -388,6 +403,12 @@ export class Game {
     })
     this.hud.setPlace(`${formatHour(this.dayHour)} · ${describePlace(this.layout, pos.x, pos.z)}`)
     this.hud.setNearby(this.nearbyText())
+    this.delivery.update(dt, {
+      x: pos.x,
+      z: pos.z,
+      driving: this.walker.driving,
+      speed: moved,
+    })
     this.minimap.draw({
       x: pos.x,
       z: pos.z,
@@ -396,6 +417,7 @@ export class Game {
       crowdXY: this.crowdView.xy,
       people: this.citizens,
       heli: this.helicopter.pose,
+      job: this.delivery.marker,
     })
     this.wordnet.draw(dt)
     this.renderer.render(this.scene, this.camera)
@@ -453,6 +475,67 @@ export class Game {
     for (const disc of list) hold.push(disc)
     if (this.placeFoot()) hold.push(this.footDisc)
     return hold
+  }
+
+  private drivenRide(): NetCarRide | null {
+    if (!this.drivenId) return null
+    const car = this.cars.find((entry) => entry.id === this.drivenId)
+    if (!car) return null
+    return { model: car.model, color: car.color }
+  }
+
+  /** Put each remote driver in the car you can see, and hide them on foot. */
+  private applyRemoteCars(): void {
+    const driving = new Set<string>()
+    for (const player of this.remotes) {
+      if (!player.car) continue
+      driving.add(player.id)
+      let car = this.cars.find((entry) => entry.driver === player.id)
+      if (!car) {
+        let best: CarSim | null = null
+        let bestDist = 12
+        for (const entry of this.cars) {
+          if (entry.driver || entry.id === this.drivenId) continue
+          const dist = Math.hypot(entry.x - player.x, entry.z - player.z)
+          if (dist >= bestDist) continue
+          best = entry
+          bestDist = dist
+        }
+        if (best) car = best
+        else {
+          car = {
+            id: `remote:${player.id}`,
+            model: player.car.model,
+            color: player.car.color,
+            lane: 0,
+            dist: 0,
+            speed: 0,
+            x: player.x,
+            z: player.z,
+            yaw: player.yaw,
+            driver: player.id,
+          }
+          this.cars.push(car)
+        }
+      }
+      car.driver = player.id
+      car.model = player.car.model
+      car.color = player.car.color
+      car.x = player.x
+      car.z = player.z
+      car.yaw = player.yaw
+      car.speed = 0
+    }
+    for (let i = this.cars.length - 1; i >= 0; i--) {
+      const car = this.cars[i]!
+      if (!car.driver || car.driver === 'you' || driving.has(car.driver)) continue
+      if (car.id.startsWith('remote:')) {
+        this.cars.splice(i, 1)
+        continue
+      }
+      car.driver = null
+      parkOnLane(car, this.network)
+    }
   }
 
   private copyDrivenCar(x: number, z: number): void {
@@ -815,7 +898,7 @@ export class Game {
   private moveTo(x: number, z: number): void {
     this.walker.teleport(x, z)
     const pos = this.walker.mesh.position
-    this.client.sendMove(pos.x, pos.z, this.walker.facing)
+    this.client.sendMove(pos.x, pos.z, this.walker.facing, this.drivenRide())
     this.client.flushMove()
   }
 

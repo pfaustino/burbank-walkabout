@@ -106,7 +106,7 @@ export class CarSet {
     for (const desc of list) {
       seen.add(desc.id)
       let car = this.cars.get(desc.id)
-      if (!car || car.root.userData.model !== desc.model) {
+      if (!car || car.root.userData.model !== desc.model || car.root.userData.color !== desc.color) {
         if (car) this.drop(desc.id, car)
         car = this.spawn(desc)
         this.cars.set(desc.id, car)
@@ -144,6 +144,7 @@ export class CarSet {
     if (!source) throw new Error('Call preloadCars() before creating cars')
     const root = source.clone(true)
     root.userData.model = desc.model
+    root.userData.color = desc.color
     root.position.set(desc.x, 0, desc.z)
     root.rotation.y = desc.yaw
     const mats: THREE.Material[] = []

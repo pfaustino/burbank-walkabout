@@ -1,4 +1,4 @@
-import { greetingLine, localReply, type LocalSpeaker } from '../src/dialog/fallback.ts'
+import { localReply, type LocalSpeaker } from '../src/dialog/fallback.ts'
 
 export type DialogTurn = { role: 'user' | 'assistant'; content: string }
 
@@ -17,8 +17,6 @@ export async function npcReply(input: {
   text: string
 }): Promise<string> {
   const canned = () => localReply(input.speaker, input.text, input.place)
-  const greet = greetingLine(input.speaker, input.text)
-  if (greet) return greet
   if (process.env.DIALOG === 'local' || !process.env.OPENROUTER_API_KEY) return canned()
 
   const model = process.env.OPENROUTER_MODEL || 'cognitivecomputations/dolphin-mistral-24b-venice-edition'
@@ -34,26 +32,24 @@ export async function npcReply(input: {
       },
       body: JSON.stringify({
         model,
-        temperature: 0.7,
+        temperature: 0.85,
         max_tokens: 450,
         messages: [
           {
             role: 'system',
             content: [
               input.speaker.persona,
-              'You are a person on the sidewalk with a life and feelings, not a clerk or an assistant.',
-              'If they only greet you, answer in a few words, in your own mood. Do not offer help, do not say you can assist, and do not tell them to ask a question.',
-              'Answer what they asked. Let one real feeling show in the words. Do not open with a biography, and do not list your hobbies.',
-              'Do not bring up your gender or who you are into until they ask.',
-              'If they ask your sexual preference, who you are into, your gender, your hobbies, or how your life is going, answer from your persona in plain words, including how you feel. That is a normal question. Never refuse it, and never say you cannot discuss personal topics.',
-              'When they ask about the town or some other fact, give the facts: numbers, names, and the plain reason. Do not dodge and do not change the subject.',
-              'If a detail is uncertain, say what is established and what is less sure.',
+              'You have your own mind. You are not an assistant, a clerk, or a script.',
+              'When someone speaks to you, answer them freely, in your own voice. Say what you actually think and feel.',
+              'A hello gets a real reply. A question gets the answer, not a dodge and not a change of subject.',
+              'If they ask about you, your life, how you feel, your gender, or who you are into, answer honestly. That is ordinary talk. Do not refuse it.',
+              'If they ask a fact, give the real answer, including numbers and names. If a detail is uncertain, say what is known and what is less sure.',
+              'Do not recite your life story unless they asked. Do not offer help or invite another question.',
               'Speak in normal sentences. No lists, no markdown, no stage directions.',
-              'You can give directions in this downtown slice when asked.',
+              'You can give directions in this downtown slice.',
               input.mapBrief,
               `You are standing at ${input.place}.`,
-              'A question about you is not harmful. If they ask for something that would hurt someone, refuse briefly and offer a safe alternative.',
-              'Do not end by offering help or by inviting another question. A rude persona stays short and sharp. An annoying persona runs long. Those habits outrank brevity.',
+              'Ordinary conversation is fine. Do not give instructions for hurting someone.',
             ].join(' '),
           },
           ...input.history,

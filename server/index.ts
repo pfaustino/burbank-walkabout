@@ -7,13 +7,14 @@ import mapJson from '../data/map.json' with { type: 'json' }
 import peopleJson from '../data/people.json' with { type: 'json' }
 import { CROWD_SEED, createCrowd, crowdIndex, crowdPose, type CrowdFile } from '../src/actors/crowdSim.ts'
 import { createPeople, stepPeople, type PeopleFile, type PersonSim, type PersonVoice } from '../src/actors/peopleSim.ts'
-import { talkHash, talkManner } from '../src/dialog/fallback.ts'
+import { talkHash } from '../src/dialog/fallback.ts'
 import { npcReply, remember, type DialogTurn } from './dialog.ts'
 import { fishEnabled, fishSpeech } from './fish.ts'
 import {
   parseClientMessage,
   shirtForName,
   type ClientMsg,
+  type NetCarRide,
   type NetPerson,
   type NetPlayer,
   type ServerMsg,
@@ -42,6 +43,7 @@ type Walker = {
   x: number
   z: number
   yaw: number
+  car: NetCarRide | null
   socket: WebSocket
   lastTalk: number
   history: Map<string, DialogTurn[]>
@@ -78,6 +80,7 @@ wss.on('connection', (socket) => {
         x: spot.x,
         z: spot.z,
         yaw: 0,
+        car: null,
         socket,
         lastTalk: 0,
         history: new Map(),
@@ -123,6 +126,7 @@ function handle(walker: Walker, msg: ClientMsg): void {
     walker.x = msg.x
     walker.z = msg.z
     walker.yaw = msg.yaw
+    walker.car = msg.car
     return
   }
   if (msg.type === 'hello') return
@@ -258,18 +262,11 @@ function crowdPick(id: string, salt: string, items: readonly string[]): string {
 }
 
 function crowdPersona(name: string, id: string): string {
-  const manner = talkManner(id)
-  const voice =
-    manner === 'brief'
-      ? 'You speak very little. A greeting is two or three words. A real question gets one short sentence.'
-      : manner === 'warm'
-        ? 'You are friendly, not a clerk. A greeting is one short sentence. You answer a real question in plain sentences.'
-        : 'A greeting gets a short hello. A real question gets a sentence or two.'
   const job = crowdPick(id, 'job', CROWD_JOBS)
   const home = crowdPick(id, 'home', CROWD_HOMES)
   const mood = crowdPick(id, 'mood', CROWD_MOODS)
   const bond = crowdPick(id, 'bond', CROWD_BONDS)
-  return `You are ${name}. ${voice} You ${job}. You live ${home}. Right now you feel ${mood}. On your mind: ${bond}. This is your private life. Do not announce it. If they ask about you or how you are, answer from it in plain words, with the feeling, not a speech.`
+  return `You are ${name}. You have your own mind and you talk when someone talks to you. You ${job}. You live ${home}. Right now you feel ${mood}. On your mind: ${bond}. Answer from that life, in your own words, with the feeling. Do not recite it unless they asked.`
 }
 
 function crowdSpeaker(
@@ -360,6 +357,7 @@ function visiblePlayers(): NetPlayer[] {
     x: round(walker.x),
     z: round(walker.z),
     yaw: round(walker.yaw),
+    car: walker.car,
   }))
 }
 
