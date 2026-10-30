@@ -86,16 +86,19 @@ export class Hud {
     this.order.classList.toggle('dropoff', dropoff)
   }
 
-  addPay(total: number, tip: number): void {
-    this.cash += total
+  addPay(fare: number, tip: number): void {
+    this.cash += fare + tip
     this.score.textContent = `$${this.cash}`
     const pop = document.createElement('div')
     pop.className = 'cash-float'
-    const fare = document.createElement('strong')
-    fare.textContent = `+$${total}`
-    const extra = document.createElement('span')
-    extra.textContent = `tip $${tip}`
-    pop.append(fare, extra)
+    const base = document.createElement('strong')
+    base.textContent = `+$${fare}`
+    pop.append(base)
+    if (tip > 0) {
+      const extra = document.createElement('span')
+      extra.textContent = `+$${tip} tip`
+      pop.append(extra)
+    }
     pop.addEventListener('animationend', () => pop.remove())
     this.cashPop.append(pop)
   }

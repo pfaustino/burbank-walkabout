@@ -90,7 +90,7 @@ export class DeliveryRun {
       return
     }
     const pay = deliveryPay(this.elapsed, this.file)
-    this.hud.addPay(pay.total, pay.tip)
+    this.hud.addPay(pay.fare, pay.tip)
     this.order = null
     this.phase = 'gap'
     this.wait = this.file.gap
