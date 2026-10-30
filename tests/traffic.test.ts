@@ -38,7 +38,6 @@ describe('traffic', () => {
     let checked = 0
     for (const lane of network.lanes) {
       const pose = sampleLane(lane, lane.length * 0.5)
-      const tx = Math.sin(pose.yaw)
       const tz = Math.cos(pose.yaw)
       if (Math.abs(tz) < 0.85) continue
       const center = nearestRoadPoint(roads, pose.x, pose.z)
