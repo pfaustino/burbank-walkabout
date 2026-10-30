@@ -4,6 +4,7 @@ import { createSeededRng } from '../src/util/seededRng.ts'
 import { hitsBuilding, buildLayout, type MapFile } from '../src/world/layout.ts'
 import { buildNetwork, lamps, sampleLane } from '../src/traffic/network.ts'
 import { bumpCars } from '../src/traffic/bumps.ts'
+import { wallBounce } from '../src/player/Walker.ts'
 import { createTraffic, stepTraffic, type CarSim, type TrafficFile } from '../src/traffic/trafficSim.ts'
 import { stepBuses, type BusFile, type BusSim } from '../src/traffic/busSim.ts'
 import { BUS_HALF_LENGTH, BUS_HALF_WIDTH, CAR_HALF_LENGTH, CAR_HALF_WIDTH, overlapsCapsule, slideClear } from '../src/traffic/bodies.ts'
@@ -15,6 +16,15 @@ const layout = buildLayout(mapJson as MapFile)
 const network = buildNetwork(layout)
 
 describe('traffic', () => {
+  it('bounces a car back off a building', () => {
+    const hit = wallBounce(12)
+    expect(hit).not.toBeNull()
+    expect(hit!.speed).toBeCloseTo(-5.4)
+    expect(hit!.kick).toBeCloseTo(1.68)
+    expect(wallBounce(-8)!.speed).toBeGreaterThan(0)
+    expect(wallBounce(1)).toBeNull()
+  })
+
   it('builds a connected street grid with lights and corner signs', () => {
     expect(network.lanes.length).toBeGreaterThan(20)
     expect(network.signals.length).toBeGreaterThan(4)

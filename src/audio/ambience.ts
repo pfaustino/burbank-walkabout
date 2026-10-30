@@ -6,6 +6,8 @@ export type AmbienceWorld = {
   z: number
   yaw: number
   speed: number
+  driving: boolean
+  driveSpeed: number
   onFoot: boolean
   altitude: number
   muted: boolean
@@ -28,6 +30,13 @@ export class Ambience {
   private hissAt = 2
   private crunchAt = 0
   private noise: AudioBuffer | null = null
+  private crashBuf: AudioBuffer | null = null
+  private coinBuf: AudioBuffer | null = null
+  private engineGain: GainNode | null = null
+  private engineFilter: BiquadFilterNode | null = null
+  private engineOsc: OscillatorNode | null = null
+  private engineHarm: OscillatorNode | null = null
+  private driveHeard = 0
 
   resume(): void {
     const ctx = this.ensure()
@@ -44,7 +53,7 @@ export class Ambience {
     const wind = Math.min(0.16, 0.035 + world.altitude * 0.0014 + world.speed * 0.004)
     this.windGain.gain.setTargetAtTime(wind, now, 0.2)
 
-    const traffic = nearest(world.cars, world.x, world.z, 38)
+    const traffic = nearest(world.cars, world.x, world.z, 38, world.driving ? 3 : 0)
     if (traffic) {
       const closeness = 1 - traffic.dist / 38
       const roll = Math.max(0.2, Math.min(1, traffic.mover.speed / 11))
@@ -80,6 +89,8 @@ export class Ambience {
     }
     if (!day) this.chirpAt = 2
 
+    this.hearEngine(now, dt, world)
+
     if (now > this.honkAt) {
       let pick: Mover | null = null
       let count = 0
@@ -96,7 +107,7 @@ export class Ambience {
     }
   }
 
-  /** A metal crunch at a collision, louder when the hit is close and fast. */
+  /** A crash at a collision, louder when the hit is close and fast. */
   crunch(
     hits: readonly { x: number; z: number; impact: number }[],
     hearX: number,
@@ -105,7 +116,7 @@ export class Ambience {
     minImpact: number,
   ): void {
     const ctx = this.ensure()
-    if (!ctx || !this.master || !this.noise || ctx.state !== 'running') return
+    if (!ctx || !this.master || ctx.state !== 'running') return
     const now = ctx.currentTime
     if (now < this.crunchAt) return
     let bestX = 0
@@ -124,8 +135,27 @@ export class Ambience {
       loud = Math.min(1, hit.impact / 10)
     }
     if (best <= 0) return
-    this.playCrunch(now, crunchPan(bestX - hearX, bestZ - hearZ, hearYaw), loud)
-    this.crunchAt = now + 0.22
+    this.playCrash(now, crunchPan(bestX - hearX, bestZ - hearZ, hearYaw), loud)
+    this.crunchAt = now + 0.4
+  }
+
+  /** A coin ding. A higher rate is the tip. */
+  coin(rate = 1): void {
+    const ctx = this.ensure()
+    if (!ctx || !this.master || ctx.state !== 'running') return
+    const now = ctx.currentTime
+    if (this.coinBuf) {
+      const source = ctx.createBufferSource()
+      source.buffer = this.coinBuf
+      source.playbackRate.value = rate
+      const amp = ctx.createGain()
+      amp.gain.value = 0.62
+      source.connect(amp)
+      amp.connect(this.master)
+      source.start(now)
+      return
+    }
+    this.playDing(now, rate)
   }
 
   dispose(): void {
@@ -152,7 +182,91 @@ export class Ambience {
     const bus = this.loop(ctx, this.noise, 90, 'lowpass', 0)
     this.busGain = bus.gain
     this.busPan = bus.pan
+    this.startEngine(ctx)
+    const base = import.meta.env.BASE_URL
+    // Pixabay Content License: "Sound Effect - Car Crash" by u_mgq59j5ayf,
+    // "coin recieved" by RibhavAgrawal.
+    this.loadClip('crash', `${base}sounds/crash.mp3`)
+    this.loadClip('coin', `${base}sounds/coin.mp3`)
     return ctx
+  }
+
+  private loadClip(kind: 'crash' | 'coin', url: string): void {
+    const ctx = this.ctx
+    if (!ctx) return
+    void fetch(url)
+      .then((res) => {
+        if (!res.ok) throw new Error(String(res.status))
+        return res.arrayBuffer()
+      })
+      .then((data) => ctx.decodeAudioData(data))
+      .then((audio) => {
+        if (kind === 'crash') this.crashBuf = audio
+        else this.coinBuf = audio
+      })
+      .catch(() => undefined)
+  }
+
+  private startEngine(ctx: AudioContext): void {
+    const filter = ctx.createBiquadFilter()
+    filter.type = 'lowpass'
+    filter.frequency.value = 280
+    filter.Q.value = 0.7
+    const amp = ctx.createGain()
+    amp.gain.value = 0.0001
+    filter.connect(amp)
+    amp.connect(this.master!)
+    const osc = ctx.createOscillator()
+    osc.type = 'sawtooth'
+    osc.frequency.value = 36
+    osc.connect(filter)
+    const harm = ctx.createOscillator()
+    harm.type = 'square'
+    harm.frequency.value = 72
+    const harmAmp = ctx.createGain()
+    harmAmp.gain.value = 0.15
+    harm.connect(harmAmp)
+    harmAmp.connect(filter)
+    if (this.noise) {
+      const noise = ctx.createBufferSource()
+      noise.buffer = this.noise
+      noise.loop = true
+      const noiseFilter = ctx.createBiquadFilter()
+      noiseFilter.type = 'bandpass'
+      noiseFilter.frequency.value = 140
+      noiseFilter.Q.value = 0.6
+      const noiseAmp = ctx.createGain()
+      noiseAmp.gain.value = 0.28
+      noise.connect(noiseFilter)
+      noiseFilter.connect(noiseAmp)
+      noiseAmp.connect(filter)
+      noise.start()
+    }
+    osc.start()
+    harm.start()
+    this.engineFilter = filter
+    this.engineGain = amp
+    this.engineOsc = osc
+    this.engineHarm = harm
+  }
+
+  private hearEngine(now: number, dt: number, world: AmbienceWorld): void {
+    if (!this.engineGain || !this.engineFilter || !this.engineOsc || !this.engineHarm) return
+    if (!world.driving) {
+      this.engineGain.gain.setTargetAtTime(0.0001, now, 0.08)
+      this.driveHeard = 0
+      return
+    }
+    const speed = Math.abs(world.driveSpeed)
+    const accel = dt > 0 ? (speed - this.driveHeard) / dt : 0
+    this.driveHeard = speed
+    const climb = Math.max(0, Math.min(8, accel))
+    const rpm = 34 + speed * 6.4 + climb * 8
+    this.engineOsc.frequency.setTargetAtTime(rpm, now, 0.05)
+    this.engineHarm.frequency.setTargetAtTime(rpm * 2.02, now, 0.05)
+    this.engineFilter.frequency.setTargetAtTime(200 + rpm * 8 + climb * 50, now, 0.05)
+    const loud = 0.05 + Math.min(0.14, speed * 0.009) + climb * 0.014
+    this.engineGain.gain.setTargetAtTime(loud, now, 0.04)
   }
 
   private loop(
@@ -254,6 +368,44 @@ export class Ambience {
     }
   }
 
+  private playCrash(when: number, panValue: number, amount: number): void {
+    const ctx = this.ctx
+    const buffer = this.crashBuf
+    if (!ctx || !buffer || !this.master) {
+      this.playCrunch(when, panValue, amount)
+      return
+    }
+    const source = ctx.createBufferSource()
+    source.buffer = buffer
+    source.playbackRate.value = 0.96 + amount * 0.12
+    const amp = ctx.createGain()
+    amp.gain.setValueAtTime(0.0001, when)
+    amp.gain.exponentialRampToValueAtTime(0.28 + amount * 0.4, when + 0.012)
+    const pan = ctx.createStereoPanner()
+    pan.pan.value = panValue
+    source.connect(amp)
+    amp.connect(pan)
+    pan.connect(this.master)
+    source.start(when)
+  }
+
+  private playDing(when: number, rate: number): void {
+    const ctx = this.ctx
+    if (!ctx || !this.master) return
+    const osc = ctx.createOscillator()
+    osc.type = 'sine'
+    osc.frequency.setValueAtTime(880 * rate, when)
+    osc.frequency.exponentialRampToValueAtTime(1320 * rate, when + 0.08)
+    const amp = ctx.createGain()
+    amp.gain.setValueAtTime(0.0001, when)
+    amp.gain.exponentialRampToValueAtTime(0.16, when + 0.012)
+    amp.gain.exponentialRampToValueAtTime(0.0001, when + 0.18)
+    osc.connect(amp)
+    amp.connect(this.master)
+    osc.start(when)
+    osc.stop(when + 0.2)
+  }
+
   private playCrunch(when: number, panValue: number, amount: number): void {
     const ctx = this.ctx
     const buffer = this.noise
@@ -317,11 +469,18 @@ export class Ambience {
   }
 }
 
-function nearest(movers: readonly Mover[], x: number, z: number, reach: number): { mover: Mover; dist: number } | null {
+function nearest(
+  movers: readonly Mover[],
+  x: number,
+  z: number,
+  reach: number,
+  skip = 0,
+): { mover: Mover; dist: number } | null {
   let best: Mover | null = null
   let bestDist = reach
   for (const mover of movers) {
     const dist = Math.hypot(mover.x - x, mover.z - z)
+    if (dist < skip) continue
     if (dist < bestDist) {
       best = mover
       bestDist = dist

@@ -226,6 +226,8 @@ export class Game {
       onHear: (enabled) => {
         this.hear = enabled
       },
+      onPay: (which) => this.ambience.coin(which === 'tip' ? 1.18 : 1),
+      coinInto: () => this.carScreen(),
     })
     this.delivery = new DeliveryRun(
       this.scene,
@@ -385,6 +387,8 @@ export class Game {
     this.copyDrivenCar(pos.x, pos.z)
     const hits = bumpCars(this.cars, this.layout, this.trafficFile.restitution)
     this.keepDrivenBump()
+    const wall = this.walker.takeWallHit()
+    if (wall > 0) hits.push({ x: pos.x, z: pos.z, impact: wall })
     this.carView.sync(this.cars, dt, this.drivenId)
     this.busView.sync(this.buses, dt)
     this.dayHour = advanceHour(this.dayHour, dt)
@@ -399,6 +403,8 @@ export class Game {
       z: pos.z,
       yaw: this.walker.facing,
       speed: Math.min(12, moved),
+      driving: this.walker.driving,
+      driveSpeed: this.walker.driveSpeed,
       onFoot: !this.walker.driving && !this.walker.flying && !this.walker.riding,
       altitude: this.walker.flying ? pos.y : 0,
       muted: this.paused,
@@ -562,6 +568,17 @@ export class Game {
     disc.x = x
     disc.z = z
     disc.yaw = car.yaw
+  }
+
+  /** Screen point of the car the chase camera is following. */
+  private carScreen(): { x: number; y: number } {
+    const pos = this.walker.mesh.position
+    const point = new THREE.Vector3(pos.x, pos.y + 1.15, pos.z)
+    point.project(this.camera)
+    return {
+      x: (point.x * 0.5 + 0.5) * window.innerWidth,
+      y: (-point.y * 0.5 + 0.5) * window.innerHeight,
+    }
   }
 
   /** The bump moves the driven car. Keep the player on it, at the new speed. */

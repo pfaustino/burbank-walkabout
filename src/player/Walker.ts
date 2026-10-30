@@ -32,6 +32,8 @@ export class Walker {
   private flyMode = false
   private carYaw = 0.4
   private carSpeed = 0
+  private wallCool = 0
+  private wallHit = 0
   private readonly driveClear: Disc[] = []
   private flyYaw = 0.4
   private flySpeed = 0
@@ -104,6 +106,8 @@ export class Walker {
     this.flyMode = false
     this.carYaw = yaw
     this.carSpeed = 0
+    this.wallCool = 0
+    this.wallHit = 0
     this.yaw = yaw + Math.PI
     this.mesh.visible = false
     this.mesh.position.set(x, 0, z)
@@ -183,6 +187,7 @@ export class Walker {
     const next = this.place(this.mesh.position.x, this.mesh.position.z, x, z, BODY_RADIUS)
     this.driveMode = false
     this.carSpeed = 0
+    this.wallHit = 0
     this.mesh.visible = true
     this.mesh.position.set(next.x, 0, next.z)
     this.mesh.rotation.y = this.carYaw
@@ -296,6 +301,7 @@ export class Walker {
   }
 
   private drive(dt: number): number {
+    this.wallCool = Math.max(0, this.wallCool - dt)
     let throttle = 0
     if (this.keys.has('KeyW') || this.keys.has('ArrowUp')) throttle += 1
     if (this.keys.has('KeyS') || this.keys.has('ArrowDown')) throttle -= 1
@@ -307,23 +313,49 @@ export class Walker {
     const steer = (this.keys.has('KeyA') || this.keys.has('ArrowLeft') ? 1 : 0) - (this.keys.has('KeyD') || this.keys.has('ArrowRight') ? 1 : 0)
     const rate = 1.8 * THREE.MathUtils.clamp(Math.abs(this.carSpeed) / 6, 0.3, 1)
     this.carYaw += steer * rate * dt * Math.sign(this.carSpeed || 1)
-    const dx = Math.sin(this.carYaw) * this.carSpeed * dt
-    const dz = Math.cos(this.carYaw) * this.carSpeed * dt
-    const next = this.place(
-      this.mesh.position.x,
-      this.mesh.position.z,
-      this.mesh.position.x + dx,
-      this.mesh.position.z + dz,
-      CAR_RADIUS,
-    )
-    if (Math.hypot(next.x - this.mesh.position.x, next.z - this.mesh.position.z) < Math.hypot(dx, dz) * 0.45) {
+    const speed = this.carSpeed
+    const dx = Math.sin(this.carYaw) * speed * dt
+    const dz = Math.cos(this.carYaw) * speed * dt
+    const pos = this.mesh.position
+    const wanted = Math.hypot(dx, dz)
+    const intoWall = wanted > 0 && hitsBuilding(this.layout, pos.x + dx, pos.z + dz, CAR_RADIUS)
+    const next = this.place(pos.x, pos.z, pos.x + dx, pos.z + dz, CAR_RADIUS)
+    const moved = Math.hypot(next.x - pos.x, next.z - pos.z)
+    pos.x = next.x
+    pos.z = next.z
+    if (intoWall && this.wallCool <= 0 && moved < wanted * 0.45) {
+      const bounce = wallBounce(speed)
+      if (bounce) {
+        const sign = Math.sign(speed) || 1
+        this.carSpeed = bounce.speed
+        this.shoveFree(-Math.sin(this.carYaw) * sign * bounce.kick, -Math.cos(this.carYaw) * sign * bounce.kick)
+        this.wallHit = Math.abs(speed)
+        this.wallCool = 0.4
+      }
+    } else if (moved < wanted * 0.45) {
       this.carSpeed *= 0.35
     }
-    this.mesh.position.x = next.x
-    this.mesh.position.z = next.z
     this.mesh.rotation.y = this.carYaw
     if (!this.dragging) this.yaw = dampAngle(this.yaw, this.carYaw + Math.PI, 1 - Math.exp(-dt * 4))
     return Math.abs(this.carSpeed)
+  }
+
+  /** Impact of a building bounce this frame, then clear it. */
+  takeWallHit(): number {
+    const hit = this.wallHit
+    this.wallHit = 0
+    return hit
+  }
+
+  private shoveFree(dx: number, dz: number): void {
+    const pos = this.mesh.position
+    if (this.open(pos.x + dx, pos.z + dz, CAR_RADIUS)) {
+      pos.x += dx
+      pos.z += dz
+      return
+    }
+    if (this.open(pos.x + dx, pos.z, CAR_RADIUS)) pos.x += dx
+    else if (this.open(pos.x, pos.z + dz, CAR_RADIUS)) pos.z += dz
   }
 
   /** Move the driven car off a hit and take the new forward speed. */
@@ -454,6 +486,14 @@ function landingSpot(layout: CityLayout, x: number, z: number): { x: number; z: 
     }
   }
   return { x, z }
+}
+
+/** Reverse part of the impact and kick the car back off a building. */
+export function wallBounce(speed: number): { speed: number; kick: number } | null {
+  const impact = Math.abs(speed)
+  if (impact < trafficJson.crunch) return null
+  const sign = Math.sign(speed)
+  return { speed: -sign * impact * 0.45, kick: Math.min(2.2, impact * 0.14) }
 }
 
 function typingTarget(target: EventTarget | null): boolean {

@@ -137,6 +137,30 @@ html, body, #app {
   100% { opacity: 0; transform: translate(-50%, -78px) scale(1); }
 }
 
+.pay-coin {
+  position: fixed;
+  z-index: 8;
+  width: 22px;
+  height: 22px;
+  margin: -11px 0 0 -11px;
+  pointer-events: none;
+  perspective: 90px;
+}
+
+.pay-coin i {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  background: radial-gradient(circle at 32% 32%, #fff6cc, #f0c14d 46%, #b8860b 78%, #6a4a08);
+  box-shadow: inset 0 0 0 2px #ffe7a0, 0 1px 2px #000;
+  animation: coin-spin 0.38s linear infinite;
+}
+
+@keyframes coin-spin {
+  to { transform: rotateY(360deg); }
+}
+
 #subtitle {
   position: fixed;
   left: 50%;

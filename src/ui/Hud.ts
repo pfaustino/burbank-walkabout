@@ -5,6 +5,8 @@ export class Hud {
     onSay: (text: string) => void
     onMic: () => void
     onHear: (enabled: boolean) => void
+    onPay?: (which: 'fare' | 'tip') => void
+    coinInto?: () => { x: number; y: number }
   }
   private readonly place: HTMLElement
   private readonly nearby: HTMLElement
@@ -24,6 +26,8 @@ export class Hud {
     onSay: (text: string) => void
     onMic: () => void
     onHear: (enabled: boolean) => void
+    onPay?: (which: 'fare' | 'tip') => void
+    coinInto?: () => { x: number; y: number }
   }) {
     this.handlers = handlers
     this.place = must('#place')
@@ -94,13 +98,45 @@ export class Hud {
     const base = document.createElement('strong')
     base.textContent = `+$${fare}`
     pop.append(base)
+    let extra: HTMLElement | null = null
     if (tip > 0) {
-      const extra = document.createElement('span')
+      extra = document.createElement('span')
       extra.textContent = `+$${tip} tip`
       pop.append(extra)
     }
     pop.addEventListener('animationend', () => pop.remove())
     this.cashPop.append(pop)
+    this.tossCoins(base, 5, 0)
+    this.handlers.onPay?.('fare')
+    if (extra) {
+      this.tossCoins(extra, 4, 180)
+      window.setTimeout(() => this.handlers.onPay?.('tip'), 180)
+    }
+  }
+
+  private tossCoins(from: HTMLElement, count: number, delay: number): void {
+    const into = this.handlers.coinInto?.()
+    if (!into) return
+    const box = from.getBoundingClientRect()
+    const sx = box.left + box.width / 2
+    const sy = box.top + box.height / 2
+    for (let i = 0; i < count; i++) {
+      const coin = document.createElement('div')
+      coin.className = 'pay-coin'
+      coin.append(document.createElement('i'))
+      const spread = (i - (count - 1) / 2) * 16
+      coin.style.left = `${sx + spread}px`
+      coin.style.top = `${sy}px`
+      document.body.append(coin)
+      const ms = 760 + i * 30
+      const wait = delay + i * 45
+      window.setTimeout(() => {
+        coin.style.transition = `left ${ms}ms cubic-bezier(0.2, 0.65, 0.2, 1), top ${ms}ms cubic-bezier(0.15, 0.55, 0.2, 1)`
+        coin.style.left = `${into.x + spread * 0.25}px`
+        coin.style.top = `${into.y}px`
+      }, wait)
+      window.setTimeout(() => coin.remove(), wait + ms + 60)
+    }
   }
 
   setDraft(text: string): void {
