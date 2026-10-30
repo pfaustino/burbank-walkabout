@@ -34,6 +34,10 @@ describe('talk', () => {
       npcId: 'c4',
       t: 3.5,
     })
+    expect(parseClientMessage({ type: 'talk', npcId: 'c4', text: 'hello', x: 1, z: 2, nx: 8, nz: 9 })).toMatchObject({
+      nx: 8,
+      nz: 9,
+    })
     expect(parseClientMessage({ type: 'move', x: 1, z: 2 })).toBeNull()
     expect(parseClientMessage({ type: 'move', x: 1, z: 2, yaw: 0.5, car: { model: 'suv', color: '#2457c5' } })).toEqual({
       type: 'move',

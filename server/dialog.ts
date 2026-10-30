@@ -47,6 +47,7 @@ export async function npcReply(input: {
               'Do not recite your life story unless they asked. Do not offer help or invite another question.',
               'Speak in normal sentences. No lists, no markdown, no stage directions.',
               'You can give directions in this downtown slice.',
+              'If you invite them to come with you, name a real place from this map, such as a cafe. You will walk there with them. Do not invent a turn, and do not say you are going if you are staying put.',
               input.mapBrief,
               `You are standing at ${input.place}.`,
               'Ordinary conversation is fine. Do not give instructions for hurting someone.',

@@ -102,6 +102,30 @@ export function createCrowd(layout: CityLayout, file: CrowdFile, rng: () => numb
   return { people, loops }
 }
 
+/** Keep walking from the spot they were held, instead of jumping ahead with the clock. */
+export function resumeWalk(person: CrowdPerson, frozen: number, now: number): void {
+  person.offset += person.speed * (frozen - now)
+}
+
+/** Put them back on the nearest sidewalk where they are actually standing. */
+export function rejoinWalk(world: CrowdWorld, index: number, x: number, z: number, now: number): void {
+  const person = world.people[index]
+  if (!person || world.loops.length === 0) return
+  let bestD = Infinity
+  let bestLoop = person.loop
+  let bestAlong = 0
+  for (let i = 0; i < world.loops.length; i++) {
+    const hit = closestOn(world.loops[i]!, x, z)
+    if (hit.d < bestD) {
+      bestD = hit.d
+      bestLoop = i
+      bestAlong = hit.dist
+    }
+  }
+  person.loop = bestLoop
+  person.offset = bestAlong - person.speed * now
+}
+
 export function crowdPose(world: CrowdWorld, index: number, time: number): { x: number; z: number; yaw: number } {
   const person = world.people[index]!
   const loop = world.loops[person.loop]!
@@ -151,6 +175,27 @@ function loopsFrom(layout: CityLayout): CrowdLoop[] {
     loops.push({ pts, cum, length })
   }
   return loops
+}
+
+function closestOn(loop: CrowdLoop, x: number, z: number): { dist: number; d: number } {
+  let bestD = Infinity
+  let bestAlong = 0
+  for (let i = 1; i < loop.pts.length; i++) {
+    const a = loop.pts[i - 1]!
+    const b = loop.pts[i]!
+    const dx = b.x - a.x
+    const dz = b.z - a.z
+    const len2 = dx * dx + dz * dz
+    const len = Math.sqrt(len2) || 1
+    const t = len2 < 1e-6 ? 0 : Math.max(0, Math.min(1, ((x - a.x) * dx + (z - a.z) * dz) / len2))
+    const px = a.x + dx * t
+    const pz = a.z + dz * t
+    const d = Math.hypot(x - px, z - pz)
+    if (d >= bestD) continue
+    bestD = d
+    bestAlong = (loop.cum[i - 1] ?? 0) + len * t
+  }
+  return { dist: bestAlong, d: bestD }
 }
 
 function sample(loop: CrowdLoop, dist: number): { x: number; z: number; yaw: number } {

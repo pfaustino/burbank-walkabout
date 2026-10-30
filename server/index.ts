@@ -149,7 +149,7 @@ function handle(walker: Walker, msg: ClientMsg): void {
     return
   }
 
-  const passerby = crowdSpeaker(msg.npcId, msg.t, walker.x, walker.z)
+  const passerby = crowdSpeaker(msg.npcId, msg.t, walker.x, walker.z, msg.nx, msg.nz)
   if (passerby) {
     if (passerby.dist > peopleFile.talkRange + talkSlack) {
       send(walker.socket, { type: 'error', message: `${passerby.speaker.name} is too far to hear you.` })
@@ -274,12 +274,16 @@ function crowdSpeaker(
   time: number | undefined,
   x: number,
   z: number,
+  nx?: number,
+  nz?: number,
 ): { dist: number; x: number; z: number; speaker: Speaker } | null {
   const index = crowdIndex(id)
   if (index === null) return null
   const person = crowd.people[index]
   if (!person) return null
-  const pose = crowdPose(crowd, index, time ?? 0)
+  const bounds = layout.file.bounds
+  const seen = nx !== undefined && nz !== undefined && nx > bounds.minX - 40 && nx < bounds.maxX + 40 && nz > bounds.minZ - 40 && nz < bounds.maxZ + 40
+  const pose = seen ? { x: nx!, z: nz! } : crowdPose(crowd, index, time ?? 0)
   return {
     dist: Math.hypot(pose.x - x, pose.z - z),
     x: pose.x,

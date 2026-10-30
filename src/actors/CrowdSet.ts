@@ -2,6 +2,7 @@ import * as THREE from 'three'
 import { asideStep, type RoadThreat } from './peopleSim.ts'
 import { separatePeople, pushClear, type Disc } from '../traffic/bodies.ts'
 import { crowdId, crowdIndex, crowdPose, type CrowdWorld } from './crowdSim.ts'
+import type { Errand } from './errand.ts'
 import { createFigure, type Figure } from './figure.ts'
 
 /** Sidewalk crowd on the shared character mesh, tinted per person. */
@@ -41,7 +42,13 @@ export class CrowdSet {
     this.update(0)
   }
 
-  update(time: number, frozen?: ReadonlyMap<number, number>, blocks: readonly Disc[] = [], threat?: RoadThreat | null): void {
+  update(
+    time: number,
+    frozen?: ReadonlyMap<number, number>,
+    blocks: readonly Disc[] = [],
+    threat?: RoadThreat | null,
+    guides?: ReadonlyMap<number, Errand>,
+  ): void {
     const dt = Math.min(0.05, Math.max(0, time - this.lastTime))
     this.lastTime = time
     const people = this.world.people
@@ -64,6 +71,12 @@ export class CrowdSet {
     }
     for (let i = 0; i < people.length; i++) {
       const person = people[i]!
+      const guide = guides?.get(i)
+      if (guide) {
+        this.xy[i * 2] = guide.x
+        this.xy[i * 2 + 1] = guide.z
+        this.homeYaw[i] = guide.yaw
+      }
       const root = this.figures[i]!.root
       const x = this.xy[i * 2]!
       const z = this.xy[i * 2 + 1]!
@@ -72,7 +85,8 @@ export class CrowdSet {
       root.position.set(x, 0, z)
       root.rotation.y = this.homeYaw[i]!
       const shoved = dx * dx + dz * dz > 0.09
-      this.figures[i]!.update(dt, frozen?.has(i) || shoved ? 0 : person.speed)
+      const pace = guide ? (guide.moving ? 3 : 0) : frozen?.has(i) || shoved ? 0 : person.speed
+      this.figures[i]!.update(dt, pace)
       const until = this.bubbleUntil[i] ?? 0
       if (until > 0 && time >= until) {
         this.figures[i]!.setBubble(null)

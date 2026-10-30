@@ -8,7 +8,7 @@ export type NetCarRide = {
 export type ClientMsg =
   | { type: 'hello'; name: string }
   | { type: 'move'; x: number; z: number; yaw: number; car: NetCarRide | null }
-  | { type: 'talk'; npcId: string; text: string; x: number; z: number; t?: number }
+  | { type: 'talk'; npcId: string; text: string; x: number; z: number; t?: number; nx?: number; nz?: number }
   | { type: 'say'; text: string; x: number; z: number }
 
 export type NetPerson = {
@@ -95,10 +95,13 @@ export function parseClientMessage(value: unknown): ClientMsg | null {
     const npcId = rec.npcId.trim().slice(0, 40)
     const text = rec.text.trim().slice(0, 240)
     if (!npcId || !text) return null
-    if (rec.t === undefined) return { type: 'talk', npcId, text, x, z }
+    const nx = finite(rec.nx)
+    const nz = finite(rec.nz)
+    const seen = nx !== null && nz !== null ? { nx, nz } : {}
+    if (rec.t === undefined) return { type: 'talk', npcId, text, x, z, ...seen }
     const t = finite(rec.t)
     if (t === null) return null
-    return { type: 'talk', npcId, text, x, z, t }
+    return { type: 'talk', npcId, text, x, z, t, ...seen }
   }
   if (rec.type === 'say') {
     const x = finite(rec.x)

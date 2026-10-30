@@ -8,7 +8,9 @@ import mapJson from '../../data/map.json'
 import peopleJson from '../../data/people.json'
 import trafficJson from '../../data/traffic.json'
 import { CrowdSet } from '../actors/CrowdSet.ts'
-import { CROWD_SEED, createCrowd, crowdId, crowdIndex, crowdPose, type CrowdFile, type CrowdWorld } from '../actors/crowdSim.ts'
+import { CROWD_SEED, createCrowd, crowdId, crowdIndex, crowdPose, rejoinWalk, resumeWalk, type CrowdFile, type CrowdWorld } from '../actors/crowdSim.ts'
+import { offeredPlace, stepErrand, type Errand } from '../actors/errand.ts'
+import { buildSidewalks, routeSidewalk, type SidewalkGraph } from '../actors/sidewalk.ts'
 import { asideStep, createPeople, stepPeople, type PeopleFile, type PersonSim, type RoadThreat } from '../actors/peopleSim.ts'
 import { PuppetSet } from '../actors/PuppetSet.ts'
 import { Ambience } from '../audio/ambience.ts'
@@ -111,6 +113,8 @@ export class Game {
   private time = 0
   private readonly held = new Set<string>()
   private readonly crowdFreeze = new Map<number, number>()
+  private readonly guides = new Map<number, Errand>()
+  private sidewalks: SidewalkGraph | null = null
   private readonly vehicleDiscs: Disc[] = []
   private readonly personDiscs: Disc[] = []
   private readonly blockers: Disc[] = []
@@ -353,7 +357,8 @@ export class Game {
     this.copyDrivenCar(pos.x, pos.z)
     this.applyRemoteCars()
     this.releaseCrowd(pos.x, pos.z)
-    this.crowdView.update(this.time, this.crowdFreeze, this.crowdBlocks(), this.roadThreat(pos))
+    this.stepGuides(dt, pos.x, pos.z)
+    this.crowdView.update(this.time, this.crowdFreeze, this.crowdBlocks(), this.roadThreat(pos), this.guides)
     this.syncPeople()
     stepTraffic(this.cars, this.network, this.trafficFile, this.time, dt, this.carRng, this.trafficObstacles())
     stepBuses(this.buses, this.network, this.busFile, this.time, dt, this.busRng, this.busObstacles())
@@ -702,7 +707,16 @@ export class Game {
       this.hold(near.id)
       const index = crowdIndex(near.id)
       const t = index === null ? undefined : this.crowdFreeze.get(index)
-      this.client.send({ type: 'talk', npcId: near.id, text: clean, x: pos.x, z: pos.z, ...(t !== undefined ? { t } : {}) })
+      const spot = index === null ? null : this.crowdSpot(index)
+      this.client.send({
+        type: 'talk',
+        npcId: near.id,
+        text: clean,
+        x: pos.x,
+        z: pos.z,
+        ...(t !== undefined ? { t } : {}),
+        ...(spot ? { nx: spot.x, nz: spot.z } : {}),
+      })
       this.hud.pushLine('You', clean)
       this.hud.setSubtitle('You', clean)
       this.wordnet.hear(clean)
@@ -719,8 +733,10 @@ export class Game {
     this.hud.setSubtitle(msg.name, msg.text)
     this.wordnet.hear(msg.text)
     if (msg.kind === 'npc') {
-      if (crowdIndex(msg.id) !== null) this.crowdView.say(msg.id, msg.text)
-      else this.citizensView.say(msg.id, msg.text)
+      if (crowdIndex(msg.id) !== null) {
+        this.crowdView.say(msg.id, msg.text)
+        this.beginErrand(msg.id, msg.text)
+      } else this.citizensView.say(msg.id, msg.text)
     } else this.walkersView.say(msg.id, msg.text)
     if (msg.aloud && this.hear) {
       if (msg.audio) {
@@ -867,6 +883,8 @@ export class Game {
       this.hud.setPlaceholder('Helicopter inbound')
       return 'The helicopter is on its way'
     }
+    const lead = this.leadText()
+    if (lead && !this.walker.driving && !this.walker.riding && !this.walker.flying) return lead
     const pos = this.walker.mesh.position
     const car = this.nearestStoppedCar(pos.x, pos.z)
     const bus = this.nearestStoppedBus(pos.x, pos.z)
@@ -940,15 +958,80 @@ export class Game {
       this.held.add(id)
       return
     }
+    if (this.guides.has(index)) return
     if (!this.crowdFreeze.has(index)) this.crowdFreeze.set(index, this.time)
   }
 
   private releaseCrowd(x: number, z: number): void {
     const reach = this.peopleFile.talkRange + 1.6
     for (const [index, at] of this.crowdFreeze) {
+      if (this.guides.has(index)) continue
       const pose = crowdPose(this.crowd, index, at)
-      if (Math.hypot(pose.x - x, pose.z - z) > reach) this.crowdFreeze.delete(index)
+      if (Math.hypot(pose.x - x, pose.z - z) <= reach) continue
+      const person = this.crowd.people[index]
+      if (person) resumeWalk(person, at, this.time)
+      this.crowdFreeze.delete(index)
     }
+  }
+
+  private crowdSpot(index: number): { x: number; z: number } | null {
+    const guide = this.guides.get(index)
+    if (guide) return { x: guide.x, z: guide.z }
+    const x = this.crowdView.xy[index * 2]
+    const z = this.crowdView.xy[index * 2 + 1]
+    if (x === undefined || z === undefined) return null
+    return { x, z }
+  }
+
+  private beginErrand(id: string, text: string): void {
+    const index = crowdIndex(id)
+    if (index === null) return
+    const spot = this.crowdSpot(index)
+    if (!spot) return
+    const place = offeredPlace(text, businessesJson as Business[], spot)
+    if (!place) return
+    if (!this.sidewalks) this.sidewalks = buildSidewalks(this.layout.file.paths)
+    const route = routeSidewalk(this.sidewalks, spot.x, spot.z, place.x, place.z)
+    if (route.length < 2) return
+    const next = route[1] ?? route[0]!
+    this.guides.set(index, {
+      x: spot.x,
+      z: spot.z,
+      yaw: Math.atan2(next.x - spot.x, next.z - spot.z),
+      route,
+      at: 1,
+      goalX: place.x,
+      goalZ: place.z,
+      place: place.name,
+      moving: true,
+    })
+    this.crowdFreeze.delete(index)
+  }
+
+  private stepGuides(dt: number, x: number, z: number): void {
+    for (const [index, errand] of this.guides) {
+      const state = stepErrand(errand, dt, x, z)
+      if (state !== 'done' && state !== 'drop') continue
+      rejoinWalk(this.crowd, index, errand.x, errand.z, this.time)
+      this.guides.delete(index)
+    }
+  }
+
+  private leadText(): string | null {
+    const pos = this.walker.mesh.position
+    let best: Errand | null = null
+    let name = 'They'
+    let bestD = 28
+    for (const [index, errand] of this.guides) {
+      const dist = Math.hypot(errand.x - pos.x, errand.z - pos.z)
+      if (dist >= bestD) continue
+      bestD = dist
+      best = errand
+      name = this.crowd.people[index]?.name ?? 'They'
+    }
+    if (!best) return null
+    this.hud.setPlaceholder(best.moving ? `Walk with ${name}` : `Catch up to ${name}`)
+    return best.moving ? `${name} is walking you to ${best.place}` : `${name} is waiting. They're walking you to ${best.place}`
   }
 
   private meet(id: string): void {
