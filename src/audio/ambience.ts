@@ -244,7 +244,8 @@ export class Ambience {
     const source = ctx.createBufferSource()
     source.buffer = buffer
     source.loop = true
-    source.playbackRate.value = 0.68
+    source.playbackRate.value = 0.72
+    this.engineFilter.Q.value = 0.5
     source.connect(this.engineFilter)
     source.start()
     this.engineSrc = source
@@ -263,14 +264,17 @@ export class Ambience {
     const climb = Math.max(0, Math.min(6, accel))
     // Idle stays under the recording. Speed and throttle each lift the pitch so a pull away is a rev.
     const rate = Math.min(1.75, 0.72 + speed * 0.042 + climb * 0.08)
+    let loud: number
     if (this.engineSrc) {
       this.engineSrc.playbackRate.setTargetAtTime(rate, now, 0.05)
-      this.engineFilter.frequency.setTargetAtTime(Math.min(980, 260 + speed * 24 + climb * 40), now, 0.05)
-    } else if (this.engineOsc) {
-      this.engineOsc.frequency.setTargetAtTime(22 + speed * 2.2 + climb * 3, now, 0.05)
+      this.engineFilter.frequency.setTargetAtTime(Math.min(4200, 900 + speed * 120 + climb * 220), now, 0.05)
+      // The recording is quiet (about -29 dB RMS), so it needs real gain to be heard.
+      loud = 2.2 + Math.min(0.8, speed * 0.05) + climb * 0.1
+    } else {
+      this.engineOsc?.frequency.setTargetAtTime(22 + speed * 2.2 + climb * 3, now, 0.05)
       this.engineFilter.frequency.setTargetAtTime(120 + speed * 14, now, 0.05)
+      loud = 0.055 + Math.min(0.09, speed * 0.005) + climb * 0.012
     }
-    const loud = 0.055 + Math.min(0.09, speed * 0.005) + climb * 0.012
     this.engineGain.gain.setTargetAtTime(loud, now, 0.05)
   }
 
