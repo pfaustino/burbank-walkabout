@@ -12,8 +12,9 @@ export type Disc = {
 }
 
 export const PERSON_RADIUS = 0.45
-export const CAR_HALF_WIDTH = 0.95
-export const CAR_HALF_LENGTH = 2.2
+/** Matches the car meshes. The capsule tip is length + width, which is the bumper. */
+export const CAR_HALF_WIDTH = 0.9
+export const CAR_HALF_LENGTH = 1.2
 export const BUS_HALF_WIDTH = 1.35
 export const BUS_HALF_LENGTH = 5.5
 
