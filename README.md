@@ -4,7 +4,7 @@ Walk Burbank in the browser. The streets and buildings follow the real city, fro
 
 You can drive a stopped car, ride a bus, or call a helicopter. Jobs show up as fares: pick someone or an order up, drop them off, and the cash in the corner goes up. The day moves from morning toward night, and the street lamps come on after dark. The corner names the time and the street you are on.
 
-The walk is the same idea as [World of Wardom](https://github.com/pfaustino/world-of-wardom): third-person WASD, right-drag look, pedestrians that pick a nearby spot and stroll. Wardom's character models stay in that project. People here are Quaternius man and woman meshes, recolored per person.
+You walk in third person with WASD and right-drag to look. Pedestrians pick a nearby spot and stroll. People are Quaternius man and woman meshes, recolored per person.
 
 ## Run
 
