@@ -1,6 +1,9 @@
 import { hitsBuilding, type CityLayout, type MapRoad } from '../world/layout.ts'
+import addresses from '../../data/addresses.json'
+import { findAddress, type AddressPin } from './address.ts'
 
 export function mountDevPanel(input: {
+  layout: CityLayout
   landmarks: { name: string; x: number; z: number }[]
   people: { id: string; name: string }[]
   teleport: (x: number, z: number) => void
@@ -14,6 +17,7 @@ export function mountDevPanel(input: {
   const title = document.createElement('p')
   title.textContent = 'dev'
   root.append(title)
+  root.append(addressForm(input.layout, input.teleport))
 
   root.append(
     pullDown(
@@ -55,6 +59,35 @@ export function shortcutPlaces(
     places.push({ name: label, ...openSpot(layout, shop.x, shop.z) })
   }
   return places
+}
+
+function addressForm(layout: CityLayout, teleport: (x: number, z: number) => void): HTMLFormElement {
+  const form = document.createElement('form')
+  const field = document.createElement('input')
+  field.type = 'search'
+  field.placeholder = 'Address'
+  field.ariaLabel = 'Address'
+  field.autocomplete = 'off'
+  field.spellcheck = false
+  const note = document.createElement('p')
+  note.className = 'dev-note'
+  form.append(field, note)
+  form.addEventListener('submit', (event) => {
+    event.preventDefault()
+    const spot = findAddress(field.value, addresses as AddressPin[], layout.file.roads)
+    if (!spot) {
+      note.textContent = 'No address like that'
+      return
+    }
+    note.textContent = ''
+    const clear = openSpot(layout, spot.x, spot.z)
+    teleport(clear.x, clear.z)
+    field.blur()
+  })
+  field.addEventListener('input', () => {
+    note.textContent = ''
+  })
+  return form
 }
 
 function pullDown(label: string, options: { value: string; text: string }[], onPick: (value: string) => void): HTMLSelectElement {

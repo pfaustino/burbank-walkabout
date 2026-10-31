@@ -287,6 +287,7 @@ export class Game {
 
     if (dev) {
       mountDevPanel({
+        layout: this.layout,
         landmarks: [
           ...this.layout.landmarks.map((mark) => ({
             name: mark.name ?? 'Place',

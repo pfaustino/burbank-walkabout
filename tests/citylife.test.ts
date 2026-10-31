@@ -6,6 +6,8 @@ import { planStoreSigns, type Business } from '../src/world/storefronts.ts'
 import { planLamps } from '../src/world/streetlamps.ts'
 import { floorsForHeight } from '../src/world/CityMesh.ts'
 import { shortcutPlaces } from '../src/dev/DevPanel.ts'
+import { findAddress } from '../src/dev/address.ts'
+import addresses from '../data/addresses.json'
 import { describe, expect, it } from 'vitest'
 
 const layout = buildLayout(mapJson as MapFile)
@@ -140,6 +142,18 @@ describe('dev shortcuts', () => {
     }
     const magnolia = places.find((place) => place.name === 'Magnolia Park')
     expect(Math.hypot((magnolia?.x ?? 0) + 3591, (magnolia?.z ?? 0) - 1672)).toBeLessThan(80)
+  })
+})
+
+describe('address search', () => {
+  it('teleports to a house number, and to a street when the number is left out', () => {
+    const house = findAddress('275 East Olive', addresses, layout.file.roads)
+    expect(house).toBeTruthy()
+    expect(Math.hypot((house?.x ?? 0) + 10.56, (house?.z ?? 0) - 105.11)).toBeLessThan(5)
+    const street = findAddress('Olive Avenue', addresses, layout.file.roads)
+    expect(street).toBeTruthy()
+    expect(findAddress('99999 Nowhere Lane', addresses, layout.file.roads)).toBeNull()
+    expect(findAddress('   ', addresses, layout.file.roads)).toBeNull()
   })
 })
 

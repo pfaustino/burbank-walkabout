@@ -355,7 +355,8 @@ button, .check {
   color: var(--muted);
 }
 
-#dev-panel select {
+#dev-panel select,
+#dev-panel input {
   width: 100%;
   border: 1px solid var(--line);
   border-radius: 8px;
@@ -364,6 +365,20 @@ button, .check {
   color: var(--ink);
   font: inherit;
   font-weight: 550;
+}
+
+#dev-panel input {
+  background: #0e1a26;
+  font-weight: 500;
+}
+
+#dev-panel .dev-note {
+  margin: 0;
+  min-height: 0;
+  font-size: 12px;
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--muted);
 }
 
 #gate {
