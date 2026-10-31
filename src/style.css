@@ -343,19 +343,47 @@ html, body, #app {
   padding: 8px 12px;
 }
 
-#talk-bar {
+#bottom-bar {
   position: fixed;
   left: 50%;
   bottom: 18px;
+  z-index: 5;
   transform: translateX(-50%);
   display: flex;
   gap: 8px;
+  align-items: stretch;
+  width: min(860px, calc(100% - 520px));
+}
+
+#talk-bar {
+  display: flex;
+  flex: 1;
+  gap: 8px;
   align-items: center;
-  width: min(640px, calc(100% - 520px));
+  min-width: 0;
   padding: 8px;
   background: var(--panel);
   border: 1px solid var(--line);
   border-radius: 12px;
+}
+
+#job-modes {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 6px;
+}
+
+#job-modes button {
+  padding: 6px 10px;
+  font-size: 13px;
+  white-space: nowrap;
+}
+
+#job-modes button[aria-pressed='false'] {
+  background: #1d3348;
+  color: var(--muted);
+  font-weight: 550;
 }
 
 #say-input {
@@ -495,10 +523,15 @@ button, .check {
     height: 132px;
     bottom: 84px;
   }
-  #talk-bar { width: min(640px, calc(100% - 320px)); }
+  #bottom-bar { width: min(860px, calc(100% - 320px)); }
 }
 
 @media (max-width: 800px) {
   #transcript { display: none; }
-  #talk-bar { width: min(640px, calc(100% - 20px)); }
+  #bottom-bar {
+    width: min(640px, calc(100% - 20px));
+    flex-wrap: wrap;
+  }
+  #job-modes { flex-direction: row; width: 100%; }
+  #job-modes button { flex: 1; }
 }

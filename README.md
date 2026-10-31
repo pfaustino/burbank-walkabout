@@ -88,7 +88,7 @@ Stand next to a car that has stopped, then press **F**.
 |-----|--------|
 | Drag | Pan |
 | Scroll | Zoom toward the cursor |
-| Double-click | Zoom in |
+| Double-click | Jump to that spot |
 | **+** / **−** | Zoom |
 | Arrows | Pan |
 | **M** or **Esc** | Close |
@@ -103,7 +103,9 @@ The words come from lines you send and lines people say back. Little words drop 
 
 ## Fares
 
-A job shows up on its own. The ribbon at the top is the current stop. Yellow is the pickup. Green is the dropoff. An arrow just under the ribbon points the way and shows the distance. The corner map marks the same spot.
+**Make Deliveries** and **Pick up Fares** sit beside the chat. Both start on, and each click turns that kind of job off or on. Turn both off and the current ribbon goes away.
+
+A job shows up on its own while its button is on. The ribbon at the top is the current stop. Yellow is the pickup. Green is the dropoff. An arrow just under the ribbon points the way and shows the distance. The corner map marks the same spot.
 
 One job is a person waving for a ride. The next is an order from a shop, then a ride again. Drive to the spot and stop. The ribbon switches to the dropoff. Stop there and the fare, plus a tip, adds to the cash in the corner. A quicker trip pays a larger tip. Then there is a short break before the next one.
 

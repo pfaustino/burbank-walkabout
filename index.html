@@ -51,7 +51,7 @@
       <div id="street-map" hidden role="dialog" aria-modal="true" aria-label="City map">
         <canvas id="street-map-canvas"></canvas>
         <p id="street-map-names"></p>
-        <p id="street-map-hint">Drag to pan · scroll to zoom · M or Esc closes</p>
+        <p id="street-map-hint">Drag to pan · scroll to zoom · double-click a spot to go there · M or Esc closes</p>
         <p id="street-map-credit">Map data © OpenStreetMap contributors</p>
         <div id="street-map-tools">
           <button id="street-map-in" type="button" aria-label="Zoom in">+</button>
@@ -61,12 +61,18 @@
       </div>
       <div id="subtitle" aria-live="polite"></div>
       <div id="transcript" aria-live="polite"></div>
-      <form id="talk-bar">
-        <button id="mic" type="button" aria-pressed="false">Mic</button>
-        <input id="say-input" maxlength="240" autocomplete="off" placeholder="Talk to someone nearby…" />
-        <label class="check"><input id="hear" type="checkbox" checked /> Hear</label>
-        <button id="send" type="submit">Send</button>
-      </form>
+      <div id="bottom-bar">
+        <form id="talk-bar">
+          <button id="mic" type="button" aria-pressed="false">Mic</button>
+          <input id="say-input" maxlength="240" autocomplete="off" placeholder="Talk to someone nearby…" />
+          <label class="check"><input id="hear" type="checkbox" checked /> Hear</label>
+          <button id="send" type="submit">Send</button>
+        </form>
+        <div id="job-modes">
+          <button id="job-deliveries" type="button" aria-pressed="true">Make Deliveries</button>
+          <button id="job-fares" type="button" aria-pressed="true">Pick up Fares</button>
+        </div>
+      </div>
       <div id="dev-panel" hidden></div>
       <div id="loading" role="status" aria-live="polite">Loading the map…</div>
       <div id="gate">

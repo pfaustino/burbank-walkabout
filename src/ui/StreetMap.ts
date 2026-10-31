@@ -123,9 +123,11 @@ export class StreetMap {
   private lastX = 0
   private lastY = 0
   private readonly onClose: () => void
+  private readonly onTeleport: (x: number, z: number) => void
 
-  constructor(layout: CityLayout, onClose: () => void) {
+  constructor(layout: CityLayout, onClose: () => void, onTeleport: (x: number, z: number) => void) {
     this.onClose = onClose
+    this.onTeleport = onTeleport
     this.root = must('#street-map')
     this.canvas = must('#street-map-canvas') as HTMLCanvasElement
     const ctx = this.canvas.getContext('2d')
@@ -148,6 +150,16 @@ export class StreetMap {
     this.root.addEventListener('dblclick', this.onDoubleClick)
     window.addEventListener('keydown', this.onKey)
     window.addEventListener('resize', this.onResize)
+  }
+
+  /** Move the player arrow to a spot and keep the map open. */
+  mark(x: number, z: number): void {
+    this.playerX = x
+    this.playerZ = z
+    this.centerX = x
+    this.centerZ = z
+    this.clamp()
+    if (this.shown) this.draw()
   }
 
   show(x: number, z: number, yaw: number): void {
@@ -360,7 +372,12 @@ export class StreetMap {
   private readonly onDoubleClick = (event: MouseEvent): void => {
     if (event.target instanceof HTMLButtonElement) return
     const rect = this.canvas.getBoundingClientRect()
-    this.zoomBy(1.6, event.clientX - rect.left, event.clientY - rect.top)
+    const cssW = this.canvas.clientWidth
+    const cssH = this.canvas.clientHeight
+    if (cssW < 2 || cssH < 2) return
+    const x = this.centerX + (event.clientX - rect.left - cssW / 2) / this.ppm
+    const z = this.centerZ + (event.clientY - rect.top - cssH / 2) / this.ppm
+    this.onTeleport(x, z)
   }
 
   private readonly onKey = (event: KeyboardEvent): void => {

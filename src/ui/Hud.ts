@@ -7,6 +7,7 @@ export class Hud {
     onHear: (enabled: boolean) => void
     onPay?: (which: 'fare' | 'tip') => void
     coinInto?: () => { x: number; y: number }
+    onJobs: (deliveries: boolean, fares: boolean) => void
   }
   private readonly place: HTMLElement
   private readonly nearby: HTMLElement
@@ -28,6 +29,7 @@ export class Hud {
     onHear: (enabled: boolean) => void
     onPay?: (which: 'fare' | 'tip') => void
     coinInto?: () => { x: number; y: number }
+    onJobs: (deliveries: boolean, fares: boolean) => void
   }) {
     this.handlers = handlers
     this.place = must('#place')
@@ -55,7 +57,22 @@ export class Hud {
     hear.addEventListener('change', () => this.handlers.onHear(hear.checked))
 
     this.setStatus('WASD walk · Shift run · right-drag look · Space hop · E talk · V mic · F drive or ride · H helicopter · M map')
+    this.mountJobs()
     this.mountCoach()
+  }
+
+  private mountJobs(): void {
+    const deliveries = must('#job-deliveries') as HTMLButtonElement
+    const fares = must('#job-fares') as HTMLButtonElement
+    const toggle = (button: HTMLButtonElement) => {
+      button.addEventListener('click', () => {
+        const on = button.getAttribute('aria-pressed') !== 'true'
+        button.setAttribute('aria-pressed', on ? 'true' : 'false')
+        this.handlers.onJobs(deliveries.getAttribute('aria-pressed') === 'true', fares.getAttribute('aria-pressed') === 'true')
+      })
+    }
+    toggle(deliveries)
+    toggle(fares)
   }
 
   private mountCoach(): void {

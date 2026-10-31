@@ -173,8 +173,8 @@ function project(roads: MapRoad[], x: number, z: number): { x: number; z: number
   return { x: px, z: pz, d: bestD }
 }
 
-/** Step out of a building so the shortcut does not leave you inside a wall. */
-function openSpot(layout: CityLayout, x: number, z: number): { x: number; z: number } {
+/** Step out of a building so a jump does not leave you inside a wall. */
+export function openSpot(layout: CityLayout, x: number, z: number): { x: number; z: number } {
   if (!hitsBuilding(layout, x, z, 0.8)) return { x, z }
   for (let radius = 6; radius <= 140; radius += 6) {
     for (let step = 0; step < 12; step++) {

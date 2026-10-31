@@ -16,7 +16,7 @@ import { PuppetSet } from '../actors/PuppetSet.ts'
 import { Ambience } from '../audio/ambience.ts'
 import { DeliveryRun } from '../delivery/DeliveryRun.ts'
 import type { DeliveryFile } from '../delivery/orders.ts'
-import { mountDevPanel, shortcutPlaces } from '../dev/DevPanel.ts'
+import { mountDevPanel, openSpot, shortcutPlaces } from '../dev/DevPanel.ts'
 import { CityClient, clientUrl } from '../net/Client.ts'
 import type { NetCarRide, NetPerson, NetPlayer, SpeechMsg } from '../net/protocol.ts'
 import { Walker } from '../player/Walker.ts'
@@ -257,7 +257,7 @@ export class Game {
     this.helicopter = new Helicopter(tourOver(this.layout.landmarks, this.layout.file.spawn))
     this.scene.add(this.helicopter.root)
     this.minimap = new Minimap(this.layout)
-    this.streetMap = new StreetMap(this.layout, () => this.setMap(false))
+    this.streetMap = new StreetMap(this.layout, () => this.setMap(false), (x, z) => this.jumpTo(x, z))
 
     this.walker = new Walker(this.layout, this.camera, this.layout.file.spawn, playerName)
     this.walker.setPosts([
@@ -276,6 +276,7 @@ export class Game {
       },
       onPay: (which) => this.ambience.coin(which === 'tip' ? 1.18 : 1),
       coinInto: () => this.carScreen(),
+      onJobs: (deliveries, fares) => this.delivery.setModes(deliveries, fares),
     })
     this.delivery = new DeliveryRun(
       this.scene,
@@ -1098,6 +1099,14 @@ export class Game {
     if (!person) return
     const spot = nearbySpot(this.layout, person.x, person.z)
     this.moveTo(spot.x, spot.z)
+  }
+
+  private jumpTo(x: number, z: number): void {
+    if (this.riddenId) this.leaveBus()
+    const spot = openSpot(this.layout, x, z)
+    this.moveTo(spot.x, spot.z)
+    const pos = this.walker.mesh.position
+    this.streetMap.mark(pos.x, pos.z)
   }
 
   private moveTo(x: number, z: number): void {

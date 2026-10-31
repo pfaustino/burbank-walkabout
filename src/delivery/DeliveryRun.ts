@@ -31,6 +31,8 @@ export class DeliveryRun {
   private ride: TaxiRide | null = null
   private passenger: Figure | null = null
   private wantTaxi = true
+  private deliveries = true
+  private fares = true
   private lastCustomer = ''
   private phase: DropPhase | 'gap' = 'gap'
   private wait = 0.6
@@ -87,6 +89,24 @@ export class DeliveryRun {
     this.scene.add(this.arrow, this.distance, this.halo)
   }
 
+  /** Turn each kind of job on or off. A job already on screen drops when its kind is turned off. */
+  setModes(deliveries: boolean, fares: boolean): void {
+    this.deliveries = deliveries
+    this.fares = fares
+    const dropDelivery = this.order !== null && !deliveries
+    const dropFare = this.ride !== null && !fares
+    if (dropDelivery || dropFare) {
+      this.order = null
+      this.ride = null
+      this.clearPassenger()
+      this.phase = 'gap'
+      this.elapsed = 0
+      this.hide()
+      this.hud.setOrder(null)
+    }
+    if (this.phase === 'gap' && (deliveries || fares)) this.wait = 0
+  }
+
   get marker(): { x: number; z: number; dropoff: boolean } | null {
     const spot = this.goal()
     if (!spot || (!this.order && !this.ride)) return null
@@ -99,7 +119,7 @@ export class DeliveryRun {
     if (this.phase === 'gap') {
       this.wait -= dt
       this.hide()
-      if (this.wait <= 0) this.offer(pose)
+      if (this.wait <= 0 && (this.deliveries || this.fares)) this.offer(pose)
       return
     }
     const spot = this.goal()
@@ -135,26 +155,30 @@ export class DeliveryRun {
   }
 
   private offer(pose: Spot): void {
-    const taxi = this.wantTaxi
-    this.wantTaxi = !this.wantTaxi
-    if (taxi) {
-      const ride = planTaxi(this.layout, this.network, pose, this.rng, this.file, this.lastCustomer)
-      if (ride) {
-        this.order = null
-        this.ride = ride
-        this.lastCustomer = ride.passenger
-        this.phase = 'pickup'
-        this.elapsed = 0
-        this.showRide(ride, 'pickup')
-        this.seatPassenger(ride)
-        return
-      }
-    }
+    const taxiFirst = this.fares && this.deliveries ? this.wantTaxi : this.fares
+    if (this.fares && this.deliveries) this.wantTaxi = !this.wantTaxi
+    if (taxiFirst && this.tryTaxi(pose)) return
+    if (this.deliveries && this.tryDelivery(pose)) return
+    if (!taxiFirst && this.fares && this.tryTaxi(pose)) return
+    this.wait = 2
+  }
+
+  private tryTaxi(pose: Spot): boolean {
+    const ride = planTaxi(this.layout, this.network, pose, this.rng, this.file, this.lastCustomer)
+    if (!ride) return false
+    this.order = null
+    this.ride = ride
+    this.lastCustomer = ride.passenger
+    this.phase = 'pickup'
+    this.elapsed = 0
+    this.showRide(ride, 'pickup')
+    this.seatPassenger(ride)
+    return true
+  }
+
+  private tryDelivery(pose: Spot): boolean {
     const order = planDelivery(this.layout, this.network, this.businesses, pose, this.rng, this.file, this.lastCustomer)
-    if (!order) {
-      this.wait = 2
-      return
-    }
+    if (!order) return false
     this.ride = null
     this.clearPassenger()
     this.order = order
@@ -162,6 +186,7 @@ export class DeliveryRun {
     this.phase = 'pickup'
     this.elapsed = 0
     this.show(order, 'pickup')
+    return true
   }
 
   private goal(): Spot | null {
