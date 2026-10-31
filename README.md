@@ -132,6 +132,24 @@ During `npm run dev`, or with `?dev=1`, a panel sits in the corner.
 - **Locations** — jump to a place: the library, Town Center, City Hall, Verdugo Park, Magnolia Park, St. Joseph's Hospital, IKEA, or Walmart.
 - **NPCs** — stand next to that person.
 
+## Your own city
+
+The streets, buildings, shops, and addresses are Burbank. To walk a different city, paste this prompt to the assistant in this repo and fill in the city.
+
+```text
+Change this game from Burbank to CITY, STATE, COUNTRY. Keep the walk, driving, buses, helicopter, fares, street map, word stream, and address search. Only replace the place.
+
+Look up the OpenStreetMap relation for the city's administrative boundary. Download that relation with its outer geometry to tmp-CITY-boundary.json. Download buildings, highways, and parks inside the boundary with out geom. If Overpass times out, split the city into tiles and save them as tmp-CITY-part-1.json, tmp-CITY-part-2.json, and so on. Do not commit those tmp files.
+
+Point scripts/build-map.mjs, scripts/pull-businesses.mjs, and scripts/pull-addresses.mjs at those files. Set LAT0 and LON0 to the same point near the middle of the city in all three scripts, and set the business query bbox to the city. Rebuild data/map.json, data/businesses.json, and data/addresses.json.
+
+Name three real landmarks the way landmarkOf does now: city hall (the spawn), a mall or main shopping place, and the central library. Give each a real street address. Put the spawn on the sidewalk outside city hall. In shortcutPlaces, pick a large park, a known crossing, a hospital, and two stores that exist in the new businesses file.
+
+Move the people in data/people.json onto real streets in the new map. Rewrite their personas and the local replies in src/dialog/fallback.ts so they know this city. Update the downtown blurb in src/world/layout.ts, the page title and gate copy, and the word-stream seed words. Update the tests and e2e so they expect the new city hall, a real street in that reply, and a Locations shortcut that exists.
+
+Run npm run check. Do not commit .env or the tmp extracts.
+```
+
 ## Scripts
 
 | Command | Purpose |
