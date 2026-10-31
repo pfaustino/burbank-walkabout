@@ -48,10 +48,8 @@ type RoadSeg = {
 }
 
 const BOARDS = [0x1c3a5f, 0x7a1f2b, 0x1e4d3a, 0x2c241c, 0x3d2a55]
-const SHOP_FIRST = ['Palm', 'Valley', 'Golden', 'Olive', 'Magnolia', 'Civic', 'Front', 'North', 'Sunny', 'Little', 'Metro', 'Plaza', 'Corner', 'Oak', 'Harbor', 'Cedar', 'Union', 'Pioneer', 'Linden', 'Burbank']
-const SHOP_SECOND = ['Books', 'Cleaners', 'Dental', 'Tailors', 'Cafe', 'Market', 'Studio', 'Realty', 'Bakery', 'Florist', 'Optics', 'Salon', 'Deli', 'Hardware', 'Pharmacy', 'Gallery', 'Shoes', 'Music', 'Printing', 'Jewelry', 'Travel', 'Gifts', 'Coffee', 'Bikes', 'Law']
 
-/** A name on every street-facing building, and several when the block has more than one business. */
+/** A sign only where a real business or a named building sits. An empty block stays residential. */
 export function planStoreSigns(layout: CityLayout, businesses: readonly Business[]): StoreSign[] {
   const buckets = new Map<number, Business[]>()
   for (const business of businesses) {
@@ -196,18 +194,7 @@ function facadeNames(building: MapBuilding, wall: Wall, tenants: readonly Busine
     if (names.some((have) => have.toLowerCase() === name.toLowerCase())) continue
     names.push(name)
   }
-  if (names.length === 0) {
-    if (wall.length < 8 || building.h < 4) return []
-    return [inventedName(building)]
-  }
   return names.slice(0, fit)
-}
-
-function inventedName(building: MapBuilding): string {
-  const n = hash(`${Math.round(building.minX)}:${Math.round(building.minZ)}:${building.h}`)
-  const first = SHOP_FIRST[n % SHOP_FIRST.length] ?? SHOP_FIRST[0]!
-  const second = SHOP_SECOND[(n >>> 8) % SHOP_SECOND.length] ?? SHOP_SECOND[0]!
-  return `${first} ${second}`
 }
 
 function usableName(name: string): boolean {

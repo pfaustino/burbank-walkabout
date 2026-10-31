@@ -33,7 +33,7 @@ describe('daylight', () => {
 })
 
 describe('storefront signs', () => {
-  it('puts a business on every facade, and more than one when the block has several', () => {
+  it('signs real businesses and leaves a building with none blank', () => {
     const file = {
       name: 't',
       credit: '',
@@ -63,14 +63,15 @@ describe('storefront signs', () => {
     expect(signs.some((sign) => sign.name === 'Big Hall')).toBe(true)
     expect(signs.some((sign) => sign.name === 'Annex')).toBe(true)
     const bare = signs.filter((sign) => sign.x > -2 && sign.x < 18 && sign.z > 18 && sign.z < 32)
-    expect(bare).toHaveLength(1)
-    expect(bare[0]!.name).toMatch(/^[A-Za-z]+ [A-Za-z]+$/)
+    expect(bare).toHaveLength(0)
   })
 
   it('hangs downtown names on the real blocks', () => {
     const signs = planStoreSigns(layout, businesses)
     const names = new Set(signs.map((sign) => sign.name))
-    expect(signs.length).toBeGreaterThan(800)
+    const allowed = new Set(businesses.map((business) => business.name))
+    for (const building of layout.buildings) if (building.name) allowed.add(building.name)
+    for (const sign of signs) expect(allowed.has(sign.name)).toBe(true)
     expect(names.has('Burbank City Hall')).toBe(true)
     expect(names.has('Burbank Central Library')).toBe(true)
     expect(names.has('Burbank Town Center')).toBe(true)
