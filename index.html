@@ -5,6 +5,24 @@
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Burbank Walkabout</title>
+    <style>
+      #loading {
+        position: fixed;
+        inset: 0;
+        z-index: 12;
+        display: grid;
+        place-items: center;
+        margin: 0;
+        background:
+          linear-gradient(180deg, rgba(12, 28, 42, 0.2), rgba(12, 28, 42, 0.72)),
+          #1d4e73;
+        color: #f6f1e6;
+        font-family: "Segoe UI", system-ui, sans-serif;
+        font-size: 22px;
+        letter-spacing: 0.02em;
+      }
+      #loading[hidden] { display: none; }
+    </style>
   </head>
   <body>
     <div id="app">
@@ -39,6 +57,7 @@
         <button id="send" type="submit">Send</button>
       </form>
       <div id="dev-panel" hidden></div>
+      <div id="loading" role="status" aria-live="polite">Loading the map…</div>
       <div id="gate">
         <form id="gate-form">
           <h1>Burbank Walkabout</h1>
