@@ -77,6 +77,41 @@ export class Hud {
         /* The card stays dismissed for this visit. */
       }
     })
+    this.dragCoach(coach)
+  }
+
+  private dragCoach(coach: HTMLElement): void {
+    let drag: { x: number; y: number; pointer: number } | null = null
+    const move = (event: PointerEvent): void => {
+      if (!drag || event.pointerId !== drag.pointer) return
+      const maxX = Math.max(0, window.innerWidth - coach.offsetWidth)
+      const maxY = Math.max(0, window.innerHeight - coach.offsetHeight)
+      const x = Math.min(maxX, Math.max(0, event.clientX - drag.x))
+      const y = Math.min(maxY, Math.max(0, event.clientY - drag.y))
+      coach.style.left = `${x}px`
+      coach.style.top = `${y}px`
+    }
+    const stop = (event: PointerEvent): void => {
+      if (!drag || event.pointerId !== drag.pointer) return
+      drag = null
+      coach.classList.remove('is-dragging')
+      window.removeEventListener('pointermove', move)
+      window.removeEventListener('pointerup', stop)
+      window.removeEventListener('pointercancel', stop)
+    }
+    coach.addEventListener('pointerdown', (event) => {
+      if (event.button !== 0 || drag) return
+      if ((event.target as HTMLElement).closest('button')) return
+      const box = coach.getBoundingClientRect()
+      drag = { x: event.clientX - box.left, y: event.clientY - box.top, pointer: event.pointerId }
+      coach.style.left = `${box.left}px`
+      coach.style.top = `${box.top}px`
+      coach.style.transform = 'none'
+      coach.classList.add('is-dragging')
+      window.addEventListener('pointermove', move)
+      window.addEventListener('pointerup', stop)
+      window.addEventListener('pointercancel', stop)
+    })
   }
 
   setPlace(text: string): void {
