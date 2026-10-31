@@ -5,8 +5,8 @@
   "green": 8.5,
   "yellow": 2.5,
   "enterRange": 4.5,
-  "driveMax": 16,
-  "driveBoost": 22,
+  "driveMax": 32,
+  "driveBoost": 44,
   "restitution": 0.2,
   "crunch": 1.6,
   "colors": ["#c0392b", "#2457c5", "#f4f4f4", "#1f7a4d", "#22262c", "#c47b2b", "#6d3b86", "#d5d8dc", "#8c2f39"]

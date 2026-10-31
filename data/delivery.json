@@ -2,7 +2,7 @@
   "haloRadius": 4.2,
   "parkSpeed": 1.4,
   "minPickup": 40,
-  "maxPickup": 480,
+  "maxPickup": 8000,
   "minTrip": 80,
   "maxTrip": 560,
   "roadReach": 32,

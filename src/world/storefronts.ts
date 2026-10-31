@@ -241,7 +241,7 @@ function buildingWalls(building: MapBuilding): Wall[] {
   const merged: Wall[] = []
   let run: Wall | null = null
   const flush = (): void => {
-    if (run && run.length >= 6) merged.push(run)
+    if (run && run.length >= 4) merged.push(run)
     run = null
   }
   for (const edge of edges) {
@@ -255,7 +255,7 @@ function buildingWalls(building: MapBuilding): Wall[] {
   if (merged.length > 1 && colinear(merged[merged.length - 1]!, merged[0]!)) {
     const joined = makeWall(merged[merged.length - 1]!.ax, merged[merged.length - 1]!.az, merged[0]!.bx, merged[0]!.bz, ring)
     merged.pop()
-    if (joined && joined.length >= 6) merged[0] = joined
+    if (joined && joined.length >= 4) merged[0] = joined
   }
   return merged
 }
