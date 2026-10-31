@@ -16,7 +16,7 @@ import { PuppetSet } from '../actors/PuppetSet.ts'
 import { Ambience } from '../audio/ambience.ts'
 import { DeliveryRun } from '../delivery/DeliveryRun.ts'
 import type { DeliveryFile } from '../delivery/orders.ts'
-import { mountDevPanel } from '../dev/DevPanel.ts'
+import { mountDevPanel, shortcutPlaces } from '../dev/DevPanel.ts'
 import { CityClient, clientUrl } from '../net/Client.ts'
 import type { NetCarRide, NetPerson, NetPlayer, SpeechMsg } from '../net/protocol.ts'
 import { Walker } from '../player/Walker.ts'
@@ -287,11 +287,14 @@ export class Game {
 
     if (dev) {
       mountDevPanel({
-        landmarks: this.layout.landmarks.map((mark) => ({
-          name: mark.name ?? 'Place',
-          x: mark.door?.[0] ?? (mark.minX + mark.maxX) / 2,
-          z: mark.door?.[1] ?? (mark.minZ + mark.maxZ) / 2,
-        })),
+        landmarks: [
+          ...this.layout.landmarks.map((mark) => ({
+            name: mark.name ?? 'Place',
+            x: mark.door?.[0] ?? (mark.minX + mark.maxX) / 2,
+            z: mark.door?.[1] ?? (mark.minZ + mark.maxZ) / 2,
+          })),
+          ...shortcutPlaces(this.layout, businessesJson as Business[]),
+        ],
         people: this.peopleFile.people.map((person) => ({ id: person.id, name: person.name })),
         teleport: (x, z) => this.moveTo(x, z),
         meet: (id) => this.meet(id),

@@ -5,6 +5,7 @@ import { buildLayout, hitsBuilding, type MapFile } from '../src/world/layout.ts'
 import { planStoreSigns, type Business } from '../src/world/storefronts.ts'
 import { planLamps } from '../src/world/streetlamps.ts'
 import { floorsForHeight } from '../src/world/CityMesh.ts'
+import { shortcutPlaces } from '../src/dev/DevPanel.ts'
 import { describe, expect, it } from 'vitest'
 
 const layout = buildLayout(mapJson as MapFile)
@@ -121,6 +122,24 @@ describe('house stories', () => {
     expect(floorsForHeight(6.4, 600)).toBe(2)
     expect(floorsForHeight(5, 600)).toBe(2)
     expect(floorsForHeight(4.2, 600)).toBe(1)
+  })
+})
+
+describe('dev shortcuts', () => {
+  it('lands the added places on open ground', () => {
+    const places = shortcutPlaces(layout, businesses)
+    expect(places.map((place) => place.name)).toEqual([
+      'Verdugo Park',
+      'Magnolia Park',
+      "St. Joseph's Hospital",
+      'IKEA',
+      'Walmart',
+    ])
+    for (const place of places) {
+      expect(hitsBuilding(layout, place.x, place.z, 0.4)).toBe(false)
+    }
+    const magnolia = places.find((place) => place.name === 'Magnolia Park')
+    expect(Math.hypot((magnolia?.x ?? 0) + 3591, (magnolia?.z ?? 0) - 1672)).toBeLessThan(80)
   })
 })
 

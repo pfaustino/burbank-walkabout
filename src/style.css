@@ -338,9 +338,7 @@ button, .check {
   display: flex;
   flex-direction: column;
   gap: 6px;
-  width: 220px;
-  max-height: calc(100% - 250px);
-  overflow: auto;
+  width: 240px;
   padding: 10px;
   background: var(--panel);
   border: 1px solid var(--line);
@@ -357,15 +355,15 @@ button, .check {
   color: var(--muted);
 }
 
-#dev-panel button {
+#dev-panel select {
   width: 100%;
-  min-width: 0;
-  text-align: left;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 8px 10px;
   background: #1d3348;
   color: var(--ink);
+  font: inherit;
   font-weight: 550;
-  white-space: normal;
-  line-height: 1.25;
 }
 
 #gate {

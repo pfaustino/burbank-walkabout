@@ -7,14 +7,14 @@ test('loads downtown and can cross to Town Center', async ({ page }) => {
   await expect(page.locator('#status')).toContainText('WASD')
   await expect(page.locator('#net-status')).toContainText('connected', { timeout: 15_000 })
   await expect(page.locator('#dev-panel')).toBeVisible()
-  await page.getByRole('button', { name: 'Burbank Town Center' }).click()
+  await page.getByRole('combobox', { name: 'Locations' }).selectOption('Burbank Town Center')
   await expect(page.locator('#place')).toContainText('Town Center')
 })
 
 test('sends text to June and shows her reply', async ({ page }) => {
   await page.goto('/?dev=1&name=Tester')
   await expect(page.locator('#net-status')).toContainText('connected', { timeout: 15_000 })
-  await page.getByRole('button', { name: 'Meet June Alvarez' }).click()
+  await page.getByRole('combobox', { name: 'NPCs' }).selectOption('June Alvarez')
   await page.locator('#say-input').fill('Where is City Hall?')
   await page.locator('#send').click()
   const transcript = page.locator('#transcript')
