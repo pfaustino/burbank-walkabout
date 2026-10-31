@@ -8,13 +8,14 @@ export type LampPost = { x: number; z: number; yaw: number }
 const SPACING = 34
 const GLOW = 10
 
-/** Sidewalk lamp posts along named streets, kept off the roadway and out of buildings. */
+/** Sidewalk lamp posts along named streets, kept off every roadway and out of buildings. */
 export function planLamps(layout: CityLayout): LampPost[] {
   const posts: LampPost[] = []
+  const pavement = pavementGrid(layout.file.roads)
   for (const road of layout.file.roads) {
     if (road.kind !== 'primary' && road.kind !== 'secondary' && road.kind !== 'tertiary') continue
     if (!road.name || /Alley|Frontage|Lot/.test(road.name)) continue
-    walkRoad(layout, road.pts, road.w * 0.5 + 1.15, posts)
+    walkRoad(layout, pavement, road.pts, road.w * 0.5 + 1.15, posts)
   }
   return posts
 }
@@ -126,7 +127,7 @@ export class StreetLamps {
   }
 }
 
-function walkRoad(layout: CityLayout, pts: number[], side: number, posts: LampPost[]): void {
+function walkRoad(layout: CityLayout, pavement: Map<string, Seg[]>, pts: number[], side: number, posts: LampPost[]): void {
   let traveled = 0
   let nextLeft = 14
   let nextRight = 14 + SPACING / 2
@@ -152,7 +153,7 @@ function walkRoad(layout: CityLayout, pts: number[], side: number, posts: LampPo
       const rx = tz
       const rz = -tx
       const flip = left ? -1 : 1
-      tryAdd(layout, posts, px + rx * side * flip, pz + rz * side * flip, Math.atan2(-rx * flip, -rz * flip))
+      tryAdd(layout, pavement, posts, px + rx * side * flip, pz + rz * side * flip, Math.atan2(-rx * flip, -rz * flip))
       if (left) nextLeft += SPACING
       else nextRight += SPACING
     }
@@ -160,8 +161,8 @@ function walkRoad(layout: CityLayout, pts: number[], side: number, posts: LampPo
   }
 }
 
-function tryAdd(layout: CityLayout, posts: LampPost[], x: number, z: number, yaw: number): void {
-  if (hitsBuilding(layout, x, z, 0.4)) return
+function tryAdd(layout: CityLayout, pavement: Map<string, Seg[]>, posts: LampPost[], x: number, z: number, yaw: number): void {
+  if (hitsBuilding(layout, x, z, 0.4) || onPavement(pavement, x, z)) return
   for (let i = 0; i < posts.length; i++) {
     const post = posts[i]!
     const dx = post.x - x
@@ -169,6 +170,52 @@ function tryAdd(layout: CityLayout, posts: LampPost[], x: number, z: number, yaw
     if (dx * dx + dz * dz < 144) return
   }
   posts.push({ x, z, yaw })
+}
+
+type Seg = { ax: number; az: number; bx: number; bz: number; half: number }
+
+const PAVEMENT_CELL = 64
+
+/** A post beside one street can still stand in the cross street. Reject that. */
+function pavementGrid(roads: { w: number; pts: number[] }[]): Map<string, Seg[]> {
+  const grid = new Map<string, Seg[]>()
+  for (const road of roads) {
+    const half = road.w * 0.5
+    for (let i = 0; i < road.pts.length - 2; i += 2) {
+      const ax = road.pts[i] ?? 0
+      const az = road.pts[i + 1] ?? 0
+      const bx = road.pts[i + 2] ?? ax
+      const bz = road.pts[i + 3] ?? az
+      const seg: Seg = { ax, az, bx, bz, half }
+      const minX = Math.floor((Math.min(ax, bx) - half) / PAVEMENT_CELL)
+      const maxX = Math.floor((Math.max(ax, bx) + half) / PAVEMENT_CELL)
+      const minZ = Math.floor((Math.min(az, bz) - half) / PAVEMENT_CELL)
+      const maxZ = Math.floor((Math.max(az, bz) + half) / PAVEMENT_CELL)
+      for (let cx = minX; cx <= maxX; cx++) {
+        for (let cz = minZ; cz <= maxZ; cz++) {
+          const key = `${cx},${cz}`
+          const list = grid.get(key) ?? []
+          list.push(seg)
+          grid.set(key, list)
+        }
+      }
+    }
+  }
+  return grid
+}
+
+function onPavement(grid: Map<string, Seg[]>, x: number, z: number): boolean {
+  const list = grid.get(`${Math.floor(x / PAVEMENT_CELL)},${Math.floor(z / PAVEMENT_CELL)}`)
+  if (!list) return false
+  for (const seg of list) {
+    const dx = seg.bx - seg.ax
+    const dz = seg.bz - seg.az
+    const len2 = dx * dx + dz * dz || 1
+    const t = Math.min(1, Math.max(0, ((x - seg.ax) * dx + (z - seg.az) * dz) / len2))
+    const dist = Math.hypot(x - (seg.ax + dx * t), z - (seg.az + dz * t))
+    if (dist < seg.half) return true
+  }
+  return false
 }
 
 function nearestPosts(posts: LampPost[], x: number, z: number, count: number): LampPost[] {

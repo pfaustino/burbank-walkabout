@@ -158,5 +158,9 @@ describe('street lamps', () => {
       }
     }
     expect(nearest).toBeGreaterThan(11)
+    const crossing = { x: -2464.8, z: 1220.2 }
+    for (const post of posts) {
+      expect(Math.hypot(post.x - crossing.x, post.z - crossing.z)).toBeGreaterThan(12)
+    }
   })
 })

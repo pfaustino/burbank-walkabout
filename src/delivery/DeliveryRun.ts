@@ -40,6 +40,7 @@ export class DeliveryRun {
   private readonly distanceMat: THREE.SpriteMaterial
   private readonly distanceCanvas: HTMLCanvasElement
   private distanceText = ''
+  private readonly aim = new THREE.Vector3()
   private readonly halo: THREE.Group
   private readonly haloMats: THREE.MeshBasicMaterial[]
   private spin = 0
@@ -68,7 +69,7 @@ export class DeliveryRun {
     this.hud = hud
     this.rng = rng
     this.file = file
-    this.arrowFace = new THREE.MeshBasicMaterial({ color: PICKUP, fog: false })
+    this.arrowFace = new THREE.MeshBasicMaterial({ color: PICKUP, fog: false, depthTest: false })
     this.arrow = buildArrow(this.arrowFace)
     this.arrow.visible = false
     const label = buildDistanceLabel()
@@ -92,7 +93,7 @@ export class DeliveryRun {
     return { x: spot.x, z: spot.z, dropoff: this.phase === 'dropoff' }
   }
 
-  update(dt: number, pose: { x: number; z: number; driving: boolean; speed: number }): void {
+  update(dt: number, pose: { x: number; z: number; driving: boolean; speed: number; camera: THREE.PerspectiveCamera }): void {
     this.spin += dt
     if (this.phase !== 'gap') this.elapsed += dt
     if (this.phase === 'gap') {
@@ -103,7 +104,7 @@ export class DeliveryRun {
     }
     const spot = this.goal()
     if ((!this.order && !this.ride) || !spot) return
-    this.placeCue(pose.x, pose.z, spot)
+    this.placeCue(pose.x, pose.z, spot, pose.camera)
     this.wave(dt, pose.x, pose.z)
     if (!parkedOn(pose.driving, pose.speed, pose.x, pose.z, spot, this.file.haloRadius, this.file.parkSpeed)) return
     if (this.phase === 'pickup') {
@@ -222,15 +223,19 @@ export class DeliveryRun {
     this.halo.visible = false
   }
 
-  private placeCue(x: number, z: number, spot: Spot): void {
+  private placeCue(x: number, z: number, spot: Spot, camera: THREE.PerspectiveCamera): void {
     const dx = spot.x - x
     const dz = spot.z - z
     const yaw = Math.atan2(dx, dz)
-    const bob = Math.sin(this.spin * 3) * 0.16
+    const bob = Math.sin(this.spin * 3) * 5
+    const order = document.querySelector('#order')
+    const ribbonBottom = order instanceof HTMLElement && !order.hidden ? order.getBoundingClientRect().bottom : 72
+    const mid = window.innerWidth / 2
+    const depth = Math.max(5, camera.position.distanceTo(this.aim.set(x, 1.2, z)) * 0.62)
+    this.placeOnScreen(camera, mid, ribbonBottom + 42 + bob, depth, this.arrow.position)
+    this.placeOnScreen(camera, mid, ribbonBottom + 86 + bob, depth, this.distance.position)
     this.arrow.visible = true
-    this.arrow.position.set(x, 3.15 + bob, z)
     this.distance.visible = true
-    this.distance.position.set(x, 4.15 + bob, z)
     this.paintDistance(formatDistance(Math.hypot(dx, dz)))
     this.arrow.rotation.order = 'YXZ'
     this.arrow.rotation.y = yaw
@@ -245,6 +250,14 @@ export class DeliveryRun {
     if (ring) ring.opacity = 0.72 + Math.sin(this.spin * 4) * 0.18
     if (disc) disc.opacity = 0.22 + Math.sin(this.spin * 4) * 0.08
     if (column) column.opacity = 0.12 + Math.sin(this.spin * 2.2) * 0.05
+  }
+
+  /** Park the arrow on the view, just under the fare ribbon. */
+  private placeOnScreen(camera: THREE.PerspectiveCamera, sx: number, sy: number, depth: number, out: THREE.Vector3): void {
+    const width = Math.max(1, window.innerWidth)
+    const height = Math.max(1, window.innerHeight)
+    this.aim.set((sx / width) * 2 - 1, -(sy / height) * 2 + 1, 0.5).unproject(camera)
+    out.copy(this.aim).sub(camera.position).normalize().multiplyScalar(depth).add(camera.position)
   }
 
   private paintDistance(text: string): void {
@@ -300,7 +313,7 @@ function buildArrow(face: THREE.MeshBasicMaterial): THREE.Group {
   group.name = 'delivery-arrow'
   const shaft = new THREE.BoxGeometry(0.7, 0.18, 2.1)
   const head = new THREE.ConeGeometry(0.95, 1.5, 4)
-  const shade = new THREE.MeshBasicMaterial({ color: 0x1a1208, fog: false })
+  const shade = new THREE.MeshBasicMaterial({ color: 0x1a1208, fog: false, depthTest: false })
   const backShaft = new THREE.Mesh(shaft, shade)
   const backHead = new THREE.Mesh(head, shade)
   const frontShaft = new THREE.Mesh(shaft, face)
@@ -310,6 +323,7 @@ function buildArrow(face: THREE.MeshBasicMaterial): THREE.Group {
   backHead.position.set(0, -0.08, 1.15)
   frontHead.position.set(0, 0, 1.15)
   for (const mesh of [backHead, frontHead]) mesh.rotation.x = Math.PI / 2
+  for (const mesh of [backShaft, backHead, frontShaft, frontHead]) mesh.renderOrder = 4
   group.add(backShaft, backHead, frontShaft, frontHead)
   group.scale.setScalar(0.36)
   return group
