@@ -74,6 +74,20 @@ export function sidewalkLoop(layout: CityLayout, street: string, part = 0): Vec2
 }
 
 export function hitsBuilding(layout: CityLayout, x: number, z: number, radius: number): boolean {
+  const grid = gridOf(buildingGrids, layout, BUILDING_CELL, () => layout.buildings)
+  let hit = false
+  visitCells(grid, x - radius, z - radius, x + radius, z + radius, (i) => {
+    const building = layout.buildings[i]!
+    if (x < building.minX - radius || x > building.maxX + radius) return false
+    if (z < building.minZ - radius || z > building.maxZ + radius) return false
+    hit = distanceToRing(x, z, building.ring) < radius
+    return hit
+  })
+  return hit
+}
+
+/** The plain scan over every building. `hitsBuilding` must always agree with it. */
+export function hitsBuildingScan(layout: CityLayout, x: number, z: number, radius: number): boolean {
   for (const building of layout.buildings) {
     if (x < building.minX - radius || x > building.maxX + radius) continue
     if (z < building.minZ - radius || z > building.maxZ + radius) continue
@@ -116,8 +130,9 @@ export function nearbySpot(layout: CityLayout, x: number, z: number): Vec2 {
   return { x, z }
 }
 
-export function describePlace(layout: CityLayout, x: number, z: number): string {
-  const road = nearestRoadName(layout, x, z)
+/** `scan` checks every road instead of the grid; tests use it to prove the two agree. */
+export function describePlace(layout: CityLayout, x: number, z: number, scan = false): string {
+  const road = nearestRoadName(layout, x, z, scan)
   let best: MapBuilding | null = null
   let bestD = 70
   for (const mark of layout.landmarks) {
@@ -136,10 +151,24 @@ export function mapBrief(layout: CityLayout): string {
   return `You are on foot in downtown Burbank. The streets and building outlines are the real downtown, including Olive Avenue, Magnolia Boulevard, San Fernando Boulevard, Glenoaks Boulevard, and 3rd Street. Places: ${marks}.`
 }
 
-function nearestRoadName(layout: CityLayout, x: number, z: number): string {
+const ROAD_REACH = 55
+
+function nearestRoadName(layout: CityLayout, x: number, z: number, scan: boolean): string {
+  const roads = layout.file.roads
+  let order: Iterable<number> = roads.keys()
+  if (!scan) {
+    const grid = gridOf(roadGrids, layout, ROAD_CELL, () => roads.map((road) => aabb(road.pts)))
+    const near = new Set<number>()
+    visitCells(grid, x - ROAD_REACH, z - ROAD_REACH, x + ROAD_REACH, z + ROAD_REACH, (i) => {
+      near.add(i)
+      return false
+    })
+    order = [...near].sort((a, b) => a - b)
+  }
   let best = ''
-  let bestD = 55
-  for (const road of layout.file.roads) {
+  let bestD = ROAD_REACH
+  for (const i of order) {
+    const road = roads[i]!
     if (!road.name || road.name.startsWith('Alley')) continue
     const dist = distanceToPolyline(x, z, road.pts)
     if (dist < bestD) {
@@ -148,6 +177,67 @@ function nearestRoadName(layout: CityLayout, x: number, z: number): string {
     }
   }
   return best
+}
+
+const BUILDING_CELL = 32
+const ROAD_CELL = 64
+/** Widens each query by a hair so float rounding at a cell edge can only add candidates, never drop one. */
+const CELL_SLACK = 1e-6
+
+type CellGrid = { cell: number; buckets: Map<number, number[]> }
+
+const buildingGrids = new WeakMap<CityLayout, CellGrid>()
+const roadGrids = new WeakMap<CityLayout, CellGrid>()
+
+function cellKey(cx: number, cz: number): number {
+  return (cx + 32768) * 65536 + (cz + 32768)
+}
+
+/** Each box goes in every cell it touches. Built once per layout. */
+function gridOf(
+  cache: WeakMap<CityLayout, CellGrid>,
+  layout: CityLayout,
+  cell: number,
+  boxes: () => readonly { minX: number; maxX: number; minZ: number; maxZ: number }[],
+): CellGrid {
+  const cached = cache.get(layout)
+  if (cached) return cached
+  const grid: CellGrid = { cell, buckets: new Map() }
+  boxes().forEach((box, i) => {
+    if (!Number.isFinite(box.minX) || !Number.isFinite(box.minZ)) return
+    for (let cx = Math.floor(box.minX / cell); cx <= Math.floor(box.maxX / cell); cx++) {
+      for (let cz = Math.floor(box.minZ / cell); cz <= Math.floor(box.maxZ / cell); cz++) {
+        const key = cellKey(cx, cz)
+        const list = grid.buckets.get(key)
+        if (list) list.push(i)
+        else grid.buckets.set(key, [i])
+      }
+    }
+  })
+  cache.set(layout, grid)
+  return grid
+}
+
+/** Calls `fn` for every index in the cells under the box; stops early once `fn` returns true. */
+function visitCells(
+  grid: CellGrid,
+  minX: number,
+  minZ: number,
+  maxX: number,
+  maxZ: number,
+  fn: (index: number) => boolean,
+): void {
+  const { cell, buckets } = grid
+  const x1 = Math.floor((maxX + CELL_SLACK) / cell)
+  const z0 = Math.floor((minZ - CELL_SLACK) / cell)
+  const z1 = Math.floor((maxZ + CELL_SLACK) / cell)
+  for (let cx = Math.floor((minX - CELL_SLACK) / cell); cx <= x1; cx++) {
+    for (let cz = z0; cz <= z1; cz++) {
+      const list = buckets.get(cellKey(cx, cz))
+      if (!list) continue
+      for (let i = 0; i < list.length; i++) if (fn(list[i]!)) return
+    }
+  }
 }
 
 function tryPoint(layout: CityLayout, x: number, z: number, radius: number): Vec2 | null {

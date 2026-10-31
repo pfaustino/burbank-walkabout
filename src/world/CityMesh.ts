@@ -1,6 +1,7 @@
 import * as THREE from 'three'
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js'
 import type { CityLayout } from './layout.ts'
+import { sealTiles, TILE_SIZE, tileGroup, tileKeyAt } from './tiles.ts'
 
 export function buildCityMesh(layout: CityLayout): THREE.Group {
   const group = new THREE.Group()
@@ -16,6 +17,7 @@ export function buildCityMesh(layout: CityLayout): THREE.Group {
   ground.receiveShadow = true
   group.add(ground)
 
+  const tiles = new Map<string, THREE.Group>()
   const grass = new THREE.MeshStandardMaterial({ color: 0x7f9a62, roughness: 1 })
   for (const park of layout.file.parks) {
     const shape = shapeFromRing(park.ring)
@@ -24,26 +26,30 @@ export function buildCityMesh(layout: CityLayout): THREE.Group {
     yard.rotation.x = -Math.PI / 2
     yard.position.y = 0.025
     yard.receiveShadow = true
-    group.add(yard)
+    const [cx, cz] = ringCenter(park.ring)
+    tileGroup(group, tiles, cx, cz).add(yard)
   }
 
-  const sidewalk = ribbonGeometry(
-    layout.file.roads.map((road) => ({ pts: road.pts, width: road.w + 5.2 })),
-    0.03,
-  )
-  const asphalt = ribbonGeometry(
-    layout.file.roads.map((road) => ({ pts: road.pts, width: road.w })),
-    0.05,
-  )
-  const lanes = ribbonGeometry(
-    layout.file.roads
-      .filter((road) => road.kind === 'primary' || road.kind === 'secondary')
-      .map((road) => ({ pts: road.pts, width: 0.16 })),
-    0.06,
-  )
-  group.add(meshFrom(sidewalk, 0xcfc6ba, 0.95))
-  group.add(meshFrom(asphalt, 0x3a3f46, 0.92))
-  if (lanes) group.add(meshFrom(lanes, 0xd7c15a, 0.7))
+  const ribbons: [runs: { pts: number[]; width: number }[], y: number, material: THREE.Material][] = [
+    [layout.file.roads.map((road) => ({ pts: road.pts, width: road.w + 5.2 })), 0.03, ribbonMaterial(0xcfc6ba, 0.95)],
+    [layout.file.roads.map((road) => ({ pts: road.pts, width: road.w })), 0.05, ribbonMaterial(0x3a3f46, 0.92)],
+    [
+      layout.file.roads
+        .filter((road) => road.kind === 'primary' || road.kind === 'secondary')
+        .map((road) => ({ pts: road.pts, width: 0.16 })),
+      0.06,
+      ribbonMaterial(0xd7c15a, 0.7),
+    ],
+  ]
+  for (const [runs, y, material] of ribbons) {
+    for (const part of segmentsByTile(runs)) {
+      const geometry = ribbonGeometry(part.runs, y)
+      if (!geometry) continue
+      const mesh = new THREE.Mesh(geometry, material)
+      mesh.receiveShadow = true
+      tileGroup(group, tiles, part.x, part.z).add(mesh)
+    }
+  }
 
   const roofs = new Map<string, THREE.BufferGeometry[]>()
   const walls = new Map<string, THREE.BufferGeometry[]>()
@@ -58,31 +64,30 @@ export function buildCityMesh(layout: CityLayout): THREE.Group {
     }
     geometry.rotateX(-Math.PI / 2)
     const floors = floorsForHeight(building.h)
-    const color = paintOf(building)
+    const color = new THREE.Color(paintOf(building))
+    const tile = tileKeyAt((building.minX + building.maxX) / 2, (building.minZ + building.maxZ) / 2)
     const roof = sliceGroup(geometry, 0)
     const wall = sliceGroup(geometry, 1)
     geometry.dispose()
-    if (roof) pushPart(roofs, color, roof)
+    if (roof) pushPart(roofs, tile, paint(roof, color))
     if (wall) {
       writeFacadeUvs(wall, building.h)
-      pushPart(walls, `${floors}|${color}`, wall)
+      pushPart(walls, `${tile}|${floors}`, paint(wall, color))
     }
   }
 
-  for (const [color, parts] of roofs) addMerged(group, parts, new THREE.MeshStandardMaterial({ color, roughness: 0.92 }))
+  const roofMat = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.92 })
+  for (const [tile, parts] of roofs) addMerged(tileFromKey(group, tiles, tile), parts, roofMat)
+  const wallMats = new Map<number, THREE.MeshStandardMaterial>()
   for (const [key, parts] of walls) {
     const split = key.indexOf('|')
-    const floors = Number(key.slice(0, split))
-    const color = key.slice(split + 1)
-    addMerged(
-      group,
-      parts,
-      new THREE.MeshStandardMaterial({
-        color,
-        map: facadeTexture(floors),
-        roughness: 0.86,
-      }),
-    )
+    const floors = Number(key.slice(split + 1))
+    let material = wallMats.get(floors)
+    if (!material) {
+      material = new THREE.MeshStandardMaterial({ vertexColors: true, map: facadeTexture(floors), roughness: 0.86 })
+      wallMats.set(floors, material)
+    }
+    addMerged(tileFromKey(group, tiles, key.slice(0, split)), parts, material)
   }
 
   const labeled = new Set<string>()
@@ -93,17 +98,75 @@ export function buildCityMesh(layout: CityLayout): THREE.Group {
     const mid = road.pts.length / 2
     const index = mid - (mid % 2)
     labeled.add(road.name)
-    group.add(labelSprite(shortRoad(road.name), road.pts[index] ?? 0, 3.2, road.pts[index + 1] ?? 0, 7))
+    const x = road.pts[index] ?? 0
+    const z = road.pts[index + 1] ?? 0
+    tileGroup(group, tiles, x, z).add(labelSprite(shortRoad(road.name), x, 3.2, z, 7))
   }
 
   for (const mark of layout.landmarks) {
     if (!mark.name) continue
     const x = mark.door?.[0] ?? (mark.minX + mark.maxX) / 2
     const z = mark.door?.[1] ?? (mark.minZ + mark.maxZ) / 2
-    group.add(labelSprite(mark.name, x, mark.h + 4, z, Math.max(14, mark.name.length * 0.85)))
+    tileGroup(group, tiles, x, z).add(labelSprite(mark.name, x, mark.h + 4, z, Math.max(14, mark.name.length * 0.85)))
   }
 
+  sealTiles(tiles)
   return group
+}
+
+function tileFromKey(root: THREE.Group, tiles: Map<string, THREE.Group>, key: string): THREE.Group {
+  const [tx, tz] = key.split(',').map(Number)
+  return tileGroup(root, tiles, ((tx ?? 0) + 0.5) * TILE_SIZE, ((tz ?? 0) + 0.5) * TILE_SIZE)
+}
+
+function ringCenter(flat: number[]): [number, number] {
+  let minX = Infinity
+  let maxX = -Infinity
+  let minZ = Infinity
+  let maxZ = -Infinity
+  for (let i = 0; i + 1 < flat.length; i += 2) {
+    const x = flat[i] ?? 0
+    const z = flat[i + 1] ?? 0
+    minX = Math.min(minX, x)
+    maxX = Math.max(maxX, x)
+    minZ = Math.min(minZ, z)
+    maxZ = Math.max(maxZ, z)
+  }
+  return [(minX + maxX) / 2, (minZ + maxZ) / 2]
+}
+
+/** Split runs at segment granularity by the tile under each segment's midpoint. */
+function segmentsByTile(
+  runs: { pts: number[]; width: number }[],
+): { x: number; z: number; runs: { pts: number[]; width: number }[] }[] {
+  const byTile = new Map<string, { x: number; z: number; runs: { pts: number[]; width: number }[] }>()
+  for (const run of runs) {
+    for (let i = 0; i < run.pts.length - 2; i += 2) {
+      const pts = run.pts.slice(i, i + 4)
+      const x = ((pts[0] ?? 0) + (pts[2] ?? 0)) / 2
+      const z = ((pts[1] ?? 0) + (pts[3] ?? 0)) / 2
+      const key = tileKeyAt(x, z)
+      let entry = byTile.get(key)
+      if (!entry) {
+        entry = { x, z, runs: [] }
+        byTile.set(key, entry)
+      }
+      entry.runs.push({ pts, width: run.width })
+    }
+  }
+  return [...byTile.values()]
+}
+
+function paint(geometry: THREE.BufferGeometry, color: THREE.Color): THREE.BufferGeometry {
+  const count = geometry.attributes.position?.count ?? 0
+  const colors = new Float32Array(count * 3)
+  for (let i = 0; i < colors.length; i += 3) {
+    colors[i] = color.r
+    colors[i + 1] = color.g
+    colors[i + 2] = color.b
+  }
+  geometry.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3))
+  return geometry
 }
 
 function shapeFromRing(flat: number[]): THREE.Shape | null {
@@ -163,13 +226,8 @@ function ribbonGeometry(runs: { pts: number[]; width: number }[], y: number): TH
   return geometry
 }
 
-function meshFrom(geometry: THREE.BufferGeometry | null, color: number, roughness: number): THREE.Mesh {
-  const mesh = new THREE.Mesh(
-    geometry ?? new THREE.BufferGeometry(),
-    new THREE.MeshStandardMaterial({ color, roughness, side: THREE.DoubleSide }),
-  )
-  mesh.receiveShadow = true
-  return mesh
+function ribbonMaterial(color: number, roughness: number): THREE.MeshStandardMaterial {
+  return new THREE.MeshStandardMaterial({ color, roughness, side: THREE.DoubleSide })
 }
 
 function shortRoad(name: string): string {
@@ -260,10 +318,7 @@ function pushPart(buckets: Map<string, THREE.BufferGeometry[]>, key: string, geo
 function addMerged(group: THREE.Group, parts: THREE.BufferGeometry[], material: THREE.Material): void {
   const merged = mergeGeometries(parts, false)
   for (const part of parts) part.dispose()
-  if (!merged) {
-    material.dispose()
-    return
-  }
+  if (!merged) return
   const mesh = new THREE.Mesh(merged, material)
   mesh.castShadow = true
   mesh.receiveShadow = true

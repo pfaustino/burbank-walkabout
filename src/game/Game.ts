@@ -41,6 +41,7 @@ import { WordRain } from '../ui/WordRain.ts'
 import { createSeededRng, sessionSeed } from '../util/seededRng.ts'
 import { listen, playMp3, speak, type ListenHandle } from '../voice/speech.ts'
 import { buildCityMesh } from '../world/CityMesh.ts'
+import { showNearbyTiles } from '../world/tiles.ts'
 import { advanceHour, formatHour, skyAt, START_HOUR } from '../world/daylight.ts'
 import { buildFoliage } from '../world/FoliageMesh.ts'
 import { type FoliageFile } from '../world/foliage.ts'
@@ -98,6 +99,7 @@ export class Game {
   private readonly skyColor = new THREE.Color(0x8ec6ea)
   private readonly fog: THREE.Fog
   private readonly storefronts: THREE.Group
+  private readonly city: THREE.Group
   private readonly lamps: StreetLamps
   private readonly ambience = new Ambience()
   private dayHour = START_HOUR
@@ -202,7 +204,8 @@ export class Game {
     this.sun.shadow.camera.bottom = -55
     this.sun.shadow.bias = -0.0004
     this.sun.target = this.sunTarget
-    this.scene.add(this.hemi, this.sun, this.sunTarget, buildCityMesh(this.layout))
+    this.city = buildCityMesh(this.layout)
+    this.scene.add(this.hemi, this.sun, this.sunTarget, this.city)
     this.storefronts = buildStoreSigns(this.layout, businessesJson as Business[])
     this.lamps = new StreetLamps(this.layout)
     this.scene.add(this.storefronts, this.lamps.root)
@@ -448,6 +451,8 @@ export class Game {
       job: this.delivery.marker,
     })
     this.wordnet.draw(dt)
+    showNearbyTiles(this.city, this.camera.position.x, this.camera.position.z)
+    showNearbyTiles(this.storefronts, this.camera.position.x, this.camera.position.z)
     this.renderer.render(this.scene, this.camera)
   }
 

@@ -1,5 +1,6 @@
 import * as THREE from 'three'
 import type { CityLayout, MapBuilding } from './layout.ts'
+import { sealTiles, tileGroup } from './tiles.ts'
 
 export type Business = {
   name: string
@@ -89,6 +90,7 @@ export function buildStoreSigns(layout: CityLayout, businesses: readonly Busines
   group.name = 'storefronts'
   const materials = new Map<string, THREE.MeshStandardMaterial>()
   const geometries = new Map<string, THREE.PlaneGeometry>()
+  const tiles = new Map<string, THREE.Group>()
   for (const sign of planStoreSigns(layout, businesses)) {
     const key = `${sign.color}:${sign.name}`
     let mat = materials.get(key)
@@ -120,8 +122,9 @@ export function buildStoreSigns(layout: CityLayout, businesses: readonly Busines
     back.position.z = -0.02
     back.scale.x = -1
     board.add(front, back)
-    group.add(board)
+    tileGroup(group, tiles, sign.x, sign.z).add(board)
   }
+  sealTiles(tiles)
   return group
 }
 

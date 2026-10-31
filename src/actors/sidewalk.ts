@@ -4,7 +4,8 @@ export type WalkPoint = { x: number; z: number }
 
 type Node = { x: number; z: number; to: number[] }
 
-export type SidewalkGraph = { nodes: Node[] }
+/** `cells` buckets node ids by LINK-sized cell, keyed "cx,cz". */
+export type SidewalkGraph = { nodes: Node[]; cells?: Map<string, number[]> }
 
 const STEP = 7
 const LINK = 9
@@ -65,15 +66,15 @@ export function buildSidewalks(paths: readonly MapPath[]): SidewalkGraph {
       }
     }
   }
-  return { nodes }
+  return { nodes, cells: buckets }
 }
 
 /** Points from where someone is standing to the sidewalk nearest the goal. */
 export function routeSidewalk(graph: SidewalkGraph, x: number, z: number, gx: number, gz: number): WalkPoint[] {
   const count = graph.nodes.length
   if (count === 0) return []
-  const start = nearest(graph, x, z)
-  const goal = nearest(graph, gx, gz)
+  const start = nearestNode(graph, x, z)
+  const goal = nearestNode(graph, gx, gz)
   if (start < 0 || goal < 0) return []
   if (start === goal) return [{ x, z }, nodePoint(graph, goal)]
   const came = new Int32Array(count)
@@ -132,7 +133,38 @@ function nodePoint(graph: SidewalkGraph, id: number): WalkPoint {
   return { x: node.x, z: node.z }
 }
 
-function nearest(graph: SidewalkGraph, x: number, z: number): number {
+/** Rings of cells to search before giving up on the grid and scanning every node. */
+const RING_LIMIT = 40
+
+/** Closest node, lowest index on a tie. `scan` skips the grid; tests use it to prove the two agree. */
+export function nearestNode(graph: SidewalkGraph, x: number, z: number, scan = false): number {
+  if (scan || !graph.cells) return scanNearest(graph, x, z)
+  const cx = Math.floor(x / LINK)
+  const cz = Math.floor(z / LINK)
+  let best = -1
+  let bestD = Infinity
+  for (let r = 0; r <= RING_LIMIT; r++) {
+    for (let ox = -r; ox <= r; ox++) {
+      const edge = Math.abs(ox) === r
+      for (let oz = -r; oz <= r; oz += edge || r === 0 ? 1 : 2 * r) {
+        const list = graph.cells.get(`${cx + ox},${cz + oz}`)
+        if (!list) continue
+        for (const i of list) {
+          const node = graph.nodes[i]!
+          const d = Math.hypot(node.x - x, node.z - z)
+          if (d < bestD || (d === bestD && i < best)) {
+            bestD = d
+            best = i
+          }
+        }
+      }
+    }
+    if (best >= 0 && bestD <= r * LINK) return best
+  }
+  return scanNearest(graph, x, z)
+}
+
+function scanNearest(graph: SidewalkGraph, x: number, z: number): number {
   let best = -1
   let bestD = Infinity
   for (let i = 0; i < graph.nodes.length; i++) {
