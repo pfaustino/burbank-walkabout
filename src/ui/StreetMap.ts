@@ -152,16 +152,6 @@ export class StreetMap {
     window.addEventListener('resize', this.onResize)
   }
 
-  /** Move the player arrow to a spot and keep the map open. */
-  mark(x: number, z: number): void {
-    this.playerX = x
-    this.playerZ = z
-    this.centerX = x
-    this.centerZ = z
-    this.clamp()
-    if (this.shown) this.draw()
-  }
-
   show(x: number, z: number, yaw: number): void {
     this.playerX = x
     this.playerZ = z

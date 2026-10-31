@@ -1105,8 +1105,7 @@ export class Game {
     if (this.riddenId) this.leaveBus()
     const spot = openSpot(this.layout, x, z)
     this.moveTo(spot.x, spot.z)
-    const pos = this.walker.mesh.position
-    this.streetMap.mark(pos.x, pos.z)
+    this.setMap(false)
   }
 
   private moveTo(x: number, z: number): void {

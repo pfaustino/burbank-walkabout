@@ -88,7 +88,7 @@ Stand next to a car that has stopped, then press **F**.
 |-----|--------|
 | Drag | Pan |
 | Scroll | Zoom toward the cursor |
-| Double-click | Jump to that spot |
+| Double-click | Jump to that spot and close the map |
 | **+** / **−** | Zoom |
 | Arrows | Pan |
 | **M** or **Esc** | Close |
