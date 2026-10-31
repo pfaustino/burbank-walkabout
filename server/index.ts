@@ -5,7 +5,7 @@ import { WebSocket, WebSocketServer } from 'ws'
 import crowdJson from '../data/crowd.json' with { type: 'json' }
 import mapJson from '../data/map.json' with { type: 'json' }
 import peopleJson from '../data/people.json' with { type: 'json' }
-import { CROWD_SEED, createCrowd, crowdIndex, crowdPose, type CrowdFile } from '../src/actors/crowdSim.ts'
+import { CROWD_SEED, createCrowd, crowdCount, crowdIndex, crowdPose, type CrowdFile } from '../src/actors/crowdSim.ts'
 import { createPeople, stepPeople, type PeopleFile, type PersonSim, type PersonVoice } from '../src/actors/peopleSim.ts'
 import { talkHash } from '../src/dialog/fallback.ts'
 import { npcReply, remember, type DialogTurn } from './dialog.ts'
@@ -31,7 +31,8 @@ const peopleFile = peopleJson as PeopleFile
 const brief = mapBrief(layout)
 const rng = createSeededRng(0xb0b81a4)
 const people: PersonSim[] = createPeople(layout, peopleFile, rng)
-const crowd = createCrowd(layout, crowdJson as CrowdFile, createSeededRng(CROWD_SEED))
+const crowdFile = crowdJson as CrowdFile
+const crowd = createCrowd(layout, { ...crowdFile, count: crowdCount(layout, crowdFile.count) }, createSeededRng(CROWD_SEED))
 const talkSlack = 1.6
 /** npc id -> player id. They stand still until that player walks out of earshot. */
 const conversations = new Map<string, string>()

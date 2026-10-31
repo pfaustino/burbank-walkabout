@@ -3,7 +3,7 @@ import busesJson from '../data/buses.json'
 import crowdJson from '../data/crowd.json'
 import foliageJson from '../data/foliage.json'
 import mapJson from '../data/map.json'
-import { createCrowd, crowdId, crowdIndex, crowdPose, type CrowdFile } from '../src/actors/crowdSim.ts'
+import { createCrowd, crowdCount, crowdId, crowdIndex, crowdPose, type CrowdFile } from '../src/actors/crowdSim.ts'
 import { createBuses, stepBuses, type BusFile } from '../src/traffic/busSim.ts'
 import { buildNetwork } from '../src/traffic/network.ts'
 import { createSeededRng } from '../src/util/seededRng.ts'
@@ -53,6 +53,8 @@ describe('downtown scenery', () => {
     const file = crowdJson as CrowdFile
     const world = createCrowd(layout, file, createSeededRng(11))
     expect(world.people).toHaveLength(500)
+    expect(crowdCount(layout, file.count)).toBeGreaterThanOrEqual(500)
+    expect(crowdCount(layout, file.count)).toBeLessThanOrEqual(2400)
     const names = world.people.map((person) => person.name)
     expect(new Set(names).size).toBe(names.length)
     expect(names.every((name) => name.includes(' '))).toBe(true)

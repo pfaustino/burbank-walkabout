@@ -59,6 +59,18 @@ export function crowdIndex(id: string): number | null {
   return n
 }
 
+/** Metres of sidewalk per person on today's downtown, so a bigger map stays about as busy. */
+const CROWD_GAP = 56.5
+const CROWD_CAP = 2400
+
+/** How many shared walkers fit the sidewalks, never below the file and never past the cap. */
+export function crowdCount(layout: CityLayout, base: number): number {
+  let total = 0
+  for (const loop of loopsFrom(layout)) total += loop.length
+  const fitted = Math.round(total / CROWD_GAP)
+  return Math.max(base, Math.min(CROWD_CAP, fitted))
+}
+
 /** Extra sidewalk walkers. Poses are a function of time, so they stay cheap and do not drift. */
 export function createCrowd(layout: CityLayout, file: CrowdFile, rng: () => number): CrowdWorld {
   const loops = loopsFrom(layout)

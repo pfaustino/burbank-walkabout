@@ -24,15 +24,30 @@ export function tileGroup(root: THREE.Group, tiles: Map<string, THREE.Group>, x:
 
 /** Record each tile's footprint once its contents are in place. Content may hang past the tile edge. */
 export function sealTiles(tiles: Map<string, THREE.Group>): void {
-  for (const tile of tiles.values()) tile.userData.tileBox = new THREE.Box3().setFromObject(tile)
+  let parent: THREE.Object3D | null = null
+  const list: THREE.Group[] = []
+  for (const tile of tiles.values()) {
+    tile.userData.tileBox = new THREE.Box3().setFromObject(tile)
+    parent = tile.parent
+    list.push(tile)
+  }
+  if (parent) parent.userData.cityTiles = list
 }
 
+/** Take far tiles out of the scene graph. A hidden child is still walked every frame. */
 export function showNearbyTiles(root: THREE.Object3D, x: number, z: number, reach = TILE_REACH): void {
-  for (const child of root.children) {
+  const stored = root.userData.cityTiles as THREE.Object3D[] | undefined
+  const list = stored ?? [...root.children]
+  for (const child of list) {
     const box = child.userData.tileBox as THREE.Box3 | undefined
     if (!box) continue
     const dx = Math.max(box.min.x - x, 0, x - box.max.x)
     const dz = Math.max(box.min.z - z, 0, z - box.max.z)
-    child.visible = dx * dx + dz * dz < reach * reach
+    const near = dx * dx + dz * dz < reach * reach
+    if (near) {
+      if (!child.parent) root.add(child)
+    } else if (child.parent) {
+      root.remove(child)
+    }
   }
 }

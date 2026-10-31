@@ -1,9 +1,11 @@
 import * as THREE from 'three'
+import { staysDrawn, type DrawSpot } from '../world/drawRange.ts'
 
 type BusView = {
   root: THREE.Group
   wheels: THREE.Object3D[]
   paint: THREE.MeshStandardMaterial
+  shown: boolean
 }
 
 type BusDesc = {
@@ -25,7 +27,7 @@ export class BusSet {
     this.scene = scene
   }
 
-  sync(list: BusDesc[], dt: number): void {
+  sync(list: BusDesc[], dt: number, view?: DrawSpot): void {
     const seen = new Set<string>()
     for (const desc of list) {
       seen.add(desc.id)
@@ -33,8 +35,16 @@ export class BusSet {
       if (!bus) {
         bus = spawn(desc)
         this.buses.set(desc.id, bus)
-        this.scene.add(bus.root)
       }
+      const show = !view || staysDrawn(desc.x, desc.z, view.x, view.z, view.reach, bus.shown)
+      bus.shown = show
+      if (!show) {
+        bus.root.position.set(desc.x, 0, desc.z)
+        bus.root.rotation.y = desc.yaw
+        if (bus.root.parent) this.scene.remove(bus.root)
+        continue
+      }
+      if (!bus.root.parent) this.scene.add(bus.root)
       bus.root.position.set(desc.x, 0, desc.z)
       bus.root.rotation.y = desc.yaw
       const spin = (desc.speed * dt) / 0.46
@@ -83,7 +93,7 @@ function spawn(desc: BusDesc): BusView {
     if (obj.userData.role === 'paint') obj.material = paint
     if (obj.userData.role === 'wheel') wheels.push(obj)
   })
-  return { root, wheels, paint }
+  return { root, wheels, paint, shown: false }
 }
 
 function busTemplate(): THREE.Group {

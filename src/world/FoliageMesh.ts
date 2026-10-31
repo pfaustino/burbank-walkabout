@@ -2,6 +2,7 @@ import { Tree } from '@dgreenheck/ez-tree'
 import * as THREE from 'three'
 import { placeFoliage, type FoliageFile, type Plant } from './foliage.ts'
 import type { CityLayout } from './layout.ts'
+import { sealTiles, tileGroup } from './tiles.ts'
 
 const STREET_HEIGHT = 8.2
 const CHUNK = 160
@@ -19,6 +20,7 @@ export function buildFoliage(
   const bushes = plants.filter((plant) => plant.kind === 'bush')
   const meshes: THREE.InstancedMesh[] = []
   const leafMats: THREE.MeshPhongMaterial[] = []
+  const tiles = new Map<string, THREE.Group>()
 
   PRESETS.forEach((preset, variant) => {
     const placed = trees.filter((plant) => plant.variant === variant)
@@ -27,7 +29,7 @@ export function buildFoliage(
     const leaves = instancePlants(built.leaves, built.leafMat, placed, false)
     for (const mesh of [...branches, ...leaves]) {
       meshes.push(mesh)
-      root.add(mesh)
+      tileGroup(root, tiles, mesh.position.x, mesh.position.z).add(mesh)
     }
     if (leaves.length > 0) leafMats.push(built.leafMat)
   })
@@ -37,8 +39,9 @@ export function buildFoliage(
   const bushMat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.9, metalness: 0 })
   for (const mesh of instancePlants(shrub, bushMat, bushes, true, [0x347a3e, 0x4e9650])) {
     meshes.push(mesh)
-    root.add(mesh)
+    tileGroup(root, tiles, mesh.position.x, mesh.position.z).add(mesh)
   }
+  sealTiles(tiles)
 
   return {
     root,

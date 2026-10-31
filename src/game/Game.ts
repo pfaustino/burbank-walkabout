@@ -8,7 +8,7 @@ import mapJson from '../../data/map.json'
 import peopleJson from '../../data/people.json'
 import trafficJson from '../../data/traffic.json'
 import { CrowdSet } from '../actors/CrowdSet.ts'
-import { CROWD_SEED, createCrowd, crowdId, crowdIndex, crowdPose, rejoinWalk, resumeWalk, type CrowdFile, type CrowdWorld } from '../actors/crowdSim.ts'
+import { CROWD_SEED, createCrowd, crowdCount, crowdId, crowdIndex, crowdPose, rejoinWalk, resumeWalk, type CrowdFile, type CrowdWorld } from '../actors/crowdSim.ts'
 import { offeredPlace, stepErrand, type Errand } from '../actors/errand.ts'
 import { buildSidewalks, routeSidewalk, type SidewalkGraph } from '../actors/sidewalk.ts'
 import { asideStep, createPeople, stepPeople, type PeopleFile, type PersonSim, type RoadThreat } from '../actors/peopleSim.ts'
@@ -34,13 +34,14 @@ import { createBuses, stepBuses, type BusFile, type BusSim } from '../traffic/bu
 import { buildNetwork, type RoadNetwork } from '../traffic/network.ts'
 import { buildSigns, disposeDrawn, setSignGlow } from '../traffic/streetProps.ts'
 import { bumpCars } from '../traffic/bumps.ts'
-import { createTraffic, parkOnLane, stepTraffic, type CarSim, type TrafficFile } from '../traffic/trafficSim.ts'
+import { createTraffic, gatherTraffic, parkOnLane, stepTraffic, type CarSim, type TrafficFile } from '../traffic/trafficSim.ts'
 import { Hud } from '../ui/Hud.ts'
 import { Minimap } from '../ui/Minimap.ts'
 import { WordRain } from '../ui/WordRain.ts'
 import { createSeededRng, sessionSeed } from '../util/seededRng.ts'
 import { listen, playMp3, speak, type ListenHandle } from '../voice/speech.ts'
 import { buildCityMesh } from '../world/CityMesh.ts'
+import { BUS_DRAW, CAR_DRAW, PERSON_DRAW } from '../world/drawRange.ts'
 import { showNearbyTiles } from '../world/tiles.ts'
 import { advanceHour, formatHour, skyAt, START_HOUR } from '../world/daylight.ts'
 import { buildFoliage } from '../world/FoliageMesh.ts'
@@ -79,6 +80,7 @@ export class Game {
   private readonly carRng: () => number
   private readonly signs: THREE.Group
   private drivenId: string | null = null
+  private gatherLeft = 2
   private riddenId: string | null = null
   private readonly crowd: CrowdWorld
   private readonly crowdView: CrowdSet
@@ -222,7 +224,12 @@ export class Game {
     this.carView = new CarSet(this.scene)
     this.signs = buildSigns(this.network.signs)
     this.scene.add(this.signs)
-    this.crowd = createCrowd(this.layout, crowdJson as CrowdFile, createSeededRng(CROWD_SEED))
+    const crowdFile = crowdJson as CrowdFile
+    this.crowd = createCrowd(
+      this.layout,
+      { ...crowdFile, count: crowdCount(this.layout, crowdFile.count) },
+      createSeededRng(CROWD_SEED),
+    )
     this.crowdView = new CrowdSet(this.scene, this.crowd)
     this.helicopter = new Helicopter(tourOver(this.layout.landmarks, this.layout.file.spawn))
     this.scene.add(this.helicopter.root)
@@ -361,9 +368,20 @@ export class Game {
     this.applyRemoteCars()
     this.releaseCrowd(pos.x, pos.z)
     this.stepGuides(dt, pos.x, pos.z)
-    this.crowdView.update(this.time, this.crowdFreeze, this.crowdBlocks(), this.roadThreat(pos), this.guides)
+    const spot = { x: pos.x, z: pos.z }
+    this.crowdView.update(this.time, this.crowdFreeze, this.crowdBlocks(), this.roadThreat(pos), this.guides, {
+      ...spot,
+      reach: PERSON_DRAW,
+    })
     this.syncPeople()
     stepTraffic(this.cars, this.network, this.trafficFile, this.time, dt, this.carRng, this.trafficObstacles())
+    this.gatherLeft -= dt
+    if (this.gatherLeft <= 0) {
+      this.gatherLeft = 2
+      const bounds = this.layout.file.bounds
+      const span = Math.max(bounds.maxX - bounds.minX, bounds.maxZ - bounds.minZ)
+      if (span > 2500) gatherTraffic(this.cars, this.network, pos.x, pos.z, 560, this.carRng)
+    }
     stepBuses(this.buses, this.network, this.busFile, this.time, dt, this.busRng, this.busObstacles())
     this.syncVehicles()
     this.crowdView.nudge(this.vehicleDiscs)
@@ -407,8 +425,8 @@ export class Game {
     this.keepDrivenBump()
     const wall = this.walker.takeWallHit()
     if (wall > 0) hits.push({ x: pos.x, z: pos.z, impact: wall })
-    this.carView.sync(this.cars, dt, this.drivenId)
-    this.busView.sync(this.buses, dt)
+    this.carView.sync(this.cars, dt, this.drivenId, { x: pos.x, z: pos.z, reach: CAR_DRAW })
+    this.busView.sync(this.buses, dt, { x: pos.x, z: pos.z, reach: BUS_DRAW })
     this.dayHour = advanceHour(this.dayHour, dt)
     this.applySky()
     const moved = dt > 0 ? Math.hypot(pos.x - this.stepX, pos.z - this.stepZ) / dt : 0
@@ -451,8 +469,14 @@ export class Game {
       job: this.delivery.marker,
     })
     this.wordnet.draw(dt)
-    showNearbyTiles(this.city, this.camera.position.x, this.camera.position.z)
-    showNearbyTiles(this.storefronts, this.camera.position.x, this.camera.position.z)
+    const camX = this.camera.position.x
+    const camZ = this.camera.position.z
+    const syncCity = this.city.userData.syncCity as ((x: number, z: number) => void) | undefined
+    syncCity?.(camX, camZ)
+    showNearbyTiles(this.city, camX, camZ)
+    showNearbyTiles(this.storefronts, camX, camZ)
+    showNearbyTiles(this.foliage.root, camX, camZ)
+    showNearbyTiles(this.lamps.root, camX, camZ)
     this.renderer.render(this.scene, this.camera)
   }
 

@@ -1,8 +1,16 @@
 import * as THREE from 'three'
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js'
-import type { CityLayout } from './layout.ts'
-import { sealTiles, TILE_SIZE, tileGroup, tileKeyAt } from './tiles.ts'
+import type { CityLayout, MapBuilding } from './layout.ts'
+import { TILE_REACH, TILE_SIZE, tileGroup, tileKeyAt } from './tiles.ts'
 
+type TileBucket = {
+  parks: { ring: number[] }[]
+  ribbons: { runs: { pts: number[]; width: number }[]; y: number; material: THREE.Material }[]
+  buildings: MapBuilding[]
+  labels: { text: string; x: number; y: number; z: number; width: number }[]
+}
+
+/** Build the blocks near `origin` now. Further tiles are built when `syncCity` runs. */
 export function buildCityMesh(layout: CityLayout): THREE.Group {
   const group = new THREE.Group()
   group.name = 'burbank'
@@ -17,17 +25,20 @@ export function buildCityMesh(layout: CityLayout): THREE.Group {
   ground.receiveShadow = true
   group.add(ground)
 
-  const tiles = new Map<string, THREE.Group>()
-  const grass = new THREE.MeshStandardMaterial({ color: 0x7f9a62, roughness: 1 })
+  const buckets = new Map<string, TileBucket>()
+  const take = (x: number, z: number): TileBucket => {
+    const key = tileKeyAt(x, z)
+    let bucket = buckets.get(key)
+    if (!bucket) {
+      bucket = { parks: [], ribbons: [], buildings: [], labels: [] }
+      buckets.set(key, bucket)
+    }
+    return bucket
+  }
+
   for (const park of layout.file.parks) {
-    const shape = shapeFromRing(park.ring)
-    if (!shape) continue
-    const yard = new THREE.Mesh(new THREE.ShapeGeometry(shape), grass)
-    yard.rotation.x = -Math.PI / 2
-    yard.position.y = 0.025
-    yard.receiveShadow = true
     const [cx, cz] = ringCenter(park.ring)
-    tileGroup(group, tiles, cx, cz).add(yard)
+    take(cx, cz).parks.push(park)
   }
 
   const ribbons: [runs: { pts: number[]; width: number }[], y: number, material: THREE.Material][] = [
@@ -43,51 +54,12 @@ export function buildCityMesh(layout: CityLayout): THREE.Group {
   ]
   for (const [runs, y, material] of ribbons) {
     for (const part of segmentsByTile(runs)) {
-      const geometry = ribbonGeometry(part.runs, y)
-      if (!geometry) continue
-      const mesh = new THREE.Mesh(geometry, material)
-      mesh.receiveShadow = true
-      tileGroup(group, tiles, part.x, part.z).add(mesh)
+      take(part.x, part.z).ribbons.push({ runs: part.runs, y, material })
     }
   }
 
-  const roofs = new Map<string, THREE.BufferGeometry[]>()
-  const walls = new Map<string, THREE.BufferGeometry[]>()
   for (const building of layout.buildings) {
-    const shape = shapeFromRing(building.ring)
-    if (!shape) continue
-    let geometry: THREE.BufferGeometry
-    try {
-      geometry = new THREE.ExtrudeGeometry(shape, { depth: building.h, bevelEnabled: false })
-    } catch {
-      continue
-    }
-    geometry.rotateX(-Math.PI / 2)
-    const floors = floorsForHeight(building.h)
-    const color = new THREE.Color(paintOf(building))
-    const tile = tileKeyAt((building.minX + building.maxX) / 2, (building.minZ + building.maxZ) / 2)
-    const roof = sliceGroup(geometry, 0)
-    const wall = sliceGroup(geometry, 1)
-    geometry.dispose()
-    if (roof) pushPart(roofs, tile, paint(roof, color))
-    if (wall) {
-      writeFacadeUvs(wall, building.h)
-      pushPart(walls, `${tile}|${floors}`, paint(wall, color))
-    }
-  }
-
-  const roofMat = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.92 })
-  for (const [tile, parts] of roofs) addMerged(tileFromKey(group, tiles, tile), parts, roofMat)
-  const wallMats = new Map<number, THREE.MeshStandardMaterial>()
-  for (const [key, parts] of walls) {
-    const split = key.indexOf('|')
-    const floors = Number(key.slice(split + 1))
-    let material = wallMats.get(floors)
-    if (!material) {
-      material = new THREE.MeshStandardMaterial({ vertexColors: true, map: facadeTexture(floors), roughness: 0.86 })
-      wallMats.set(floors, material)
-    }
-    addMerged(tileFromKey(group, tiles, key.slice(0, split)), parts, material)
+    take((building.minX + building.maxX) / 2, (building.minZ + building.maxZ) / 2).buildings.push(building)
   }
 
   const labeled = new Set<string>()
@@ -100,23 +72,124 @@ export function buildCityMesh(layout: CityLayout): THREE.Group {
     labeled.add(road.name)
     const x = road.pts[index] ?? 0
     const z = road.pts[index + 1] ?? 0
-    tileGroup(group, tiles, x, z).add(labelSprite(shortRoad(road.name), x, 3.2, z, 7))
+    take(x, z).labels.push({ text: shortRoad(road.name), x, y: 3.2, z, width: 7 })
   }
 
   for (const mark of layout.landmarks) {
     if (!mark.name) continue
     const x = mark.door?.[0] ?? (mark.minX + mark.maxX) / 2
     const z = mark.door?.[1] ?? (mark.minZ + mark.maxZ) / 2
-    tileGroup(group, tiles, x, z).add(labelSprite(mark.name, x, mark.h + 4, z, Math.max(14, mark.name.length * 0.85)))
+    take(x, z).labels.push({
+      text: mark.name,
+      x,
+      y: mark.h + 4,
+      z,
+      width: Math.max(14, mark.name.length * 0.85),
+    })
   }
 
-  sealTiles(tiles)
+  const tiles = new Map<string, THREE.Group>()
+  const grass = new THREE.MeshStandardMaterial({ color: 0x7f9a62, roughness: 1 })
+  const roofMat = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.92 })
+  const wallMats = new Map<number, THREE.MeshStandardMaterial>()
+
+  const buildKey = (key: string): void => {
+    const bucket = buckets.get(key)
+    if (!bucket) return
+    const [tx, tz] = key.split(',').map(Number)
+    const tile = tileGroup(group, tiles, ((tx ?? 0) + 0.5) * TILE_SIZE, ((tz ?? 0) + 0.5) * TILE_SIZE)
+    for (const park of bucket.parks) {
+      const shape = shapeFromRing(park.ring)
+      if (!shape) continue
+      const yard = new THREE.Mesh(new THREE.ShapeGeometry(shape), grass)
+      yard.rotation.x = -Math.PI / 2
+      yard.position.y = 0.025
+      yard.receiveShadow = true
+      tile.add(yard)
+    }
+    for (const ribbon of bucket.ribbons) {
+      const geometry = ribbonGeometry(ribbon.runs, ribbon.y)
+      if (!geometry) continue
+      const mesh = new THREE.Mesh(geometry, ribbon.material)
+      mesh.receiveShadow = true
+      tile.add(mesh)
+    }
+    const roofs: THREE.BufferGeometry[] = []
+    const walls = new Map<number, THREE.BufferGeometry[]>()
+    for (const building of bucket.buildings) {
+      const shape = shapeFromRing(building.ring)
+      if (!shape) continue
+      let geometry: THREE.BufferGeometry
+      try {
+        geometry = new THREE.ExtrudeGeometry(shape, { depth: building.h, bevelEnabled: false })
+      } catch {
+        continue
+      }
+      geometry.rotateX(-Math.PI / 2)
+      const floors = floorsForHeight(building.h)
+      const color = new THREE.Color(paintOf(building))
+      const roof = sliceGroup(geometry, 0)
+      const wall = sliceGroup(geometry, 1)
+      geometry.dispose()
+      if (roof) roofs.push(paint(roof, color))
+      if (wall) {
+        writeFacadeUvs(wall, building.h)
+        const list = walls.get(floors) ?? []
+        list.push(paint(wall, color))
+        walls.set(floors, list)
+      }
+    }
+    if (roofs.length > 0) addMerged(tile, roofs, roofMat)
+    for (const [floors, parts] of walls) {
+      let material = wallMats.get(floors)
+      if (!material) {
+        material = new THREE.MeshStandardMaterial({ vertexColors: true, map: facadeTexture(floors), roughness: 0.86 })
+        wallMats.set(floors, material)
+      }
+      addMerged(tile, parts, material)
+    }
+    for (const label of bucket.labels) tile.add(labelSprite(label.text, label.x, label.y, label.z, label.width))
+    tile.userData.tileBox = new THREE.Box3().setFromObject(tile)
+  }
+
+  const sync = (x: number, z: number): void => {
+    for (const key of buckets.keys()) {
+      if (tileInReach(key, x, z, TILE_REACH)) {
+        if (!tiles.has(key)) buildKey(key)
+        continue
+      }
+      if (tiles.has(key) && !tileInReach(key, x, z, TILE_REACH + 600)) releaseTile(tiles, key)
+    }
+    group.userData.cityTiles = [...tiles.values()]
+  }
+
+  group.userData.syncCity = sync
+  sync(layout.file.spawn.x, layout.file.spawn.z)
   return group
 }
 
-function tileFromKey(root: THREE.Group, tiles: Map<string, THREE.Group>, key: string): THREE.Group {
+function tileInReach(key: string, x: number, z: number, reach: number): boolean {
   const [tx, tz] = key.split(',').map(Number)
-  return tileGroup(root, tiles, ((tx ?? 0) + 0.5) * TILE_SIZE, ((tz ?? 0) + 0.5) * TILE_SIZE)
+  const minX = (tx ?? 0) * TILE_SIZE
+  const minZ = (tz ?? 0) * TILE_SIZE
+  const dx = Math.max(minX - x, 0, x - (minX + TILE_SIZE))
+  const dz = Math.max(minZ - z, 0, z - (minZ + TILE_SIZE))
+  return dx * dx + dz * dz < reach * reach
+}
+
+function releaseTile(tiles: Map<string, THREE.Group>, key: string): void {
+  const tile = tiles.get(key)
+  if (!tile) return
+  tile.removeFromParent()
+  tile.traverse((obj) => {
+    if (obj instanceof THREE.Mesh) obj.geometry.dispose()
+    if (!(obj instanceof THREE.Sprite)) return
+    const material = obj.material
+    if (!(material instanceof THREE.SpriteMaterial)) return
+    material.map?.dispose()
+    material.dispose()
+  })
+  tiles.delete(key)
 }
 
 function ringCenter(flat: number[]): [number, number] {
@@ -307,12 +380,6 @@ function paintOf(building: { h: number; c: string; ring: number[] }): string {
     hash = Math.imul(hash ^ Math.round((building.ring[i] ?? 0) * 10), 16777619)
   }
   return HOUSE_COLORS[(hash >>> 0) % HOUSE_COLORS.length] ?? building.c
-}
-
-function pushPart(buckets: Map<string, THREE.BufferGeometry[]>, key: string, geometry: THREE.BufferGeometry): void {
-  const list = buckets.get(key) ?? []
-  list.push(geometry)
-  buckets.set(key, list)
 }
 
 function addMerged(group: THREE.Group, parts: THREE.BufferGeometry[], material: THREE.Material): void {

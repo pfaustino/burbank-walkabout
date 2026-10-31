@@ -1,6 +1,7 @@
 import * as THREE from 'three'
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js'
 import { hitsBuilding, type CityLayout } from './layout.ts'
+import { sealTiles, TILE_SIZE, tileGroup, tileKeyAt } from './tiles.ts'
 
 export type LampPost = { x: number; z: number; yaw: number }
 
@@ -21,7 +22,7 @@ export function planLamps(layout: CityLayout): LampPost[] {
 export class StreetLamps {
   readonly root = new THREE.Group()
   private readonly posts: LampPost[]
-  private readonly bulbs: THREE.InstancedMesh | null
+  private readonly bulbMat: THREE.MeshStandardMaterial | null
   private readonly glow: THREE.PointLight[] = []
   private night = 0
 
@@ -30,39 +31,46 @@ export class StreetLamps {
     this.root.name = 'streetlamps'
     const count = this.posts.length
     if (count === 0) {
-      this.bulbs = null
+      this.bulbMat = null
       return
     }
-    const pole = lampPole()
-    const poles = new THREE.InstancedMesh(
-      pole,
-      new THREE.MeshStandardMaterial({ color: 0x2a2e32, roughness: 0.62, metalness: 0.28 }),
-      count,
-    )
+    const poleGeo = lampPole()
     const bulbGeo = new THREE.SphereGeometry(0.18, 10, 8)
     bulbGeo.translate(0, 5.05, 0.7)
-    this.bulbs = new THREE.InstancedMesh(
-      bulbGeo,
-      new THREE.MeshStandardMaterial({
-        color: 0x3a3328,
-        emissive: 0xffc56a,
-        emissiveIntensity: 0,
-        roughness: 0.4,
-      }),
-      count,
-    )
-    const dummy = new THREE.Object3D()
-    for (let i = 0; i < count; i++) {
-      const post = this.posts[i]!
-      dummy.position.set(post.x, 0, post.z)
-      dummy.rotation.y = post.yaw
-      dummy.updateMatrix()
-      poles.setMatrixAt(i, dummy.matrix)
-      this.bulbs.setMatrixAt(i, dummy.matrix)
+    const poleMat = new THREE.MeshStandardMaterial({ color: 0x2a2e32, roughness: 0.62, metalness: 0.28 })
+    this.bulbMat = new THREE.MeshStandardMaterial({
+      color: 0x3a3328,
+      emissive: 0xffc56a,
+      emissiveIntensity: 0,
+      roughness: 0.4,
+    })
+    const byTile = new Map<string, LampPost[]>()
+    for (const post of this.posts) {
+      const key = tileKeyAt(post.x, post.z)
+      const list = byTile.get(key) ?? []
+      list.push(post)
+      byTile.set(key, list)
     }
-    poles.instanceMatrix.needsUpdate = true
-    this.bulbs.instanceMatrix.needsUpdate = true
-    this.root.add(poles, this.bulbs)
+    const tiles = new Map<string, THREE.Group>()
+    const dummy = new THREE.Object3D()
+    for (const [key, posts] of byTile) {
+      const [tx, tz] = key.split(',').map(Number)
+      const tile = tileGroup(this.root, tiles, ((tx ?? 0) + 0.5) * TILE_SIZE, ((tz ?? 0) + 0.5) * TILE_SIZE)
+      const poles = new THREE.InstancedMesh(poleGeo, poleMat, posts.length)
+      const bulbs = new THREE.InstancedMesh(bulbGeo, this.bulbMat, posts.length)
+      for (let i = 0; i < posts.length; i++) {
+        const post = posts[i]!
+        dummy.position.set(post.x, 0, post.z)
+        dummy.rotation.y = post.yaw
+        dummy.updateMatrix()
+        poles.setMatrixAt(i, dummy.matrix)
+        bulbs.setMatrixAt(i, dummy.matrix)
+      }
+      poles.instanceMatrix.needsUpdate = true
+      bulbs.instanceMatrix.needsUpdate = true
+      tile.add(poles, bulbs)
+    }
+    sealTiles(tiles)
     for (let i = 0; i < GLOW; i++) {
       const light = new THREE.PointLight(0xffc98a, 0, 22, 2)
       light.castShadow = false
@@ -75,13 +83,12 @@ export class StreetLamps {
   /** `amount` is 0 at noon and 1 in full night. */
   setNight(amount: number): void {
     this.night = amount
-    if (!this.bulbs) return
-    const material = this.bulbs.material
-    if (material instanceof THREE.MeshStandardMaterial) material.emissiveIntensity = amount * 1.8
+    if (!this.bulbMat) return
+    this.bulbMat.emissiveIntensity = amount * 1.8
   }
 
   follow(x: number, z: number): void {
-    if (!this.bulbs || this.glow.length === 0) return
+    if (!this.bulbMat || this.glow.length === 0) return
     if (this.night < 0.04) {
       for (const light of this.glow) light.visible = false
       return
@@ -106,13 +113,16 @@ export class StreetLamps {
   }
 
   dispose(): void {
+    const geometries = new Set<THREE.BufferGeometry>()
+    const materials = new Set<THREE.Material>()
     this.root.traverse((obj) => {
       if (!(obj instanceof THREE.Mesh)) return
-      obj.geometry.dispose()
-      const material = obj.material
-      if (Array.isArray(material)) material.forEach((entry) => entry.dispose())
-      else material.dispose()
+      geometries.add(obj.geometry)
+      const list = Array.isArray(obj.material) ? obj.material : [obj.material]
+      for (const material of list) materials.add(material)
     })
+    for (const geometry of geometries) geometry.dispose()
+    for (const material of materials) material.dispose()
   }
 }
 

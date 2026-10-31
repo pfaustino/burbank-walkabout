@@ -1,18 +1,72 @@
 /**
- * Turn an Overpass extract into data/map.json.
- * Query downtown Burbank (south,west,north,east) = (34.177,-118.316,34.189,-118.300)
- * and save the response as tmp-downtown.json before running this.
+ * Turn an Overpass extract of the city of Burbank into data/map.json.
+ * Expects tmp-burbank-part-N.json tiles and tmp-burbank-boundary.json.
  * The extract is © OpenStreetMap contributors, ODbL.
  */
-import { readFileSync, writeFileSync } from 'node:fs'
+import { readdirSync, readFileSync, writeFileSync } from 'node:fs'
 
 const LAT0 = 34.183
 const LON0 = -118.308
 const MX = 111_320 * Math.cos((LAT0 * Math.PI) / 180)
 const MZ = 110_540
-const BBOX = { minLat: 34.177, maxLat: 34.189, minLon: -118.316, maxLon: -118.3 }
 
-const raw = JSON.parse(readFileSync('tmp-downtown.json', 'utf8'))
+const seen = new Set()
+const elements = []
+const parts = readdirSync('.').filter((name) => /^tmp-burbank-part-\d+\.json$/.test(name)).sort()
+if (parts.length === 0) throw new Error('No tmp-burbank-part-N.json files')
+for (const name of parts) {
+  const file = JSON.parse(readFileSync(name, 'utf8'))
+  for (const element of file.elements ?? []) {
+    const key = `${element.type}:${element.id}`
+    if (seen.has(key)) continue
+    seen.add(key)
+    elements.push(element)
+  }
+}
+const raw = { elements }
+
+function cityRing() {
+  const boundary = JSON.parse(readFileSync('tmp-burbank-boundary.json', 'utf8'))
+  const relation = boundary.elements.find((element) => element.type === 'relation')
+  const lines = []
+  for (const member of relation?.members ?? []) {
+    if (member.role !== 'outer' || !member.geometry || member.geometry.length < 2) continue
+    lines.push(member.geometry.map((node) => project(node.lat, node.lon)))
+  }
+  if (lines.length === 0) throw new Error('Burbank boundary did not project')
+  const ring = lines.shift()
+  while (lines.length > 0) {
+    const end = ring[ring.length - 1]
+    let found = -1
+    let reverse = false
+    let best = Infinity
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i]
+      const start = line[0]
+      const tail = line[line.length - 1]
+      const fromStart = Math.hypot(start.x - end.x, start.z - end.z)
+      const fromTail = Math.hypot(tail.x - end.x, tail.z - end.z)
+      if (fromStart < best) {
+        best = fromStart
+        found = i
+        reverse = false
+      }
+      if (fromTail < best) {
+        best = fromTail
+        found = i
+        reverse = true
+      }
+    }
+    if (found < 0 || best > 40) break
+    const next = lines.splice(found, 1)[0]
+    if (reverse) next.reverse()
+    ring.push(...next.slice(1))
+  }
+  if (ring.length < 3) throw new Error('Burbank boundary did not project')
+  return ring
+}
+
+const city = cityRing()
 
 function project(lat, lon) {
   return {
@@ -298,8 +352,7 @@ function addBuilding(id, tags, geometry) {
   if (box.maxX - box.minX > 350 || box.maxZ - box.minZ > 350) return
   const cx = (box.minX + box.maxX) / 2
   const cz = (box.minZ + box.maxZ) / 2
-  const center = project((BBOX.minLat + BBOX.maxLat) / 2, (BBOX.minLon + BBOX.maxLon) / 2)
-  if (Math.hypot(cx - center.x, cz - center.z) > 1100) return
+  if (distToRing(cx, cz, city) > 12) return
   const kind = kindOf(tags)
   const record = {
     id,
@@ -385,6 +438,7 @@ for (const [key, segments] of grouped) {
   for (const chain of chainSegments(segments)) {
     for (const run of clipPolyline(chain, box)) {
       if (lengthOf(run) < 8) continue
+      if (!run.some((point) => distToRing(point.x, point.z, city) < 30)) continue
       roads.push({ name, kind, w: half * 2, pts: run.flatMap((point) => [point.x, point.z]) })
     }
   }
@@ -457,8 +511,15 @@ function centroid(points) {
 }
 
 const landmarks = []
+const usedLandmark = new Set()
 for (const building of buildings) {
   if (!building.name) continue
+  if (usedLandmark.has(building.name)) {
+    delete building.name
+    delete building.blurb
+    continue
+  }
+  usedLandmark.add(building.name)
   const center = centroid(building.points)
   const pattern = /Hall/.test(building.name) ? /Olive/i : /Town Center/.test(building.name) ? /Magnolia/i : /Glenoaks/i
   const door = nearestOnPaths(center.x, center.z, pattern) || nearestOnPaths(center.x, center.z, null)
@@ -475,6 +536,8 @@ for (const element of raw.elements) {
   if (element.type !== 'way' || element.tags?.leisure !== 'park' || !element.geometry) continue
   const points = toPoints(element.geometry)
   if (points.length < 3 || Math.abs(ringArea(points)) < 200) continue
+  const parkCenter = centroid(points)
+  if (distToRing(parkCenter.x, parkCenter.z, city) > 20) continue
   parks.push({
     name: element.tags.name || 'Park',
     ring: points.flatMap((point) => [point.x, point.z]),
@@ -482,7 +545,7 @@ for (const element of raw.elements) {
 }
 
 const map = {
-  name: 'Downtown Burbank',
+  name: 'Burbank',
   credit: '© OpenStreetMap contributors',
   spawn: { x: spawn.x, z: spawn.z },
   bounds: {

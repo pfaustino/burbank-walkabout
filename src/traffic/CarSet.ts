@@ -1,5 +1,6 @@
 import * as THREE from 'three'
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js'
+import { staysDrawn, type DrawSpot } from '../world/drawRange.ts'
 import type { CarModel } from './trafficSim.ts'
 
 export type CarDesc = {
@@ -23,6 +24,7 @@ const BEAM_OFFSET: Record<CarModel, { y: number; z: number }> = {
 type DrawnCar = {
   root: THREE.Group
   yaw: number
+  shown: boolean
   mats: THREE.Material[]
   lamps: THREE.MeshStandardMaterial[]
 }
@@ -99,7 +101,7 @@ export class CarSet {
     }
   }
 
-  sync(list: CarDesc[], dt: number, snapId: string | null): void {
+  sync(list: CarDesc[], dt: number, snapId: string | null, view?: DrawSpot): void {
     if (!templates) return
     const seen = new Set<string>()
     const k = 1 - Math.exp(-dt * 8)
@@ -110,9 +112,18 @@ export class CarSet {
         if (car) this.drop(desc.id, car)
         car = this.spawn(desc)
         this.cars.set(desc.id, car)
-        this.scene.add(car.root)
       }
       const root = car.root
+      const show = !view || desc.id === snapId || staysDrawn(desc.x, desc.z, view.x, view.z, view.reach, car.shown)
+      car.shown = show
+      if (!show) {
+        root.position.set(desc.x, 0, desc.z)
+        root.rotation.y = desc.yaw
+        car.yaw = desc.yaw
+        if (root.parent) this.scene.remove(root)
+        continue
+      }
+      if (!root.parent) this.scene.add(root)
       if (desc.id === snapId) {
         root.position.set(desc.x, 0, desc.z)
         root.rotation.y = desc.yaw
@@ -169,7 +180,7 @@ export class CarSet {
       })
       obj.material = next.length === 1 ? next[0]! : next
     })
-    return { root, yaw: desc.yaw, mats, lamps }
+    return { root, yaw: desc.yaw, shown: false, mats, lamps }
   }
 
   private drop(id: string, car: DrawnCar): void {
@@ -189,6 +200,7 @@ function ground(scene: THREE.Group): THREE.Group {
 function nearestCars(cars: Map<string, DrawnCar>, x: number, z: number, count: number): DrawnCar[] {
   const best: { car: DrawnCar; d: number }[] = []
   for (const car of cars.values()) {
+    if (!car.root.parent) continue
     const dx = car.root.position.x - x
     const dz = car.root.position.z - z
     const d = dx * dx + dz * dz

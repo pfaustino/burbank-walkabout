@@ -92,6 +92,43 @@ export function createTraffic(network: RoadNetwork, file: TrafficFile, rng: () =
   return cars
 }
 
+/** Move driverless cars that have fallen far behind the player onto a lane nearby. */
+export function gatherTraffic(
+  cars: CarSim[],
+  network: RoadNetwork,
+  x: number,
+  z: number,
+  reach: number,
+  rng: () => number,
+): void {
+  const lanes = network.lanes.filter((lane) => lane.length > 40)
+  if (lanes.length === 0) return
+  const keep = reach * 0.72
+  for (const car of cars) {
+    if (car.driver) continue
+    const dx = car.x - x
+    const dz = car.z - z
+    if (dx * dx + dz * dz < reach * reach) continue
+    for (let attempt = 0; attempt < 12; attempt++) {
+      const lane = lanes[Math.floor(rng() * lanes.length)]
+      if (!lane) continue
+      const dist = 16 + rng() * Math.max(0, lane.length - 32)
+      const spot = sampleLane(lane, dist)
+      if (Math.hypot(spot.x - x, spot.z - z) > keep) continue
+      const crowded = cars.some((other) => other !== car && other.lane === lane.id && Math.abs(other.dist - dist) < 28)
+      if (crowded) continue
+      car.lane = lane.id
+      car.dist = dist
+      car.x = spot.x
+      car.z = spot.z
+      car.yaw = spot.yaw
+      car.knockX = 0
+      car.knockZ = 0
+      break
+    }
+  }
+}
+
 export function parkOnLane(car: CarSim, network: RoadNetwork): void {
   const spot = nearestOnLane(network.lanes, car.x, car.z)
   const lane = network.lanes[spot.lane]
