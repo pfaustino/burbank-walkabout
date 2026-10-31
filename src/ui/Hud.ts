@@ -54,7 +54,7 @@ export class Hud {
     const hear = must('#hear') as HTMLInputElement
     hear.addEventListener('change', () => this.handlers.onHear(hear.checked))
 
-    this.setStatus('WASD walk · Shift run · right-drag look · Space hop · E talk · V mic · F drive or ride · H helicopter')
+    this.setStatus('WASD walk · Shift run · right-drag look · Space hop · E talk · V mic · F drive or ride · H helicopter · M map')
     this.mountCoach()
   }
 

@@ -37,6 +37,7 @@ import { bumpCars } from '../traffic/bumps.ts'
 import { createTraffic, gatherTraffic, parkOnLane, stepTraffic, type CarSim, type TrafficFile } from '../traffic/trafficSim.ts'
 import { Hud } from '../ui/Hud.ts'
 import { Minimap } from '../ui/Minimap.ts'
+import { StreetMap } from '../ui/StreetMap.ts'
 import { WordRain } from '../ui/WordRain.ts'
 import { createSeededRng, sessionSeed } from '../util/seededRng.ts'
 import { listen, playMp3, speak, type ListenHandle } from '../voice/speech.ts'
@@ -52,10 +53,10 @@ import { buildLayout, describePlace, nearbySpot, type CityLayout, type MapFile }
 import { planLamps, StreetLamps } from '../world/streetlamps.ts'
 import { buildStoreSigns, disposeStoreSigns, type Business } from '../world/storefronts.ts'
 
-const WALK_HINT = 'WASD walk · Shift run · right-drag look · Space hop · E talk · V mic · F drive or ride · H helicopter'
-const DRIVE_HINT = 'WASD drive · A/D steer · Shift faster · F park'
-const RIDE_HINT = 'Riding the bus · F to hop off'
-const FLY_HINT = 'WASD fly · A/D turn · Space up · C down · Shift faster · H land'
+const WALK_HINT = 'WASD walk · Shift run · right-drag look · Space hop · E talk · V mic · F drive or ride · H helicopter · M map'
+const DRIVE_HINT = 'WASD drive · A/D steer · Shift faster · F park · M map'
+const RIDE_HINT = 'Riding the bus · F to hop off · M map'
+const FLY_HINT = 'WASD fly · A/D turn · Space up · C down · Shift faster · H land · M map'
 
 export class Game {
   private readonly canvas: HTMLCanvasElement
@@ -92,6 +93,8 @@ export class Game {
   }
   private readonly helicopter: Helicopter
   private readonly minimap: Minimap
+  private readonly streetMap: StreetMap
+  private mapOpen = false
   private readonly delivery: DeliveryRun
   private readonly wordnet = new WordRain()
   private readonly client: CityClient
@@ -146,6 +149,14 @@ export class Game {
     }
     if (event.repeat) return
     this.ambience.resume()
+    if (event.code === 'KeyM') {
+      this.setMap(!this.mapOpen)
+      return
+    }
+    if (this.mapOpen) {
+      if (event.code === 'Escape') this.setMap(false)
+      return
+    }
     if (event.code === 'Escape') {
       this.paused = !this.paused
       this.walker.paused = this.paused
@@ -164,6 +175,18 @@ export class Game {
     } else if (event.code === 'KeyF') {
       event.preventDefault()
       this.toggleVehicle()
+    }
+  }
+
+  private setMap(open: boolean): void {
+    if (open === this.mapOpen) return
+    this.mapOpen = open
+    this.walker.paused = open || this.paused
+    if (open) {
+      const pos = this.walker.mesh.position
+      this.streetMap.show(pos.x, pos.z, this.walker.facing)
+    } else {
+      this.streetMap.hide()
     }
   }
 
@@ -234,6 +257,7 @@ export class Game {
     this.helicopter = new Helicopter(tourOver(this.layout.landmarks, this.layout.file.spawn))
     this.scene.add(this.helicopter.root)
     this.minimap = new Minimap(this.layout)
+    this.streetMap = new StreetMap(this.layout, () => this.setMap(false))
 
     this.walker = new Walker(this.layout, this.camera, this.layout.file.spawn, playerName)
     this.walker.setPosts([
@@ -343,6 +367,7 @@ export class Game {
     this.helicopter.dispose()
     this.delivery.dispose()
     this.minimap.dispose()
+    this.streetMap.dispose()
     this.wordnet.dispose()
     this.scene.remove(this.foliage.root, this.helicopter.root, this.storefronts, this.lamps.root)
     disposeStoreSigns(this.storefronts)

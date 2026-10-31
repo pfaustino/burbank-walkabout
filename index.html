@@ -34,7 +34,7 @@
           <p><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> walk</p>
           <p>Shift run · drag to look · Space hop</p>
           <p><kbd>F</kbd> drive a stopped car, ride a bus, or get back out</p>
-          <p class="coach-rest">E talk · V mic · H helicopter</p>
+          <p class="coach-rest">E talk · V mic · H helicopter · M map</p>
           <button id="coach-ok" type="button">Got it</button>
         </div>
         <div id="score">$0</div>
@@ -48,6 +48,17 @@
       <div id="cash-pop" aria-live="polite"></div>
       <canvas id="wordnet" width="200" height="200" role="button" aria-pressed="false" aria-label="Word stream. Click to enlarge."></canvas>
       <canvas id="minimap" width="200" height="200" role="img" aria-label="Minimap. North is up. East is on the right."></canvas>
+      <div id="street-map" hidden role="dialog" aria-modal="true" aria-label="City map">
+        <canvas id="street-map-canvas"></canvas>
+        <p id="street-map-names"></p>
+        <p id="street-map-hint">Drag to pan · scroll to zoom · M or Esc closes</p>
+        <p id="street-map-credit">Map data © OpenStreetMap contributors</p>
+        <div id="street-map-tools">
+          <button id="street-map-in" type="button" aria-label="Zoom in">+</button>
+          <button id="street-map-out" type="button" aria-label="Zoom out">−</button>
+          <button id="street-map-close" type="button">Close</button>
+        </div>
+      </div>
       <div id="subtitle" aria-live="polite"></div>
       <div id="transcript" aria-live="polite"></div>
       <form id="talk-bar">
