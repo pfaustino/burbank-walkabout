@@ -43,6 +43,52 @@ html, body, #app {
   text-shadow: 0 1px 2px #000;
 }
 
+#coach {
+  width: min(360px, calc(100vw - 36px));
+  margin-top: 10px;
+  padding: 12px 14px 10px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  pointer-events: auto;
+  text-shadow: 0 1px 2px #000;
+}
+
+#coach p { margin: 0 0 8px; line-height: 1.45; }
+
+.coach-title {
+  font-size: 13px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+#coach kbd {
+  display: inline-block;
+  min-width: 1.35em;
+  margin: 0 3px 0 0;
+  padding: 1px 6px;
+  border-radius: 6px;
+  border: 1px solid rgba(246, 241, 230, 0.35);
+  background: #24384c;
+  font-family: inherit;
+  font-weight: 750;
+  text-align: center;
+}
+
+.coach-rest { color: var(--muted); font-size: 14px; }
+
+#coach-ok {
+  border: 0;
+  border-radius: 8px;
+  padding: 6px 12px;
+  background: var(--accent);
+  color: #1a120c;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
 #score {
   position: fixed;
   top: 14px;

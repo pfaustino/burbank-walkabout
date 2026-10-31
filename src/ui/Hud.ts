@@ -55,6 +55,28 @@ export class Hud {
     hear.addEventListener('change', () => this.handlers.onHear(hear.checked))
 
     this.setStatus('WASD walk · Shift run · right-drag look · Space hop · E talk · V mic · F drive or ride · H helicopter')
+    this.mountCoach()
+  }
+
+  private mountCoach(): void {
+    const coach = must('#coach')
+    const ok = must('#coach-ok') as HTMLButtonElement
+    try {
+      if (localStorage.getItem('burbank-coach') === '1') {
+        coach.hidden = true
+        return
+      }
+    } catch {
+      /* Private browsing still shows the card. */
+    }
+    ok.addEventListener('click', () => {
+      coach.hidden = true
+      try {
+        localStorage.setItem('burbank-coach', '1')
+      } catch {
+        /* The card stays dismissed for this visit. */
+      }
+    })
   }
 
   setPlace(text: string): void {

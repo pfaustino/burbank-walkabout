@@ -1,7 +1,7 @@
 import businessesJson from '../data/businesses.json'
 import deliveryJson from '../data/delivery.json'
 import mapJson from '../data/map.json'
-import { deliveryPay, orderLine, parkedOn, planDelivery, planTaxi, taxiLine, taxiPay, type DeliveryFile } from '../src/delivery/orders.ts'
+import { deliveryPay, fareBreak, orderLine, parkedOn, planDelivery, planTaxi, taxiLine, taxiPay, type DeliveryFile } from '../src/delivery/orders.ts'
 import { buildNetwork } from '../src/traffic/network.ts'
 import { createSeededRng } from '../src/util/seededRng.ts'
 import { hitsBuilding, buildLayout, type MapFile } from '../src/world/layout.ts'
@@ -47,6 +47,16 @@ describe('delivery orders', () => {
     expect(hitsBuilding(layout, order!.dropoff.x, order!.dropoff.z, 1)).toBe(false)
     const fromDoor = Math.hypot(order!.pickup.x - spawn.x, order!.pickup.z - spawn.z)
     expect(fromDoor).toBeGreaterThan(20)
+  })
+
+  it('waits up to ten seconds between fares', () => {
+    expect(fareBreak(() => 0, file)).toBe(file.gapMin)
+    expect(fareBreak(() => 1, file)).toBe(file.gapMax)
+    expect(file.gapMin).toBe(0)
+    expect(file.gapMax).toBe(10)
+    const mid = fareBreak(() => 0.4, file)
+    expect(mid).toBeGreaterThan(0)
+    expect(mid).toBeLessThan(10)
   })
 
   it('pays a bigger tip for a faster delivery', () => {

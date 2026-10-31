@@ -12,7 +12,10 @@ export type DeliveryFile = {
   maxTrip: number
   roadReach: number
   houseHeight: number
-  gap: number
+  /** Shortest wait after a fare, in seconds. */
+  gapMin: number
+  /** Longest wait after a fare, in seconds. */
+  gapMax: number
   fare: number
   tipMin: number
   tipMax: number
@@ -78,6 +81,12 @@ function payFor(
   const rush = Math.max(0, Math.min(1, (file.tipSlow - seconds) / span))
   const tip = Math.round(tipMin + (tipMax - tipMin) * rush)
   return { fare, tip, total: fare + tip }
+}
+
+/** A pause between jobs, from gapMin through gapMax. */
+export function fareBreak(rng: () => number, file: DeliveryFile): number {
+  const span = Math.max(0, file.gapMax - file.gapMin)
+  return file.gapMin + rng() * span
 }
 
 /** Stopped in a car, inside the halo. Driving through does not count. */

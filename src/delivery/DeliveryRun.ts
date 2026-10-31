@@ -7,6 +7,7 @@ import type { CityLayout } from '../world/layout.ts'
 import type { Business } from '../world/storefronts.ts'
 import {
   deliveryPay,
+  fareBreak,
   orderLine,
   parkedOn,
   planDelivery,
@@ -107,7 +108,7 @@ export class DeliveryRun {
     this.order = null
     this.ride = null
     this.phase = 'gap'
-    this.wait = this.file.gap
+    this.wait = fareBreak(this.rng, this.file)
     this.elapsed = 0
     this.hide()
     this.hud.setOrder(null)
