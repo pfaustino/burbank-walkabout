@@ -1,5 +1,6 @@
 {
   "count": 600,
+  "nearby": 100,
   "cruise": 10.5,
   "green": 8.5,
   "yellow": 2.5,

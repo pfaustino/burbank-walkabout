@@ -6,7 +6,7 @@ import { buildNetwork, lamps, sampleLane } from '../src/traffic/network.ts'
 import { bumpCars } from '../src/traffic/bumps.ts'
 import { wallBounce } from '../src/player/Walker.ts'
 import { asideStep } from '../src/actors/peopleSim.ts'
-import { createTraffic, cutsOff, stepTraffic, type CarSim, type TrafficFile } from '../src/traffic/trafficSim.ts'
+import { createTraffic, cutsOff, gatherTraffic, stepTraffic, type CarSim, type TrafficFile } from '../src/traffic/trafficSim.ts'
 import { stepBuses, type BusFile, type BusSim } from '../src/traffic/busSim.ts'
 import { BUS_HALF_LENGTH, BUS_HALF_WIDTH, CAR_HALF_LENGTH, CAR_HALF_WIDTH, overlapsCapsule, slideClear } from '../src/traffic/bodies.ts'
 import busesJson from '../data/buses.json'
@@ -92,6 +92,59 @@ describe('traffic', () => {
     }
     const crossed = moving.lane !== lane!.id || moving.dist > lane!.stopAt + 4
     expect(crossed).toBe(true)
+  })
+
+  it('waits at the line when the far side of the crossing is stopped', () => {
+    const lane = network.lanes.find((entry) => entry.signal !== null && entry.next.length > 0 && entry.length > 50)
+    expect(lane).toBeTruthy()
+    const greenTime = lane!.axis === 'ew' ? 1 : file.green + file.yellow + 1
+    const exits = new Set<number>(lane!.next)
+    if (lane!.back !== lane!.id) exits.add(lane!.back)
+    const held: CarSim[] = []
+    for (const id of exits) {
+      const pose = sampleLane(network.lanes[id]!, 4)
+      const blocker = carOn(id, 4)
+      blocker.id = `held-${id}`
+      blocker.speed = 0
+      blocker.driver = 'hold'
+      blocker.x = pose.x
+      blocker.z = pose.z
+      blocker.yaw = pose.yaw
+      held.push(blocker)
+    }
+    const pose = sampleLane(lane!, lane!.stopAt - 6)
+    const car = carOn(lane!.id, lane!.stopAt - 6)
+    car.speed = 8
+    car.x = pose.x
+    car.z = pose.z
+    car.yaw = pose.yaw
+    for (let t = 0; t < 3; t += 0.05) {
+      stepTraffic([car, ...held], network, file, greenTime, 0.05, () => 0.2, [])
+    }
+    expect(car.lane).toBe(lane!.id)
+    expect(car.dist).toBeLessThanOrEqual(lane!.stopAt + 0.8)
+  })
+
+  it('stops pulling cars in once the neighborhood is full', () => {
+    const lane = network.lanes.find((entry) => entry.length > 80)
+    expect(lane).toBeTruthy()
+    const spot = sampleLane(lane!, lane!.length * 0.5)
+    const near = carOn(lane!.id, lane!.length * 0.5)
+    near.x = spot.x
+    near.z = spot.z
+    const far: CarSim[] = []
+    for (let i = 0; i < 24; i++) {
+      const car = carOn(lane!.id, 30)
+      car.id = `far-${i}`
+      car.x = spot.x + 4000
+      car.z = spot.z + 4000
+      far.push(car)
+    }
+    gatherTraffic([near, ...far], network, spot.x, spot.z, 560, createSeededRng(3), 4)
+    const nearby = [near, ...far].filter((car) => Math.hypot(car.x - spot.x, car.z - spot.z) < 560)
+    expect(nearby.length).toBeGreaterThan(1)
+    expect(nearby.length).toBeLessThanOrEqual(4)
+    expect(far.some((car) => car.x === spot.x + 4000)).toBe(true)
   })
 
   it('shoves both cars when one drives into the other', () => {

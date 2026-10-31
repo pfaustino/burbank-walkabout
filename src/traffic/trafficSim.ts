@@ -33,6 +33,8 @@ export function cutsOff(ahead: number, side: number, speed: number, half: number
 
 export type TrafficFile = {
   count: number
+  /** How many of those cars stay near the player. The rest remain out in the city. */
+  nearby: number
   cruise: number
   green: number
   yellow: number
@@ -92,7 +94,7 @@ export function createTraffic(network: RoadNetwork, file: TrafficFile, rng: () =
   return cars
 }
 
-/** Move driverless cars that have fallen far behind the player onto a lane nearby. */
+/** Move driverless cars that have fallen far behind the player onto a lane nearby, until `cap` are close. */
 export function gatherTraffic(
   cars: CarSim[],
   network: RoadNetwork,
@@ -100,15 +102,26 @@ export function gatherTraffic(
   z: number,
   reach: number,
   rng: () => number,
+  cap: number,
 ): void {
   const lanes = network.lanes.filter((lane) => lane.length > 40)
-  if (lanes.length === 0) return
-  const keep = reach * 0.72
+  if (lanes.length === 0 || cap < 1) return
+  const reach2 = reach * reach
+  let nearby = 0
   for (const car of cars) {
     if (car.driver) continue
     const dx = car.x - x
     const dz = car.z - z
-    if (dx * dx + dz * dz < reach * reach) continue
+    if (dx * dx + dz * dz < reach2) nearby++
+  }
+  if (nearby >= cap) return
+  const keep = reach * 0.72
+  for (const car of cars) {
+    if (nearby >= cap) break
+    if (car.driver) continue
+    const dx = car.x - x
+    const dz = car.z - z
+    if (dx * dx + dz * dz < reach2) continue
     for (let attempt = 0; attempt < 12; attempt++) {
       const lane = lanes[Math.floor(rng() * lanes.length)]
       if (!lane) continue
@@ -124,6 +137,7 @@ export function gatherTraffic(
       car.yaw = spot.yaw
       car.knockX = 0
       car.knockZ = 0
+      nearby++
       break
     }
   }
@@ -204,6 +218,11 @@ export function stepTraffic(
       desired = Math.min(desired, speed)
     })
     if ((car.wait ?? 0) > PATIENCE) desired = Math.min(desired, 4.5)
+    const holdAt = junctionHold(lane)
+    if (car.dist > holdAt - 24 && !hasClearExit(lane, cars)) {
+      const holdGap = holdAt - car.dist
+      desired = Math.min(desired, holdGap < 1.1 ? 0 : holdGap * 1.15)
+    }
     if ((car.coast ?? 0) > 0) {
       car.coast = Math.max(0, (car.coast ?? 0) - dt)
       hard = false
@@ -220,8 +239,15 @@ export function stepTraffic(
     if (!holding && !hard) nextDist += car.speed * dt
     if (nextDist >= lane.length - 0.05) {
       const overflow = nextDist - lane.length
-      nextLane = chooseNext(lane, network.lanes, rng)
-      nextDist = Math.max(0, overflow)
+      const exit = chooseNext(lane, network.lanes, rng, cars)
+      if (exit === null) {
+        nextLane = car.lane
+        nextDist = car.dist > holdAt ? car.dist : Math.min(nextDist, holdAt)
+        car.speed = 0
+      } else {
+        nextLane = exit
+        nextDist = Math.max(0, overflow)
+      }
     }
     const moved = nextLane !== car.lane || nextDist !== car.dist
     const pose = sampleLane(network.lanes[nextLane] ?? lane, moved ? nextDist : car.dist)
@@ -390,7 +416,27 @@ function takeBody(index: number): Body {
   return body
 }
 
-function chooseNext(lane: Lane, lanes: Lane[], rng: () => number): number {
+/** Stop short of the crossing, at the light if there is one. */
+function junctionHold(lane: Lane): number {
+  if (lane.signal !== null) return lane.stopAt
+  return Math.max(8, lane.length - 10)
+}
+
+/** True when a car could leave the crossing onto this lane instead of sitting in it. */
+function exitClear(laneId: number, cars: readonly CarSim[]): boolean {
+  for (const other of cars) {
+    if (other.lane !== laneId) continue
+    if (other.dist < 16 && other.speed < 1.5) return false
+  }
+  return true
+}
+
+function hasClearExit(lane: Lane, cars: readonly CarSim[]): boolean {
+  const options = lane.next.length > 0 ? lane.next : [lane.back]
+  return options.some((id) => id !== lane.id && exitClear(id, cars))
+}
+
+function chooseNext(lane: Lane, lanes: Lane[], rng: () => number, cars: readonly CarSim[]): number | null {
   const heading = endHeading(lane)
   const scored = lane.next.map((id) => {
     const next = lanes[id]
@@ -398,8 +444,8 @@ function chooseNext(lane: Lane, lanes: Lane[], rng: () => number): number {
     return { id, dot: heading.x * start.x + heading.z * start.z }
   })
   const usable = scored.filter((item) => item.dot > -0.15)
-  const pool = usable.length > 0 ? usable : scored
-  if (pool.length === 0) return lane.back
+  const pool = (usable.length > 0 ? usable : scored).filter((item) => exitClear(item.id, cars))
+  if (pool.length === 0) return lane.back !== lane.id && exitClear(lane.back, cars) ? lane.back : null
   let best = pool[0]!
   let bestScore = -10
   for (const item of pool) {

@@ -380,7 +380,7 @@ export class Game {
       this.gatherLeft = 2
       const bounds = this.layout.file.bounds
       const span = Math.max(bounds.maxX - bounds.minX, bounds.maxZ - bounds.minZ)
-      if (span > 2500) gatherTraffic(this.cars, this.network, pos.x, pos.z, 560, this.carRng)
+      if (span > 2500) gatherTraffic(this.cars, this.network, pos.x, pos.z, 560, this.carRng, this.trafficFile.nearby)
     }
     stepBuses(this.buses, this.network, this.busFile, this.time, dt, this.busRng, this.busObstacles())
     this.syncVehicles()
