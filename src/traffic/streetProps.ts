@@ -37,11 +37,12 @@ export function buildSigns(posts: SignPost[]): THREE.Group {
       board.position.y = index === 0 ? 2.95 : 2.42
       board.rotation.y = blade.yaw - Math.PI / 2
       const front = new THREE.Mesh(geo, mat)
-      front.position.z = 0.016
+      front.position.z = 0.02
       front.castShadow = true
       const back = new THREE.Mesh(geo, mat)
-      back.position.z = -0.016
-      back.scale.x = -1
+      back.position.z = -0.02
+      // A negative scale turns the face inside out and the blade disappears from that side.
+      back.rotation.y = Math.PI
       back.castShadow = true
       board.add(front, back)
       root.add(board)

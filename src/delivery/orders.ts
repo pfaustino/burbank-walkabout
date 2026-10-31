@@ -50,6 +50,15 @@ export type TaxiRide = {
 
 export type DropPhase = 'pickup' | 'dropoff'
 
+/** Distance from the player to the fare the arrow is pointing at. */
+export function formatDistance(meters: number): string {
+  const away = Math.max(0, meters)
+  if (away < 1000) return `${Math.round(away)} m`
+  const km = away / 1000
+  const text = km < 10 ? km.toFixed(1) : String(Math.round(km))
+  return `${text} km`
+}
+
 export function orderLine(order: DeliveryOrder, phase: DropPhase): string {
   if (phase === 'pickup') return `Order for ${order.customer} at ${order.business}`
   return `Deliver to ${order.customer}`

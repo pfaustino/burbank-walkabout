@@ -8,6 +8,7 @@ import type { Business } from '../world/storefronts.ts'
 import {
   deliveryPay,
   fareBreak,
+  formatDistance,
   orderLine,
   parkedOn,
   planDelivery,
@@ -35,6 +36,10 @@ export class DeliveryRun {
   private wait = 0.6
   private readonly arrow: THREE.Group
   private readonly arrowFace: THREE.MeshBasicMaterial
+  private readonly distance: THREE.Sprite
+  private readonly distanceMat: THREE.SpriteMaterial
+  private readonly distanceCanvas: HTMLCanvasElement
+  private distanceText = ''
   private readonly halo: THREE.Group
   private readonly haloMats: THREE.MeshBasicMaterial[]
   private spin = 0
@@ -66,6 +71,11 @@ export class DeliveryRun {
     this.arrowFace = new THREE.MeshBasicMaterial({ color: PICKUP, fog: false })
     this.arrow = buildArrow(this.arrowFace)
     this.arrow.visible = false
+    const label = buildDistanceLabel()
+    this.distance = label.sprite
+    this.distanceMat = label.material
+    this.distanceCanvas = label.canvas
+    this.distance.visible = false
     this.haloMats = [
       new THREE.MeshBasicMaterial({ color: PICKUP, transparent: true, opacity: 0.9, side: THREE.DoubleSide, depthWrite: false }),
       new THREE.MeshBasicMaterial({ color: PICKUP, transparent: true, opacity: 0.3, side: THREE.DoubleSide, depthWrite: false }),
@@ -73,7 +83,7 @@ export class DeliveryRun {
     ]
     this.halo = buildHalo(this.haloMats)
     this.halo.visible = false
-    this.scene.add(this.arrow, this.halo)
+    this.scene.add(this.arrow, this.distance, this.halo)
   }
 
   get marker(): { x: number; z: number; dropoff: boolean } | null {
@@ -116,9 +126,11 @@ export class DeliveryRun {
 
   dispose(): void {
     this.clearPassenger()
-    this.scene.remove(this.arrow, this.halo)
+    this.scene.remove(this.arrow, this.distance, this.halo)
     disposeDrawn(this.arrow)
     disposeDrawn(this.halo)
+    this.distanceMat.map?.dispose()
+    this.distanceMat.dispose()
   }
 
   private offer(pose: Spot): void {
@@ -206,6 +218,7 @@ export class DeliveryRun {
 
   private hide(): void {
     this.arrow.visible = false
+    this.distance.visible = false
     this.halo.visible = false
   }
 
@@ -213,8 +226,12 @@ export class DeliveryRun {
     const dx = spot.x - x
     const dz = spot.z - z
     const yaw = Math.atan2(dx, dz)
+    const bob = Math.sin(this.spin * 3) * 0.16
     this.arrow.visible = true
-    this.arrow.position.set(x, 3.15 + Math.sin(this.spin * 3) * 0.16, z)
+    this.arrow.position.set(x, 3.15 + bob, z)
+    this.distance.visible = true
+    this.distance.position.set(x, 4.15 + bob, z)
+    this.paintDistance(formatDistance(Math.hypot(dx, dz)))
     this.arrow.rotation.order = 'YXZ'
     this.arrow.rotation.y = yaw
     this.arrow.rotation.x = -0.42
@@ -229,6 +246,26 @@ export class DeliveryRun {
     if (disc) disc.opacity = 0.22 + Math.sin(this.spin * 4) * 0.08
     if (column) column.opacity = 0.12 + Math.sin(this.spin * 2.2) * 0.05
   }
+
+  private paintDistance(text: string): void {
+    if (text === this.distanceText) return
+    this.distanceText = text
+    const canvas = this.distanceCanvas
+    const ctx = canvas.getContext('2d')
+    if (!ctx) return
+    ctx.clearRect(0, 0, canvas.width, canvas.height)
+    ctx.fillStyle = 'rgba(18, 14, 8, 0.88)'
+    ctx.beginPath()
+    ctx.roundRect(8, 14, canvas.width - 16, canvas.height - 28, 18)
+    ctx.fill()
+    ctx.fillStyle = '#fff6df'
+    ctx.textAlign = 'center'
+    ctx.textBaseline = 'middle'
+    ctx.font = '700 54px sans-serif'
+    ctx.fillText(text, canvas.width / 2, canvas.height / 2 + 1)
+    const map = this.distanceMat.map
+    if (map) map.needsUpdate = true
+  }
 }
 
 function disposeDrawn(root: THREE.Object3D): void {
@@ -242,6 +279,20 @@ function disposeDrawn(root: THREE.Object3D): void {
   })
   for (const geometry of geometries) geometry.dispose()
   for (const material of materials) material.dispose()
+}
+
+function buildDistanceLabel(): { sprite: THREE.Sprite; material: THREE.SpriteMaterial; canvas: HTMLCanvasElement } {
+  const canvas = document.createElement('canvas')
+  canvas.width = 256
+  canvas.height = 96
+  const map = new THREE.CanvasTexture(canvas)
+  map.colorSpace = THREE.SRGBColorSpace
+  const material = new THREE.SpriteMaterial({ map, transparent: true, depthTest: false, fog: false })
+  const sprite = new THREE.Sprite(material)
+  sprite.name = 'delivery-distance'
+  sprite.scale.set(1.7, 0.64, 1)
+  sprite.renderOrder = 3
+  return { sprite, material, canvas }
 }
 
 function buildArrow(face: THREE.MeshBasicMaterial): THREE.Group {

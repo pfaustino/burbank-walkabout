@@ -1,7 +1,7 @@
 import businessesJson from '../data/businesses.json'
 import deliveryJson from '../data/delivery.json'
 import mapJson from '../data/map.json'
-import { deliveryPay, fareBreak, orderLine, parkedOn, planDelivery, planTaxi, taxiLine, taxiPay, type DeliveryFile } from '../src/delivery/orders.ts'
+import { deliveryPay, fareBreak, formatDistance, orderLine, parkedOn, planDelivery, planTaxi, taxiLine, taxiPay, type DeliveryFile } from '../src/delivery/orders.ts'
 import { buildNetwork } from '../src/traffic/network.ts'
 import { createSeededRng } from '../src/util/seededRng.ts'
 import { hitsBuilding, buildLayout, type MapFile } from '../src/world/layout.ts'
@@ -15,6 +15,13 @@ const businesses = businessesJson as Business[]
 const spawn = layout.file.spawn
 
 describe('delivery orders', () => {
+  it('shows meters up close and kilometers farther out', () => {
+    expect(formatDistance(86.4)).toBe('86 m')
+    expect(formatDistance(999.4)).toBe('999 m')
+    expect(formatDistance(1200)).toBe('1.2 km')
+    expect(formatDistance(10500)).toBe('11 km')
+  })
+
   it('names the pickup and then the customer', () => {
     const order = {
       customer: 'June Alvarez',
