@@ -126,7 +126,7 @@ export function buildCityMesh(layout: CityLayout): THREE.Group {
         continue
       }
       geometry.rotateX(-Math.PI / 2)
-      const floors = floorsForHeight(building.h)
+      const floors = floorsForHeight(building.h, ringArea(building.ring))
       const color = new THREE.Color(paintOf(building))
       const roof = sliceGroup(geometry, 0)
       const wall = sliceGroup(geometry, 1)
@@ -350,6 +350,10 @@ function roundRect(
 }
 
 const FLOOR_HEIGHT = 3.2
+/** A one-story house, roof included, is usually under this. */
+const HOUSE_SECOND_STORY = 7
+/** Bigger than this is a block or an apartment, not a house. */
+const HOUSE_AREA = 400
 const BAY_WIDTH = 3.6
 const HOUSE_COLORS = [
   '#f4efe4',
@@ -369,8 +373,23 @@ const HOUSE_COLORS = [
 ]
 const STORED_HOUSE = new Set(['#e4d0b4', '#d8c2a4', '#efe0c8', '#d7c4a4', '#d9c7ae', '#e4d3bc', '#cfc6ba'])
 
-function floorsForHeight(height: number): number {
+/** Window rows. A house stays one story until it clears the roof line at 7 m. */
+export function floorsForHeight(height: number, area: number): number {
+  if (area < HOUSE_AREA) {
+    if (height < HOUSE_SECOND_STORY) return 1
+    const steps = Math.floor((height - HOUSE_SECOND_STORY) / FLOOR_HEIGHT + 1e-6)
+    return Math.min(18, 2 + Math.max(0, steps))
+  }
   return Math.min(18, Math.max(1, Math.round(height / FLOOR_HEIGHT)))
+}
+
+function ringArea(ring: number[]): number {
+  let area = 0
+  for (let i = 0; i < ring.length; i += 2) {
+    const j = (i + 2) % ring.length
+    area += (ring[i] ?? 0) * (ring[j + 1] ?? 0) - (ring[j] ?? 0) * (ring[i + 1] ?? 0)
+  }
+  return Math.abs(area) / 2
 }
 
 function paintOf(building: { h: number; c: string; ring: number[] }): string {

@@ -4,6 +4,7 @@ import { formatHour, skyAt } from '../src/world/daylight.ts'
 import { buildLayout, hitsBuilding, type MapFile } from '../src/world/layout.ts'
 import { planStoreSigns, type Business } from '../src/world/storefronts.ts'
 import { planLamps } from '../src/world/streetlamps.ts'
+import { floorsForHeight } from '../src/world/CityMesh.ts'
 import { describe, expect, it } from 'vitest'
 
 const layout = buildLayout(mapJson as MapFile)
@@ -106,6 +107,20 @@ describe('storefront signs', () => {
     expect(ross).toHaveLength(2)
     expect(ross.some((sign) => sign.z < 2)).toBe(true)
     expect(ross.some((sign) => sign.x > 38)).toBe(true)
+  })
+})
+
+describe('house stories', () => {
+  it('keeps a house at one story until the roof clears seven meters', () => {
+    expect(floorsForHeight(5.2, 160)).toBe(1)
+    expect(floorsForHeight(6.5, 160)).toBe(1)
+    expect(floorsForHeight(6.9, 40)).toBe(1)
+    expect(floorsForHeight(7, 160)).toBe(2)
+    expect(floorsForHeight(9, 160)).toBe(2)
+    expect(floorsForHeight(10.2, 160)).toBe(3)
+    expect(floorsForHeight(6.4, 600)).toBe(2)
+    expect(floorsForHeight(5, 600)).toBe(2)
+    expect(floorsForHeight(4.2, 600)).toBe(1)
   })
 })
 
