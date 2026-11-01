@@ -143,9 +143,10 @@
       <div id="transcript" aria-live="polite"></div>
       <div id="bottom-bar">
         <div id="radio">
-          <button id="radio-prev" type="button" aria-label="Previous station">‹</button>
-          <button id="radio-name" type="button">Radio off</button>
-          <button id="radio-next" type="button" aria-label="Next station">›</button>
+          <label for="radio-pick">Radio</label>
+          <select id="radio-pick">
+            <option value="">Off</option>
+          </select>
         </div>
         <form id="talk-bar">
           <button id="mic" type="button" aria-pressed="false">Mic</button>

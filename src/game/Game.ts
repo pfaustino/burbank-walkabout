@@ -14,7 +14,7 @@ import { buildSidewalks, routeSidewalk, type SidewalkGraph } from '../actors/sid
 import { asideStep, createPeople, stepPeople, type PeopleFile, type PersonSim, type RoadThreat } from '../actors/peopleSim.ts'
 import { PuppetSet } from '../actors/PuppetSet.ts'
 import { Ambience } from '../audio/ambience.ts'
-import { paintRadio, Radio, stepStation } from '../audio/radio.ts'
+import { fillRadio, paintRadio, Radio } from '../audio/radio.ts'
 import { DeliveryRun } from '../delivery/DeliveryRun.ts'
 import type { DeliveryFile } from '../delivery/orders.ts'
 import { mountDevPanel, openSpot, shortcutPlaces } from '../dev/DevPanel.ts'
@@ -345,17 +345,11 @@ export class Game {
       onChange: (settings) => this.applySettings(settings),
       onTutorial: () => this.hud.showCoach(),
     })
+    const pick = document.querySelector('#radio-pick')
+    if (!(pick instanceof HTMLSelectElement)) throw new Error('Missing #radio-pick')
+    fillRadio(pick)
+    pick.addEventListener('change', () => this.menu.setStation(pick.value))
     this.applySettings(this.menu.settings)
-    mustRadio('#radio-prev').addEventListener('click', () => this.menu.setStation(stepStation(this.menu.settings.station, -1)))
-    mustRadio('#radio-next').addEventListener('click', () => this.menu.setStation(stepStation(this.menu.settings.station, 1)))
-    mustRadio('#radio-name').addEventListener('click', () => {
-      const station = this.menu.settings.station
-      if (station && this.radio.isSilent()) {
-        this.radio.resume()
-        return
-      }
-      this.menu.setStation(station ? '' : stepStation('', 1))
-    })
     window.addEventListener('resize', this.onResize)
     window.addEventListener('keydown', this.onKey)
     window.addEventListener('pointerdown', this.onUnlock)
@@ -1260,8 +1254,3 @@ export class Game {
   }
 }
 
-function mustRadio(id: string): HTMLButtonElement {
-  const el = document.querySelector(id)
-  if (!(el instanceof HTMLButtonElement)) throw new Error(`Missing ${id}`)
-  return el
-}

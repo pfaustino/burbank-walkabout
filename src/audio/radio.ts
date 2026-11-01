@@ -34,10 +34,6 @@ export function knownStation(id: unknown): id is (typeof STATIONS)[number]['id']
   return typeof id === 'string' && IDS.includes(id as (typeof IDS)[number])
 }
 
-export function stationName(id: string): string {
-  return STATIONS.find((station) => station.id === id)?.name ?? 'Radio off'
-}
-
 /** Step through Off and the stations. `dir` is 1 or -1. */
 export function stepStation(current: string, dir: number): string {
   const ids = ['', ...IDS]
@@ -46,9 +42,20 @@ export function stepStation(current: string, dir: number): string {
   return ids[next] ?? ''
 }
 
+/** Fill the list above the chat from the stations the radio can play. */
+export function fillRadio(select: HTMLSelectElement): void {
+  if (select.options.length > 1) return
+  for (const station of STATIONS) {
+    const option = document.createElement('option')
+    option.value = station.id
+    option.textContent = station.name
+    select.append(option)
+  }
+}
+
 export function paintRadio(id: string): void {
-  const button = document.querySelector('#radio-name')
-  if (button) button.textContent = stationName(id)
+  const select = document.querySelector<HTMLSelectElement>('#radio-pick')
+  if (select) select.value = knownStation(id) ? id : ''
 }
 
 /** Play one station through the music volume. A click or key resumes it if the browser blocked the first try. */
@@ -114,11 +121,6 @@ export class Radio {
   hush(on: boolean): void {
     this.hushed = on
     if (this.audio) this.audio.volume = on ? 0 : this.volume
-  }
-
-  /** A saved station is selected, and the browser has not let it start yet. */
-  isSilent(): boolean {
-    return !!this.id && (!this.audio || this.audio.paused)
   }
 
   /** Try again after a click or key, once the browser will allow sound. */
