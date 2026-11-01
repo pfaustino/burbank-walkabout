@@ -1,10 +1,14 @@
 # Burbank Walkabout
 
-Walk Burbank in the browser. The streets and buildings follow the real city, from OpenStreetMap. People move along the sidewalks. Step up to one and talk. Other players on the same server appear on the street with you.
+You are on the streets of Burbank, in the browser. The map is the real city: roads, buildings, house numbers, and the names on the shops. Other players who open the same server are out there with you.
 
-You can drive a stopped car, van, or motorcycle, ride a bus, or call a helicopter. Jobs show up as fares: pick someone or an order up, drop them off, and the cash in the corner goes up. The day moves from morning toward night, and the street lamps come on after dark. The corner names the time and the street you are on.
+A stopped car, van, or motorcycle is yours to drive. The buses keep their routes. A helicopter will come if you call it. Jobs show up as rides and deliveries. An arrow on the pavement leads you there, and it bends into a turn before the corner. A few blocks pays a few dollars.
 
-You walk in third person with WASD and right-drag to look. Pedestrians pick a nearby spot and stroll. People are Quaternius man and woman meshes, recolored per person.
+People are already walking. Step up and talk, by typing or by the mic. They answer in a short spoken line, and they know the streets around them. The mic stays on your machine. The street only hears the sentence. While you or they are talking, the city and the radio go quiet.
+
+People are Quaternius man and woman meshes, recolored per person.
+
+The day runs from morning to night. The street lamps come on. The radio plays live stations from Los Angeles and farther off.
 
 ## Run
 
