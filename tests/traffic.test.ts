@@ -282,6 +282,23 @@ describe('traffic', () => {
     expect(Math.hypot(nose.x - piled.x, nose.z - piled.z)).toBeGreaterThan(3)
   })
 
+  it('spawns vans and motorcycles less often than the other vehicles', () => {
+    let vans = 0
+    let bikes = 0
+    let cars = 0
+    for (let seed = 1; seed <= 30; seed++) {
+      for (const car of createTraffic(network, file, createSeededRng(seed))) {
+        if (car.model === 'van') vans++
+        else if (car.model === 'motorcycle') bikes++
+        else cars++
+      }
+    }
+    expect(vans).toBeGreaterThan(0)
+    expect(bikes).toBeGreaterThan(0)
+    expect(vans).toBeLessThan(cars / 4)
+    expect(bikes).toBeLessThan(cars / 4)
+  })
+
   it('keeps cars on the roadway', () => {
     const cars = createTraffic(network, file, createSeededRng(5))
     expect(cars.length).toBe(file.count)

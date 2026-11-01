@@ -2,7 +2,7 @@
 
 Walk Burbank in the browser. The streets and buildings follow the real city, from OpenStreetMap. People move along the sidewalks. Step up to one and talk. Other players on the same server appear on the street with you.
 
-You can drive a stopped car, ride a bus, or call a helicopter. Jobs show up as fares: pick someone or an order up, drop them off, and the cash in the corner goes up. The day moves from morning toward night, and the street lamps come on after dark. The corner names the time and the street you are on.
+You can drive a stopped car, van, or motorcycle, ride a bus, or call a helicopter. Jobs show up as fares: pick someone or an order up, drop them off, and the cash in the corner goes up. The day moves from morning toward night, and the street lamps come on after dark. The corner names the time and the street you are on.
 
 You walk in third person with WASD and right-drag to look. Pedestrians pick a nearby spot and stroll. People are Quaternius man and woman meshes, recolored per person.
 
@@ -107,7 +107,7 @@ The words come from lines you send and lines people say back. Little words drop 
 
 A job shows up on its own while its button is on. The ribbon at the top is the current stop. Yellow is the pickup. Green is the dropoff. An arrow just under the ribbon points the way. The distance sits at the end of the ribbon. The corner map marks the same spot.
 
-One job is a person waving for a ride. The next is an order from a shop, then a ride again. Drive to the spot and stop. The ribbon switches to the dropoff. Stop there and the fare, plus a tip, adds to the cash in the corner. A quicker trip pays a larger tip. Then there is a short break before the next one.
+One job is a person waving for a ride. The next is an order from a shop, then a ride again. Drive to the spot and stop. The ribbon switches to the dropoff. Stop there and the fare, plus a tip, adds to the cash in the corner. A few blocks pays a few dollars, and a quicker trip pays a larger tip. Then there is a short break before the next one.
 
 Shops wear their OpenStreetMap names. Street blades name the road you are on.
 

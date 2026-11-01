@@ -2,7 +2,7 @@ import { BodyGrid, CAR_HALF_LENGTH, CAR_HALF_WIDTH, overlapsCapsule, type Disc }
 import type { Lamp, Lane, RoadNetwork } from './network.ts'
 import { lamps, nearestOnLane, sampleLane } from './network.ts'
 
-export type CarModel = 'sedan' | 'suv' | 'sport' | 'taxi'
+export type CarModel = 'sedan' | 'suv' | 'sport' | 'taxi' | 'van' | 'motorcycle'
 
 export type CarSim = {
   id: string
@@ -48,7 +48,30 @@ export type TrafficFile = {
   colors: string[]
 }
 
-const MODELS: CarModel[] = ['sedan', 'suv', 'sport', 'taxi', 'sedan']
+/** Vans and motorcycles are one slot each, so they show up less often than the cars. */
+const MODELS: CarModel[] = [
+  'sedan',
+  'sedan',
+  'sedan',
+  'sedan',
+  'sedan',
+  'suv',
+  'suv',
+  'suv',
+  'sport',
+  'sport',
+  'taxi',
+  'van',
+  'motorcycle',
+]
+
+/** Half-width and half-length. Sedans stay the shared car capsule. */
+export function vehicleHalf(model: CarModel): { w: number; len: number } {
+  if (model === 'motorcycle') return { w: 0.38, len: 0.95 }
+  if (model === 'van') return { w: 1.02, len: 2.15 }
+  return { w: CAR_HALF_WIDTH, len: CAR_HALF_LENGTH }
+}
+
 const trafficGrid = new BodyGrid()
 const bodyPool: Body[] = []
 
@@ -172,10 +195,11 @@ export function stepTraffic(
   for (let i = 0; i < cars.length; i++) {
     const car = cars[i]!
     const body = takeBody(i)
+    const size = vehicleHalf(car.model)
     body.x = car.x
     body.z = car.z
-    body.r = CAR_HALF_WIDTH
-    body.len = CAR_HALF_LENGTH
+    body.r = size.w
+    body.len = size.len
     body.yaw = car.yaw
     body.id = car.id
     body.priority = car.driver !== null
@@ -336,17 +360,18 @@ function yieldStop(car: CarSim, self: Body, grid: BodyGrid, slow: (speed: number
     const ahead = dx * fx + dz * fz
     const side = dx * fz - dz * fx
     const otherLen = body.len ?? 0
-    const stopLine = CAR_HALF_LENGTH + otherLen + 1.2
+    const myLen = self.len ?? CAR_HALF_LENGTH
+    const stopLine = myLen + otherLen + 1.2
     const reach = stopLine + 3.4
-    const half = CAR_HALF_WIDTH + body.r + 0.25
-    const overlap = overlapsCapsule(car.x, car.z, car.yaw, CAR_HALF_LENGTH, CAR_HALF_WIDTH, body)
+    const half = self.r + body.r + 0.25
+    const overlap = overlapsCapsule(car.x, car.z, car.yaw, myLen, self.r, body)
     const close = ahead > 0.35 && ahead < reach && Math.abs(side) < half
     if (body.priority && body.order >= 0 && cutsOff(ahead, side, car.speed, half)) {
       if ((car.horn ?? 0) <= 0) car.horn = 1.8
       if (ahead < 4.5) hard = true
       else slow(Math.max(0, (ahead - stopLine) * 0.35))
     }
-    const boarding = body.id === 'you' && ahead > -CAR_HALF_LENGTH && dx * dx + dz * dz < 13
+    const boarding = body.id === 'you' && ahead > -(self.len ?? CAR_HALF_LENGTH) && dx * dx + dz * dz < 13
     if (!overlap && !close && !boarding) return
     if (boarding) {
       hard = true
@@ -397,7 +422,7 @@ function poseHits(x: number, z: number, yaw: number, self: Body, grid: BodyGrid)
   grid.near(x, z, 14, (other) => {
     if (hit || other === self) return
     const body = other as Body
-    if (!overlapsCapsule(x, z, yaw, CAR_HALF_LENGTH, CAR_HALF_WIDTH, body)) return
+    if (!overlapsCapsule(x, z, yaw, self.len ?? CAR_HALF_LENGTH, self.r, body)) return
     const dx = body.x - x
     const dz = body.z - z
     const ahead = dx * fx + dz * fz

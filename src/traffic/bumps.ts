@@ -1,6 +1,6 @@
 import { hitsBuilding, type CityLayout } from '../world/layout.ts'
-import { BodyGrid, CAR_HALF_LENGTH, CAR_HALF_WIDTH, capsuleContact, type Disc } from './bodies.ts'
-import type { CarSim } from './trafficSim.ts'
+import { BodyGrid, capsuleContact, type Disc } from './bodies.ts'
+import { vehicleHalf, type CarSim } from './trafficSim.ts'
 
 export type CarHit = {
   x: number
@@ -9,11 +9,10 @@ export type CarHit = {
   impact: number
 }
 
-const REACH = CAR_HALF_LENGTH * 2 + 2
+const REACH = 8
 const SLOP = 0.04
 const SPEED_MIN = -6
 const SPEED_MAX = 22
-const BODY = CAR_HALF_WIDTH + 0.1
 
 type Slot = Disc & { index: number }
 
@@ -32,13 +31,16 @@ function separate(cars: CarSim[], layout: CityLayout, restitution: number, impul
   grid.clear()
   for (let i = 0; i < cars.length; i++) {
     const car = cars[i]!
+    const size = vehicleHalf(car.model)
     let slot = slots[i]
     if (!slot) {
-      slot = { x: 0, z: 0, r: CAR_HALF_WIDTH, len: CAR_HALF_LENGTH, index: i }
+      slot = { x: 0, z: 0, r: size.w, len: size.len, index: i }
       slots[i] = slot
     }
     slot.x = car.x
     slot.z = car.z
+    slot.r = size.w
+    slot.len = size.len
     slot.yaw = car.yaw
     slot.index = i
     grid.add(slot)
@@ -50,7 +52,7 @@ function separate(cars: CarSim[], layout: CityLayout, restitution: number, impul
       const other = found as Slot
       if (other.index <= i) return
       const mate = cars[other.index]!
-      const contact = capsuleContact(car.x, car.z, car.yaw, CAR_HALF_LENGTH, CAR_HALF_WIDTH, other)
+      const contact = capsuleContact(car.x, car.z, car.yaw, self.len ?? 0, self.r, other)
       if (contact.gap >= -SLOP) return
       const { nx, nz } = contact
       let kick = 0
@@ -91,9 +93,10 @@ function shove(car: CarSim, dx: number, dz: number, layout: CityLayout): void {
   if (dx === 0 && dz === 0) return
   let mx = dx
   let mz = dz
-  if (hitsBuilding(layout, car.x + mx, car.z + mz, BODY)) {
-    if (!hitsBuilding(layout, car.x + dx, car.z, BODY)) mz = 0
-    else if (!hitsBuilding(layout, car.x, car.z + dz, BODY)) mx = 0
+  const body = vehicleHalf(car.model).w + 0.1
+  if (hitsBuilding(layout, car.x + mx, car.z + mz, body)) {
+    if (!hitsBuilding(layout, car.x + dx, car.z, body)) mz = 0
+    else if (!hitsBuilding(layout, car.x, car.z + dz, body)) mx = 0
     else return
   }
   if (car.driver) {

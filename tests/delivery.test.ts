@@ -91,5 +91,7 @@ describe('delivery orders', () => {
     expect(fast.fare).toBeGreaterThan(file.fare)
     expect(fast.tip).toBe(file.taxiTipMax)
     expect(fast.total).toBeGreaterThan(deliveryPay(file.tipFast, file).total)
+    expect(fast.total).toBeLessThanOrEqual(12)
+    expect(deliveryPay(file.tipFast, file).total).toBeLessThanOrEqual(10)
   })
 })

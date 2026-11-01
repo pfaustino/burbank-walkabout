@@ -19,6 +19,8 @@ const BEAM_OFFSET: Record<CarModel, { y: number; z: number }> = {
   sport: { y: 0.47, z: 1.89 },
   suv: { y: 0.62, z: 1.99 },
   taxi: { y: 0.46, z: 2.17 },
+  van: { y: 0.72, z: 2.45 },
+  motorcycle: { y: 0.72, z: 1.15 },
 }
 
 type DrawnCar = {
@@ -46,6 +48,8 @@ export async function preloadCars(): Promise<void> {
     suv: ground(suv.scene),
     sport: ground(sport.scene),
     taxi: ground(taxi.scene),
+    van: ground(buildVan()),
+    motorcycle: ground(buildMotorcycle()),
   }
 }
 
@@ -188,6 +192,82 @@ export class CarSet {
     for (const material of car.mats) material.dispose()
     this.cars.delete(id)
   }
+}
+
+function buildVan(): THREE.Group {
+  const group = new THREE.Group()
+  const paint = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.55, metalness: 0.08 })
+  const glass = new THREE.MeshStandardMaterial({ name: 'Windows', color: 0x1a2836, roughness: 0.2, metalness: 0.2 })
+  const dark = new THREE.MeshStandardMaterial({ name: 'Black', color: 0x1c1e22, roughness: 0.7 })
+  const lamp = new THREE.MeshStandardMaterial({ name: 'Headlights', color: 0xfff6df, roughness: 0.3 })
+  const tail = new THREE.MeshStandardMaterial({ name: 'TailLights', color: 0x9a1c1c, roughness: 0.4 })
+  group.add(block(1.95, 1.55, 3.05, paint, 0, 1.32, -0.62))
+  group.add(block(1.82, 0.72, 1.55, paint, 0, 0.9, 1.58))
+  const windshield = block(1.62, 0.62, 0.06, glass, 0, 1.28, 1.15)
+  windshield.rotation.x = -0.55
+  group.add(windshield)
+  group.add(block(1.45, 0.38, 0.06, glass, 0, 1.55, -2.12))
+  group.add(block(0.28, 0.14, 0.06, lamp, -0.58, 0.72, 2.34))
+  group.add(block(0.28, 0.14, 0.06, lamp, 0.58, 0.72, 2.34))
+  group.add(block(0.22, 0.14, 0.05, tail, -0.68, 0.82, -2.14))
+  group.add(block(0.22, 0.14, 0.05, tail, 0.68, 0.82, -2.14))
+  const wheelGeo = new THREE.CylinderGeometry(0.36, 0.36, 0.24, 12)
+  wheelGeo.rotateZ(Math.PI / 2)
+  for (const x of [-0.92, 0.92]) {
+    for (const z of [-1.45, 1.55]) {
+      const wheel = new THREE.Mesh(wheelGeo, dark)
+      wheel.position.set(x, 0.36, z)
+      wheel.castShadow = true
+      wheel.receiveShadow = true
+      group.add(wheel)
+    }
+  }
+  return group
+}
+
+function buildMotorcycle(): THREE.Group {
+  const group = new THREE.Group()
+  const paint = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.4, metalness: 0.25 })
+  const dark = new THREE.MeshStandardMaterial({ name: 'Black', color: 0x1c1e22, roughness: 0.65 })
+  const glass = new THREE.MeshStandardMaterial({ name: 'Windows', color: 0x1a2836, roughness: 0.15, metalness: 0.3 })
+  const lamp = new THREE.MeshStandardMaterial({ name: 'Headlights', color: 0xfff6df, roughness: 0.3 })
+  const tail = new THREE.MeshStandardMaterial({ name: 'TailLights', color: 0x9a1c1c, roughness: 0.4 })
+  const wheelGeo = new THREE.CylinderGeometry(0.32, 0.32, 0.12, 12)
+  wheelGeo.rotateZ(Math.PI / 2)
+  for (const z of [-0.72, 0.78]) {
+    const wheel = new THREE.Mesh(wheelGeo, dark)
+    wheel.position.set(0, 0.32, z)
+    wheel.castShadow = true
+    wheel.receiveShadow = true
+    group.add(wheel)
+  }
+  group.add(block(0.16, 0.14, 1.35, dark, 0, 0.42, 0.05))
+  group.add(block(0.28, 0.22, 0.42, dark, 0, 0.48, 0.05))
+  group.add(block(0.32, 0.22, 0.55, paint, 0, 0.72, 0.28))
+  group.add(block(0.28, 0.12, 0.42, dark, 0, 0.78, -0.22))
+  group.add(block(0.46, 0.06, 0.08, dark, 0, 0.92, 0.62))
+  group.add(block(0.06, 0.28, 0.06, dark, -0.16, 0.78, 0.62))
+  group.add(block(0.06, 0.28, 0.06, dark, 0.16, 0.78, 0.62))
+  group.add(block(0.22, 0.28, 0.04, glass, 0, 0.98, 0.72))
+  group.add(block(0.16, 0.12, 0.08, lamp, 0, 0.62, 1.05))
+  group.add(block(0.1, 0.08, 0.05, tail, 0, 0.7, -0.95))
+  return group
+}
+
+function block(
+  w: number,
+  h: number,
+  d: number,
+  material: THREE.Material,
+  x: number,
+  y: number,
+  z: number,
+): THREE.Mesh {
+  const mesh = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), material)
+  mesh.position.set(x, y, z)
+  mesh.castShadow = true
+  mesh.receiveShadow = true
+  return mesh
 }
 
 function ground(scene: THREE.Group): THREE.Group {

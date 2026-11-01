@@ -1,7 +1,7 @@
 import type { PersonVoice } from '../actors/peopleSim.ts'
 
 export type NetCarRide = {
-  model: 'sedan' | 'suv' | 'sport' | 'taxi'
+  model: 'sedan' | 'suv' | 'sport' | 'taxi' | 'van' | 'motorcycle'
   color: string
 }
 
@@ -114,7 +114,7 @@ export function parseClientMessage(value: unknown): ClientMsg | null {
   return null
 }
 
-const CAR_MODELS = new Set(['sedan', 'suv', 'sport', 'taxi'])
+const CAR_MODELS = new Set(['sedan', 'suv', 'sport', 'taxi', 'van', 'motorcycle'])
 
 function parseRide(value: unknown): NetCarRide | null {
   if (!value || typeof value !== 'object') return null

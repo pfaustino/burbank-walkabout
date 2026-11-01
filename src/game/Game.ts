@@ -22,19 +22,12 @@ import type { NetCarRide, NetPerson, NetPlayer, SpeechMsg } from '../net/protoco
 import { Walker } from '../player/Walker.ts'
 import { BusSet } from '../traffic/BusSet.ts'
 import { CarSet } from '../traffic/CarSet.ts'
-import {
-  BUS_HALF_LENGTH,
-  BUS_HALF_WIDTH,
-  CAR_HALF_LENGTH,
-  CAR_HALF_WIDTH,
-  PERSON_RADIUS,
-  type Disc,
-} from '../traffic/bodies.ts'
+import { BUS_HALF_LENGTH, BUS_HALF_WIDTH, PERSON_RADIUS, type Disc } from '../traffic/bodies.ts'
 import { createBuses, stepBuses, type BusFile, type BusSim } from '../traffic/busSim.ts'
 import { buildNetwork, type RoadNetwork } from '../traffic/network.ts'
 import { buildSigns, disposeDrawn, setSignGlow } from '../traffic/streetProps.ts'
 import { bumpCars } from '../traffic/bumps.ts'
-import { createTraffic, gatherTraffic, parkOnLane, stepTraffic, type CarSim, type TrafficFile } from '../traffic/trafficSim.ts'
+import { createTraffic, gatherTraffic, parkOnLane, stepTraffic, vehicleHalf, type CarSim, type TrafficFile } from '../traffic/trafficSim.ts'
 import { Hud } from '../ui/Hud.ts'
 import { PauseMenu } from '../ui/PauseMenu.ts'
 import { defaultSettings, type Settings } from '../ui/settings.ts'
@@ -530,7 +523,8 @@ export class Game {
   private syncVehicles(): void {
     let n = 0
     for (const car of this.cars) {
-      this.putDisc(this.vehicleDiscs, n++, car.x, car.z, CAR_HALF_WIDTH, `car:${car.id}`, car.yaw, CAR_HALF_LENGTH)
+      const size = vehicleHalf(car.model)
+      this.putDisc(this.vehicleDiscs, n++, car.x, car.z, size.w, `car:${car.id}`, car.yaw, size.len)
     }
     for (const bus of this.buses) {
       this.putDisc(this.vehicleDiscs, n++, bus.x, bus.z, BUS_HALF_WIDTH, `bus:${bus.id}`, bus.yaw, BUS_HALF_LENGTH)
