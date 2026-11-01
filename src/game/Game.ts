@@ -17,7 +17,7 @@ import { Ambience } from '../audio/ambience.ts'
 import { fillRadio, paintRadio, Radio } from '../audio/radio.ts'
 import { DeliveryRun } from '../delivery/DeliveryRun.ts'
 import type { DeliveryFile } from '../delivery/orders.ts'
-import { mountDevPanel, openSpot, shortcutPlaces } from '../dev/DevPanel.ts'
+import { mountDevPanel, shortcutPlaces } from '../dev/DevPanel.ts'
 import { CityClient, clientUrl } from '../net/Client.ts'
 import type { NetCarRide, NetPerson, NetPlayer, SpeechMsg } from '../net/protocol.ts'
 import { Walker } from '../player/Walker.ts'
@@ -34,7 +34,7 @@ import { StreetView } from '../ui/StreetView.ts'
 import { PauseMenu } from '../ui/PauseMenu.ts'
 import { defaultSettings, type Settings } from '../ui/settings.ts'
 import { Minimap } from '../ui/Minimap.ts'
-import { StreetMap } from '../ui/StreetMap.ts'
+import { CityMap } from '../ui/CityMap.ts'
 import { WordRain } from '../ui/WordRain.ts'
 import { createSeededRng, sessionSeed } from '../util/seededRng.ts'
 import { listen, playMp3, speak, type ListenHandle } from '../voice/speech.ts'
@@ -94,7 +94,7 @@ export class Game {
   }
   private readonly helicopter: Helicopter
   private readonly minimap: Minimap
-  private readonly streetMap: StreetMap
+  private readonly cityMap: CityMap
   private mapOpen = false
   private readonly delivery: DeliveryRun
   private readonly wordnet = new WordRain()
@@ -196,9 +196,9 @@ export class Game {
     this.walker.paused = open || this.paused
     if (open) {
       const pos = this.walker.mesh.position
-      this.streetMap.show(pos.x, pos.z, this.walker.facing)
+      this.cityMap.show(pos.x, pos.z)
     } else {
-      this.streetMap.hide()
+      this.cityMap.hide()
     }
   }
 
@@ -274,7 +274,7 @@ export class Game {
     this.helicopter = new Helicopter(tourOver(this.layout.landmarks, this.layout.file.spawn))
     this.scene.add(this.helicopter.root)
     this.minimap = new Minimap(this.layout)
-    this.streetMap = new StreetMap(this.layout, () => this.setMap(false), (x, z) => this.jumpTo(x, z))
+    this.cityMap = new CityMap(() => this.setMap(false))
 
     this.walker = new Walker(this.layout, this.camera, this.layout.file.spawn, playerName)
     this.walker.setPosts([
@@ -401,7 +401,7 @@ export class Game {
     this.helicopter.dispose()
     this.delivery.dispose()
     this.minimap.dispose()
-    this.streetMap.dispose()
+    this.cityMap.dispose()
     this.wordnet.dispose()
     this.scene.remove(this.foliage.root, this.helicopter.root, this.storefronts, this.lamps.root)
     disposeStoreSigns(this.storefronts)
@@ -532,8 +532,6 @@ export class Game {
       job: this.delivery.marker,
       route: this.delivery.trail,
     })
-    const trail = this.delivery.trail
-    this.streetMap.setTrail(trail?.points ?? null, trail?.dropoff ?? false)
     this.wordnet.draw(dt)
     const camX = this.camera.position.x
     const camZ = this.camera.position.z
@@ -1179,13 +1177,6 @@ export class Game {
     if (!person) return
     const spot = nearbySpot(this.layout, person.x, person.z)
     this.moveTo(spot.x, spot.z)
-  }
-
-  private jumpTo(x: number, z: number): void {
-    if (this.riddenId) this.leaveBus()
-    const spot = openSpot(this.layout, x, z)
-    this.moveTo(spot.x, spot.z)
-    this.setMap(false)
   }
 
   private moveTo(x: number, z: number): void {

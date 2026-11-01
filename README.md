@@ -40,7 +40,7 @@ Look at a building and a window on the left shows that block in Google Street Vi
 | **Hear** | Speak replies on this computer |
 | **F** | Drive the nearest stopped car, or board the nearest stopped bus |
 | **H** | Call the helicopter |
-| **M** | City map |
+| **M** | Google map |
 | **Esc** | Menu |
 
 **F** picks whichever stopped vehicle is closer. Say something with nobody close and it goes to other players within earshot, still as text, spoken on their machine if Hear is on.
@@ -58,7 +58,7 @@ Stand next to a car that has stopped, then press **F**.
 | Right-drag | Look |
 | Wheel | Camera distance |
 | **F** | Park and get out |
-| **M** | City map |
+| **M** | Google map |
 | **Esc** | Menu |
 
 ## On the bus
@@ -68,7 +68,7 @@ Stand next to a car that has stopped, then press **F**.
 | Key | Action |
 |-----|--------|
 | **F** | Hop off |
-| **M** | City map |
+| **M** | Google map |
 | **Esc** | Menu |
 
 ## Flying
@@ -83,23 +83,12 @@ Stand next to a car that has stopped, then press **F**.
 | **C** or **Ctrl** | Descend |
 | **Shift** | Faster |
 | **H** | Land |
-| **M** | City map |
+| **M** | Google map |
 | **Esc** | Menu |
 
 ## Street map
 
-**M** opens a north-up map of the city. Your arrow is on it. Wide streets keep their names when the view is wide. Smaller streets pick up names as you zoom in. You stay put while the map is open, and the arrow slides to the edge if you pan away from yourself.
-
-| Key | Action |
-|-----|--------|
-| Drag | Pan |
-| Scroll | Zoom toward the cursor |
-| Double-click | Jump to that spot and close the map |
-| **+** / **−** | Zoom |
-| Arrows | Pan |
-| **M** or **Esc** | Close |
-
-**Zoom in**, **Zoom out**, and **Close** do the same thing. **Esc** closes the map and does not pause. The small map in the corner stays up while you walk. North is up. East is on the right.
+**M** opens Google's map, centered on where you are standing. **Map** and **Satellite** switch the picture, and the view returns to you. Drag and scroll move around inside the picture. **Close**, **M**, or **Esc** leaves the map. You stay put while it is open. The small map in the corner stays up while you walk. North is up. East is on the right.
 
 ## Wordnet
 
@@ -121,7 +110,7 @@ Shops wear their OpenStreetMap names. Street blades name the road you are on.
 
 While a fare is active, a chevron sits on the road ahead of you and follows the driving lanes to the stop. A few seconds before a corner it becomes a left or right turn arrow, still on the street you are on. On the last stretch it points at the stop. The distance at the end of the ribbon is the length of that drive.
 
-The corner map and the city map draw the same route, yellow toward the pickup and green toward the dropoff. Leave the route and it draws a new one.
+The corner map draws the route, yellow toward the pickup and green toward the dropoff. Leave the route and it draws a new one.
 
 ## Radio
 
@@ -172,7 +161,7 @@ During `npm run dev`, or with `?dev=1`, a panel sits in the corner.
 The streets, buildings, shops, and addresses are Burbank. To walk a different city, paste this prompt to the assistant in this repo and fill in the city.
 
 ```text
-Change this game from Burbank to CITY, STATE, COUNTRY. Keep the walk, driving, buses, helicopter, fares, the road arrow, street map, radio, pause menu, word stream, and address search. Only replace the place.
+Change this game from Burbank to CITY, STATE, COUNTRY. Keep the walk, driving, buses, helicopter, fares, the road arrow, Google map, radio, pause menu, word stream, and address search. Only replace the place.
 
 Look up the OpenStreetMap relation for the city's administrative boundary. Download that relation with its outer geometry to tmp-CITY-boundary.json. Download buildings, highways, and parks inside the boundary with out geom. If Overpass times out, split the city into tiles and save them as tmp-CITY-part-1.json, tmp-CITY-part-2.json, and so on. Do not commit those tmp files.
 

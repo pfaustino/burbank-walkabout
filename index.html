@@ -102,15 +102,12 @@
       <canvas id="wordnet" width="200" height="200" role="button" aria-pressed="false" aria-label="Word stream. Click to enlarge."></canvas>
       <canvas id="minimap" width="200" height="200" role="img" aria-label="Minimap. North is up. East is on the right."></canvas>
       <div id="street-map" hidden role="dialog" aria-modal="true" aria-label="City map">
-        <canvas id="street-map-canvas"></canvas>
-        <p id="street-map-names"></p>
-        <p id="street-map-hint">Drag to pan · scroll to zoom · double-click a spot to go there</p>
-        <p id="street-map-credit">Map data © OpenStreetMap contributors</p>
-        <div id="street-map-tools">
-          <button id="street-map-in" type="button" aria-label="Zoom in">+</button>
-          <button id="street-map-out" type="button" aria-label="Zoom out">−</button>
-          <button id="street-map-close" type="button">Close</button>
+        <iframe id="street-map-frame" title="Google map of where you are" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
+        <div id="street-map-switch" role="group" aria-label="Map type">
+          <button id="street-map-roadmap" type="button" aria-pressed="true">Map</button>
+          <button id="street-map-satellite" type="button" aria-pressed="false">Satellite</button>
         </div>
+        <button id="street-map-close" type="button">Close</button>
       </div>
       <aside id="streetview" hidden>
         <button id="streetview-name" type="button">Street View</button>
