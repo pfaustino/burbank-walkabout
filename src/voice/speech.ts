@@ -65,27 +65,48 @@ export function listen(
 }
 
 let currentClip: HTMLAudioElement | null = null
+let clipGen = 0
+let speakGen = 0
 
-/** Play a Fish Audio MP3. Returns false when the browser blocks playback. */
-export async function playMp3(base64: string): Promise<boolean> {
+/** Play a Fish Audio MP3. Returns false when the browser blocks playback. `onEnd` runs when this clip finishes. */
+export async function playMp3(base64: string, onEnd: () => void): Promise<boolean> {
+  speakGen += 1
+  const gen = ++clipGen
   window.speechSynthesis?.cancel()
   currentClip?.pause()
   const clip = new Audio(`data:audio/mpeg;base64,${base64}`)
   currentClip = clip
+  clip.onended = () => {
+    if (gen === clipGen) onEnd()
+  }
   try {
     await clip.play()
     return true
   } catch {
+    if (gen === clipGen) clipGen += 1
+    clip.onended = null
     return false
   }
 }
 
-export function speak(text: string, voice: 'female' | 'male' | 'default'): void {
-  if (!window.speechSynthesis) return
+export function speak(text: string, voice: 'female' | 'male' | 'default', onEnd?: () => void): void {
+  if (!window.speechSynthesis) {
+    onEnd?.()
+    return
+  }
+  const gen = ++speakGen
+  clipGen += 1
+  currentClip?.pause()
   const utterance = new SpeechSynthesisUtterance(text)
   utterance.rate = 1.02
   const picked = pickVoice(voice)
   if (picked) utterance.voice = picked
+  utterance.onend = () => {
+    if (gen === speakGen) onEnd?.()
+  }
+  utterance.onerror = () => {
+    if (gen === speakGen) onEnd?.()
+  }
   window.speechSynthesis.cancel()
   window.speechSynthesis.speak(utterance)
 }

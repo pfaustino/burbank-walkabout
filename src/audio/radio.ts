@@ -57,13 +57,14 @@ export class Radio {
   private hls: { destroy: () => void } | null = null
   private id = ''
   private volume = 1
+  private hushed = false
   private generation = 0
 
   tune(id: string, volume: number): void {
     this.volume = Math.min(1, Math.max(0, volume))
     const next = knownStation(id) ? id : ''
     if (!this.audio) this.audio = new Audio()
-    this.audio.volume = this.volume
+    this.audio.volume = this.hushed ? 0 : this.volume
     if (next === this.id) return
     this.id = next
     this.generation += 1
@@ -107,6 +108,12 @@ export class Radio {
     this.audio.pause()
     this.audio.removeAttribute('src')
     this.audio.load()
+  }
+
+  /** Drop the station to silence without stopping the stream. */
+  hush(on: boolean): void {
+    this.hushed = on
+    if (this.audio) this.audio.volume = on ? 0 : this.volume
   }
 
   /** Try again after a click or key, once the browser will allow sound. */

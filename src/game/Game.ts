@@ -133,6 +133,9 @@ export class Game {
   private readonly footDisc: Disc = { x: 0, z: 0, r: PERSON_RADIUS, id: 'you' }
   private running = false
   private mic: ListenHandle | null = null
+  private listening = false
+  private talking = false
+  private talkToken = 0
 
   private readonly onResize = (): void => {
     this.camera.aspect = window.innerWidth / window.innerHeight
@@ -495,7 +498,7 @@ export class Game {
       braking: this.walker.braking,
       onFoot: !this.walker.driving && !this.walker.flying && !this.walker.riding,
       altitude: this.walker.flying ? pos.y : 0,
-      muted: this.paused,
+      muted: this.paused || this.listening || this.talking,
       cars: this.cars,
       buses: this.buses,
     })
@@ -822,21 +825,40 @@ export class Game {
       } else this.citizensView.say(msg.id, msg.text)
     } else this.walkersView.say(msg.id, msg.text)
     if (msg.aloud && this.hear) {
+      const token = msg.kind === 'npc' ? this.startTalk() : 0
+      const done = () => {
+        if (msg.kind === 'npc') this.stopTalk(token)
+      }
       if (msg.audio) {
-        void playMp3(msg.audio).then((played) => {
-          if (!played) speak(msg.text, msg.voice)
+        void playMp3(msg.audio, done).then((played) => {
+          if (!played) speak(msg.text, msg.voice, done)
         })
       } else {
-        speak(msg.text, msg.voice)
+        speak(msg.text, msg.voice, done)
       }
     }
+  }
+
+  private startTalk(): number {
+    this.talking = true
+    this.talkToken += 1
+    this.radio.hush(true)
+    return this.talkToken
+  }
+
+  private stopTalk(token: number): void {
+    if (token !== this.talkToken) return
+    this.talking = false
+    this.radio.hush(this.listening)
   }
 
   private toggleMic(): void {
     if (this.mic) {
       this.mic.stop()
       this.mic = null
+      this.listening = false
       this.hud.setMic(false)
+      this.radio.hush(this.talking)
       return
     }
     const handle = listen(
@@ -847,7 +869,9 @@ export class Game {
       (text) => this.hud.setDraft(text),
       () => {
         this.mic = null
+        this.listening = false
         this.hud.setMic(false)
+        this.radio.hush(this.talking)
       },
     )
     if (!handle) {
@@ -855,7 +879,9 @@ export class Game {
       return
     }
     this.mic = handle
+    this.listening = true
     this.hud.setMic(true)
+    this.radio.hush(true)
   }
 
   private releaseHeld(x: number, z: number): void {
