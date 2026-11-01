@@ -499,6 +499,7 @@ export class Walker {
   private onWheel = (event: WheelEvent): void => {
     if (typingTarget(event.target)) return
     event.preventDefault()
+    if (this.paused) return
     const maxDist = this.flyMode ? 28 : DIST_MAX
     const minDist = this.flyMode ? 10 : DIST_MIN
     this.cameraDist = THREE.MathUtils.clamp(this.cameraDist + Math.sign(event.deltaY) * 0.8, minDist, maxDist)

@@ -16,7 +16,6 @@ export class Hud {
   private readonly subtitle: HTMLElement
   private readonly input: HTMLInputElement
   private readonly mic: HTMLButtonElement
-  private readonly pause: HTMLElement
   private readonly order: HTMLElement
   private readonly score: HTMLElement
   private readonly cashPop: HTMLElement
@@ -39,7 +38,6 @@ export class Hud {
     this.subtitle = must('#subtitle')
     this.input = must('#say-input') as HTMLInputElement
     this.mic = must('#mic') as HTMLButtonElement
-    this.pause = must('#pause-banner')
     this.order = must('#order')
     this.score = must('#score')
     this.cashPop = must('#cash-pop')
@@ -78,14 +76,6 @@ export class Hud {
   private mountCoach(): void {
     const coach = must('#coach')
     const ok = must('#coach-ok') as HTMLButtonElement
-    try {
-      if (localStorage.getItem('burbank-coach') === '1') {
-        coach.hidden = true
-        return
-      }
-    } catch {
-      /* Private browsing still shows the card. */
-    }
     ok.addEventListener('click', () => {
       coach.hidden = true
       try {
@@ -95,6 +85,20 @@ export class Hud {
       }
     })
     this.dragCoach(coach)
+    try {
+      if (localStorage.getItem('burbank-coach') === '1') coach.hidden = true
+    } catch {
+      /* Private browsing still shows the card. */
+    }
+  }
+
+  showCoach(): void {
+    must('#coach').hidden = false
+    try {
+      localStorage.removeItem('burbank-coach')
+    } catch {
+      /* The card is visible for this visit. */
+    }
   }
 
   private dragCoach(coach: HTMLElement): void {
@@ -146,10 +150,6 @@ export class Hud {
   setStatus(text: string): void {
     const status = must('#status')
     status.textContent = text
-  }
-
-  setPaused(paused: boolean): void {
-    this.pause.hidden = !paused
   }
 
   setOrder(text: string | null, dropoff = false): void {

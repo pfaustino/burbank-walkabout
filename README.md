@@ -35,7 +35,7 @@ Two browser windows on that address share the street.
 | **F** | Drive the nearest stopped car, or board the nearest stopped bus |
 | **H** | Call the helicopter |
 | **M** | City map |
-| **Esc** | Pause |
+| **Esc** | Menu |
 
 **F** picks whichever stopped vehicle is closer. Say something with nobody close and it goes to other players within earshot, still as text, spoken on their machine if Hear is on.
 
@@ -53,7 +53,7 @@ Stand next to a car that has stopped, then press **F**.
 | Wheel | Camera distance |
 | **F** | Park and get out |
 | **M** | City map |
-| **Esc** | Pause |
+| **Esc** | Menu |
 
 ## On the bus
 
@@ -63,7 +63,7 @@ Stand next to a car that has stopped, then press **F**.
 |-----|--------|
 | **F** | Hop off |
 | **M** | City map |
-| **Esc** | Pause |
+| **Esc** | Menu |
 
 ## Flying
 
@@ -78,7 +78,7 @@ Stand next to a car that has stopped, then press **F**.
 | **Shift** | Faster |
 | **H** | Land |
 | **M** | City map |
-| **Esc** | Pause |
+| **Esc** | Menu |
 
 ## Street map
 

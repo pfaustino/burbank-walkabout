@@ -36,6 +36,8 @@ import { buildSigns, disposeDrawn, setSignGlow } from '../traffic/streetProps.ts
 import { bumpCars } from '../traffic/bumps.ts'
 import { createTraffic, gatherTraffic, parkOnLane, stepTraffic, type CarSim, type TrafficFile } from '../traffic/trafficSim.ts'
 import { Hud } from '../ui/Hud.ts'
+import { PauseMenu } from '../ui/PauseMenu.ts'
+import { defaultSettings, type Settings } from '../ui/settings.ts'
 import { Minimap } from '../ui/Minimap.ts'
 import { StreetMap } from '../ui/StreetMap.ts'
 import { WordRain } from '../ui/WordRain.ts'
@@ -43,7 +45,7 @@ import { createSeededRng, sessionSeed } from '../util/seededRng.ts'
 import { listen, playMp3, speak, type ListenHandle } from '../voice/speech.ts'
 import { buildCityMesh } from '../world/CityMesh.ts'
 import { BUS_DRAW, CAR_DRAW, PERSON_DRAW } from '../world/drawRange.ts'
-import { showNearbyTiles } from '../world/tiles.ts'
+import { showNearbyTiles, TILE_REACH } from '../world/tiles.ts'
 import { advanceHour, formatHour, skyAt, START_HOUR } from '../world/daylight.ts'
 import { buildFoliage } from '../world/FoliageMesh.ts'
 import { type FoliageFile } from '../world/foliage.ts'
@@ -117,6 +119,8 @@ export class Game {
   private live = false
   private hear = true
   private paused = false
+  private settings: Settings = defaultSettings()
+  private menu!: PauseMenu
   private time = 0
   private readonly held = new Set<string>()
   private readonly crowdFreeze = new Map<number, number>()
@@ -138,18 +142,24 @@ export class Game {
   private readonly onResize = (): void => {
     this.camera.aspect = window.innerWidth / window.innerHeight
     this.camera.updateProjectionMatrix()
+    this.renderer.setPixelRatio(this.pixelRatio())
     this.renderer.setSize(window.innerWidth, window.innerHeight)
   }
 
   private readonly onKey = (event: KeyboardEvent): void => {
     const tag = (event.target as HTMLElement | null)?.tagName
     if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') {
+      if (event.code === 'Escape' && this.paused) {
+        if (!this.menu.back()) this.setPaused(false)
+        return
+      }
       if (event.code === 'Escape') (event.target as HTMLElement).blur()
       return
     }
     if (event.repeat) return
     this.ambience.resume()
     if (event.code === 'KeyM') {
+      if (this.paused) return
       this.setMap(!this.mapOpen)
       return
     }
@@ -158,9 +168,8 @@ export class Game {
       return
     }
     if (event.code === 'Escape') {
-      this.paused = !this.paused
-      this.walker.paused = this.paused
-      this.hud.setPaused(this.paused)
+      if (this.menu.back()) return
+      this.setPaused(!this.paused)
       return
     }
     if (this.paused) return
@@ -328,6 +337,12 @@ export class Game {
     }
 
     this.canvas.tabIndex = 0
+    this.menu = new PauseMenu({
+      onResume: () => this.setPaused(false),
+      onChange: (settings) => this.applySettings(settings),
+      onTutorial: () => this.hud.showCoach(),
+    })
+    this.applySettings(this.menu.settings)
     window.addEventListener('resize', this.onResize)
     window.addEventListener('keydown', this.onKey)
     this.canvas.addEventListener('mousedown', this.onPointer)
@@ -401,7 +416,7 @@ export class Game {
     const spot = { x: pos.x, z: pos.z }
     this.crowdView.update(this.time, this.crowdFreeze, this.crowdBlocks(), this.roadThreat(pos), this.guides, {
       ...spot,
-      reach: PERSON_DRAW,
+      reach: PERSON_DRAW * this.settings.distance,
     })
     this.syncPeople()
     stepTraffic(this.cars, this.network, this.trafficFile, this.time, dt, this.carRng, this.trafficObstacles())
@@ -455,8 +470,8 @@ export class Game {
     this.keepDrivenBump()
     const wall = this.walker.takeWallHit()
     if (wall > 0) hits.push({ x: pos.x, z: pos.z, impact: wall })
-    this.carView.sync(this.cars, dt, this.drivenId, { x: pos.x, z: pos.z, reach: CAR_DRAW })
-    this.busView.sync(this.buses, dt, { x: pos.x, z: pos.z, reach: BUS_DRAW })
+    this.carView.sync(this.cars, dt, this.drivenId, { x: pos.x, z: pos.z, reach: CAR_DRAW * this.settings.distance })
+    this.busView.sync(this.buses, dt, { x: pos.x, z: pos.z, reach: BUS_DRAW * this.settings.distance })
     this.dayHour = advanceHour(this.dayHour, dt)
     this.applySky()
     const moved = dt > 0 ? Math.hypot(pos.x - this.stepX, pos.z - this.stepZ) / dt : 0
@@ -504,10 +519,11 @@ export class Game {
     const camZ = this.camera.position.z
     const syncCity = this.city.userData.syncCity as ((x: number, z: number) => void) | undefined
     syncCity?.(camX, camZ)
-    showNearbyTiles(this.city, camX, camZ)
-    showNearbyTiles(this.storefronts, camX, camZ)
-    showNearbyTiles(this.foliage.root, camX, camZ)
-    showNearbyTiles(this.lamps.root, camX, camZ)
+    const reach = TILE_REACH * this.settings.distance
+    showNearbyTiles(this.city, camX, camZ, reach)
+    showNearbyTiles(this.storefronts, camX, camZ, reach)
+    showNearbyTiles(this.foliage.root, camX, camZ, reach)
+    showNearbyTiles(this.lamps.root, camX, camZ, reach)
     this.renderer.render(this.scene, this.camera)
   }
 
@@ -1145,15 +1161,43 @@ export class Game {
     }
   }
 
+  private setPaused(paused: boolean): void {
+    this.paused = paused
+    this.walker.paused = paused || this.mapOpen
+    this.menu.setOpen(paused)
+  }
+
+  private applySettings(settings: Settings): void {
+    this.settings = settings
+    this.ambience.setMix(settings.ambient, settings.music, settings.sfx)
+    this.renderer.setPixelRatio(this.pixelRatio())
+    this.renderer.setSize(window.innerWidth, window.innerHeight)
+    this.renderer.shadowMap.enabled = settings.shadows !== 'off'
+    this.renderer.shadowMap.type = settings.quality === 'low' ? THREE.BasicShadowMap : THREE.PCFShadowMap
+    const size = settings.shadows === 'high' ? 1024 : 512
+    if (this.sun.shadow.mapSize.x !== size) {
+      this.sun.shadow.mapSize.set(size, size)
+      this.sun.shadow.map?.dispose()
+      this.sun.shadow.map = null
+    }
+    this.applySky()
+  }
+
+  private pixelRatio(): number {
+    if (this.settings.quality === 'low') return 0.75
+    if (this.settings.quality === 'medium') return 1
+    return Math.min(window.devicePixelRatio || 1, 2)
+  }
+
   private applySky(): void {
     const sky = skyAt(this.dayHour)
     const pos = this.walker.mesh.position
     const lift = 90
     this.sun.color.setHex(sky.keyColor)
     this.sun.intensity = sky.keyIntensity
-    const cast = sky.shadow > 0.05
+    const cast = this.settings.shadows !== 'off' && sky.shadow > 0.05
     if (this.sun.castShadow !== cast) this.sun.castShadow = cast
-    this.sun.shadow.intensity = sky.shadow
+    this.sun.shadow.intensity = this.settings.shadows === 'off' ? 0 : sky.shadow
     this.sun.position.set(pos.x + sky.key.x * lift, Math.max(24, pos.y + sky.key.y * lift), pos.z + sky.key.z * lift)
     this.sunTarget.position.set(pos.x, 0, pos.z)
     this.sunTarget.updateMatrixWorld()
@@ -1162,8 +1206,9 @@ export class Game {
     this.hemi.intensity = sky.hemiIntensity
     this.skyColor.setHex(sky.background)
     this.fog.color.setHex(sky.fog)
-    this.fog.near = sky.fogNear
-    this.fog.far = sky.fogFar
+    const distance = this.settings.distance
+    this.fog.near = sky.fogNear * distance
+    this.fog.far = Math.max(this.fog.near + 40, sky.fogFar * distance)
     this.lamps.setNight(sky.night)
     this.lamps.follow(pos.x, pos.z)
     setSignGlow(this.signs, sky.night)

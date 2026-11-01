@@ -43,7 +43,56 @@
         <div id="net-status">connecting</div>
         <div id="map-credit">Map data © OpenStreetMap contributors</div>
       </div>
-      <div id="pause-banner" hidden>PAUSED · Esc to walk</div>
+      <div id="menu" hidden role="dialog" aria-modal="true" aria-label="Paused">
+        <div class="menu-card">
+          <section id="menu-page-home">
+            <h2>Paused</h2>
+            <button id="menu-resume" type="button">Resume</button>
+            <button id="menu-sound" type="button">Sound</button>
+            <button id="menu-graphics" type="button">Graphics</button>
+            <button id="menu-tutorial" type="button">Restore tutorial</button>
+            <button id="menu-about" type="button">About</button>
+            <p id="menu-note"></p>
+          </section>
+          <section id="menu-page-sound" hidden>
+            <button class="menu-back" type="button">Back</button>
+            <h2>Sound</h2>
+            <label>Ambient <input id="vol-ambient" type="range" min="0" max="100" value="100"></label>
+            <label>Music <input id="vol-music" type="range" min="0" max="100" value="100"></label>
+            <p class="menu-hint">No music is playing. This level is saved.</p>
+            <label>Sound effects <input id="vol-sfx" type="range" min="0" max="100" value="100"></label>
+          </section>
+          <section id="menu-page-graphics" hidden>
+            <button class="menu-back" type="button">Back</button>
+            <h2>Graphics</h2>
+            <p class="menu-hint">Lower these if the frame rate drops.</p>
+            <label>Shadows
+              <select id="gfx-shadows">
+                <option value="off">Off</option>
+                <option value="low">Low</option>
+                <option value="high" selected>High</option>
+              </select>
+            </label>
+            <label>Distance <span id="gfx-distance-value">100%</span>
+              <input id="gfx-distance" type="range" min="45" max="100" value="100">
+            </label>
+            <label>Quality
+              <select id="gfx-quality">
+                <option value="low">Low</option>
+                <option value="medium">Medium</option>
+                <option value="high" selected>High</option>
+              </select>
+            </label>
+          </section>
+          <section id="menu-page-about" hidden>
+            <button class="menu-back" type="button">Back</button>
+            <h2>About</h2>
+            <p>Burbank Walkabout. You walk the real streets of Burbank. Buildings, roads, and shop names come from OpenStreetMap.</p>
+            <p>The microphone stays on this computer. The street only hears the words.</p>
+            <p>Map data © OpenStreetMap contributors</p>
+          </section>
+        </div>
+      </div>
       <div id="order" hidden aria-live="polite"></div>
       <div id="cash-pop" aria-live="polite"></div>
       <canvas id="wordnet" width="200" height="200" role="button" aria-pressed="false" aria-label="Word stream. Click to enlarge."></canvas>

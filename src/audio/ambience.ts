@@ -24,6 +24,10 @@ export type AmbienceWorld = {
 export class Ambience {
   private ctx: AudioContext | null = null
   private master: GainNode | null = null
+  private ambientBus: GainNode | null = null
+  private musicBus: GainNode | null = null
+  private sfxBus: GainNode | null = null
+  private mix = { ambient: 1, music: 1, sfx: 1 }
   private windGain: GainNode | null = null
   private trafficGain: GainNode | null = null
   private trafficPan: StereoPannerNode | null = null
@@ -163,7 +167,7 @@ export class Ambience {
       const amp = ctx.createGain()
       amp.gain.value = 0.62
       source.connect(amp)
-      amp.connect(this.master)
+      amp.connect(this.out('sfx'))
       source.start(now)
       return
     }
@@ -173,6 +177,12 @@ export class Ambience {
   dispose(): void {
     void this.ctx?.close()
     this.ctx = null
+  }
+
+  /** Ambient is wind, traffic, and birds. Effects are steps, the car, and one-shots. */
+  setMix(ambient: number, music: number, sfx: number): void {
+    this.mix = { ambient, music, sfx }
+    this.applyMix()
   }
 
   private ensure(): AudioContext | null {
@@ -185,6 +195,13 @@ export class Ambience {
     this.master = ctx.createGain()
     this.master.gain.value = 0
     this.master.connect(ctx.destination)
+    this.ambientBus = ctx.createGain()
+    this.musicBus = ctx.createGain()
+    this.sfxBus = ctx.createGain()
+    this.ambientBus.connect(this.master)
+    this.musicBus.connect(this.master)
+    this.sfxBus.connect(this.master)
+    this.applyMix()
 
     const wind = this.loop(ctx, this.noise, 420, 'lowpass', 0.04)
     this.windGain = wind.gain
@@ -239,13 +256,13 @@ export class Ambience {
     source.loop = true
     source.connect(tire)
     tire.connect(tireAmp)
-    tireAmp.connect(this.master)
+    tireAmp.connect(this.out('sfx'))
     const squeal = ctx.createBufferSource()
     squeal.buffer = this.noise
     squeal.loop = true
     squeal.connect(brake)
     brake.connect(brakeAmp)
-    brakeAmp.connect(this.master)
+    brakeAmp.connect(this.out('sfx'))
     source.start()
     squeal.start()
     this.tireFilter = tire
@@ -281,7 +298,7 @@ export class Ambience {
     const amp = ctx.createGain()
     amp.gain.value = 0.0001
     filter.connect(amp)
-    amp.connect(this.master!)
+    amp.connect(this.out('sfx'))
     const osc = ctx.createOscillator()
     osc.type = 'triangle'
     osc.frequency.value = 20
@@ -353,7 +370,7 @@ export class Ambience {
     source.connect(filter)
     filter.connect(amp)
     amp.connect(pan)
-    pan.connect(this.master!)
+    pan.connect(this.out('ambient'))
     source.start()
     return { gain: amp, pan }
   }
@@ -374,7 +391,7 @@ export class Ambience {
     amp.gain.exponentialRampToValueAtTime(0.0001, when + 0.09)
     source.connect(filter)
     filter.connect(amp)
-    amp.connect(this.master)
+    amp.connect(this.out('sfx'))
     source.start(when)
     source.stop(when + 0.1)
   }
@@ -398,7 +415,7 @@ export class Ambience {
       pan.pan.value = Math.random() * 1.4 - 0.7
       osc.connect(amp)
       amp.connect(pan)
-      pan.connect(this.master)
+      pan.connect(this.out('ambient'))
       osc.start(start)
       osc.stop(start + 0.11)
     }
@@ -427,7 +444,7 @@ export class Ambience {
       osc.connect(filter)
       filter.connect(amp)
       amp.connect(pan)
-      pan.connect(this.master)
+      pan.connect(this.out('sfx'))
       osc.start(start)
       osc.stop(start + 0.22)
     }
@@ -450,7 +467,7 @@ export class Ambience {
     pan.pan.value = panValue
     source.connect(amp)
     amp.connect(pan)
-    pan.connect(this.master)
+    pan.connect(this.out('sfx'))
     source.start(when)
   }
 
@@ -466,7 +483,7 @@ export class Ambience {
     amp.gain.exponentialRampToValueAtTime(0.16, when + 0.012)
     amp.gain.exponentialRampToValueAtTime(0.0001, when + 0.18)
     osc.connect(amp)
-    amp.connect(this.master)
+    amp.connect(this.out('sfx'))
     osc.start(when)
     osc.stop(when + 0.2)
   }
@@ -477,7 +494,7 @@ export class Ambience {
     if (!ctx || !buffer || !this.master) return
     const pan = ctx.createStereoPanner()
     pan.pan.value = panValue
-    pan.connect(this.master)
+    pan.connect(this.out('sfx'))
 
     const noise = ctx.createBufferSource()
     noise.buffer = buffer
@@ -528,9 +545,21 @@ export class Ambience {
     source.connect(filter)
     filter.connect(amp)
     amp.connect(pan)
-    pan.connect(this.master)
+    pan.connect(this.out('sfx'))
     source.start(when)
     source.stop(when + 0.5)
+  }
+
+  private applyMix(): void {
+    const now = this.ctx?.currentTime ?? 0
+    this.ambientBus?.gain.setValueAtTime(this.mix.ambient, now)
+    this.musicBus?.gain.setValueAtTime(this.mix.music, now)
+    this.sfxBus?.gain.setValueAtTime(this.mix.sfx, now)
+  }
+
+  private out(kind: 'ambient' | 'sfx'): GainNode {
+    const bus = kind === 'ambient' ? this.ambientBus : this.sfxBus
+    return bus ?? this.master!
   }
 }
 
