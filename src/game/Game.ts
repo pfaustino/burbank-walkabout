@@ -340,6 +340,11 @@ export class Game {
     }
 
     this.canvas.tabIndex = 0
+    for (const id of ['#radio-pick', '#radio-station']) {
+      const select = document.querySelector(id)
+      if (!(select instanceof HTMLSelectElement)) throw new Error(`Missing ${id}`)
+      fillRadio(select)
+    }
     this.menu = new PauseMenu({
       onResume: () => this.setPaused(false),
       onChange: (settings) => this.applySettings(settings),
@@ -347,7 +352,6 @@ export class Game {
     })
     const pick = document.querySelector('#radio-pick')
     if (!(pick instanceof HTMLSelectElement)) throw new Error('Missing #radio-pick')
-    fillRadio(pick)
     pick.addEventListener('change', () => this.menu.setStation(pick.value))
     this.applySettings(this.menu.settings)
     window.addEventListener('resize', this.onResize)

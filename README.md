@@ -121,9 +121,9 @@ The corner map and the city map draw the same route, yellow toward the pickup an
 
 The radio sits above the chat. The list picks the station, and Off turns it off. **Esc**, then **Sound**, has the same list. The music slider is the volume. Each station plays from its own live stream. The last station is still on the next time the page loads. If the browser holds the sound, the first click or key starts it.
 
-Los Angeles: KFI 640, KIIS 102.7, KOST 103.5, MyFM 104.3, ALT 98.7, Real 92.3, AM 570 LA Sports, The Patriot 1150, 95.5 KLOS, Cali 93.9, KPFK 90.7, LAist 89.3, and KCRW 89.9.
+Los Angeles: 95.5 KLOS, ALT 98.7, AM 570 LA Sports, Cali 93.9, KCRW 89.9, KFI 640, KIIS 102.7, KOST 103.5, KPFK 90.7, LAist 89.3, MyFM 104.3, Real 92.3, and The Patriot 1150.
 
-Elsewhere: BBC World Service, CBC Radio One, NHK World Radio, DW English, ABC NewsRadio, ABC Radio National, triple j, BBC Radio 6 Music, FIP, NTS Radio, France Inter, Radio Nacional, and Radio Caroline.
+Elsewhere: ABC NewsRadio, ABC Radio National, BBC Radio 6 Music, BBC World Service, CBC Radio One, DW English, FIP, France Inter, NHK World Radio, NTS Radio, Radio Caroline, Radio Nacional, and triple j.
 
 The street and the radio go quiet while the mic is listening and while an NPC is speaking. They come back when that voice stops.
 

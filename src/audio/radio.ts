@@ -1,5 +1,5 @@
 /** Live streams published by the stations. The game does not host the audio. */
-export const STATIONS = [
+const CATALOG = [
   { id: 'kfi', name: 'KFI 640', url: 'https://stream.revma.ihrhls.com/zc177' },
   { id: 'kiis', name: 'KIIS 102.7', url: 'https://stream.revma.ihrhls.com/zc185' },
   { id: 'kost', name: 'KOST 103.5', url: 'https://stream.revma.ihrhls.com/zc193' },
@@ -28,10 +28,15 @@ export const STATIONS = [
   { id: 'caroline', name: 'Radio Caroline', url: 'https://stream.radiocaroline.net/rc128/;' },
 ] as const
 
+/** Off stays first. The rest are alphabetical by the name on the list. */
+export const STATIONS = [...CATALOG].sort((a, b) =>
+  a.name.localeCompare(b.name, 'en', { numeric: true, sensitivity: 'base' }),
+)
+
 const IDS = STATIONS.map((station) => station.id)
 
-export function knownStation(id: unknown): id is (typeof STATIONS)[number]['id'] {
-  return typeof id === 'string' && IDS.includes(id as (typeof IDS)[number])
+export function knownStation(id: unknown): id is (typeof CATALOG)[number]['id'] {
+  return typeof id === 'string' && (IDS as readonly string[]).includes(id)
 }
 
 /** Step through Off and the stations. `dir` is 1 or -1. */
