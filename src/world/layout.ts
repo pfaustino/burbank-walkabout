@@ -1,5 +1,7 @@
 /** Downtown Burbank in local meters. +x is east, +z is south, y is up (Three.js right-handed). */
 
+import { compass } from './geo.ts'
+
 export type Vec2 = { x: number; z: number }
 
 export type MapBuilding = {
@@ -84,6 +86,57 @@ export function hitsBuilding(layout: CityLayout, x: number, z: number, radius: n
     return hit
   })
   return hit
+}
+
+export type AimHit = {
+  name: string
+  /** A point on the street side of the wall, for a street-level photo. */
+  x: number
+  z: number
+  /** Compass degrees, clockwise from north, looking at the facade. */
+  heading: number
+}
+
+const AIM_REACH = 80
+const AIM_STAND = 12
+
+/** The building a look from (ox, oy, oz) along (dx, dy, dz) hits first. */
+export function aimBuilding(
+  layout: CityLayout,
+  ox: number,
+  oy: number,
+  oz: number,
+  dx: number,
+  dy: number,
+  dz: number,
+): AimHit | null {
+  const len = Math.hypot(dx, dy, dz)
+  if (len < 1e-6) return null
+  dx /= len
+  dy /= len
+  dz /= len
+  const grid = gridOf(buildingGrids, layout, BUILDING_CELL, () => layout.buildings)
+  const seen = new Set<number>()
+  const pick: { t: number; hit: AimHit | null } = { t: Infinity, hit: null }
+  const consider = (index: number): void => {
+    if (seen.has(index)) return
+    seen.add(index)
+    const building = layout.buildings[index]
+    if (!building) return
+    const hit = hitPrism(ox, oy, oz, dx, dy, dz, building)
+    if (!hit || hit.t > AIM_REACH || hit.t >= pick.t) return
+    pick.t = hit.t
+    pick.hit = hit
+  }
+  for (let step = 0; step <= AIM_REACH; step += BUILDING_CELL / 2) {
+    const x = ox + dx * step
+    const z = oz + dz * step
+    visitCells(grid, x, z, x, z, (index) => {
+      consider(index)
+      return false
+    })
+  }
+  return pick.hit
 }
 
 /** The plain scan over every building. `hitsBuilding` must always agree with it. */
@@ -308,6 +361,92 @@ function distanceToSegment(x: number, z: number, ax: number, az: number, bx: num
   const len2 = dx * dx + dz * dz || 1
   const t = clamp(((x - ax) * dx + (z - az) * dz) / len2, 0, 1)
   return Math.hypot(x - (ax + dx * t), z - (az + dz * t))
+}
+
+type PrismHit = AimHit & { t: number }
+
+function hitPrism(
+  ox: number,
+  oy: number,
+  oz: number,
+  dx: number,
+  dy: number,
+  dz: number,
+  building: MapBuilding,
+): PrismHit | null {
+  const { ring, h } = building
+  const count = ring.length / 2
+  if (count < 3) return null
+  const cx = (building.minX + building.maxX) / 2
+  const cz = (building.minZ + building.maxZ) / 2
+  let best: PrismHit | null = null
+  const keep = (t: number, nx: number, nz: number): void => {
+    if (t < 0.4 || t > AIM_REACH) return
+    if (best && t >= best.t) return
+    const nlen = Math.hypot(nx, nz) || 1
+    const outX = nx / nlen
+    const outZ = nz / nlen
+    best = {
+      t,
+      name: building.name ?? '',
+      x: ox + dx * t + outX * AIM_STAND,
+      z: oz + dz * t + outZ * AIM_STAND,
+      heading: compass(-outX, -outZ),
+    }
+  }
+  for (let i = 0; i < count; i++) {
+    const a = i * 2
+    const b = ((i + 1) % count) * 2
+    const ax = ring[a] ?? 0
+    const az = ring[a + 1] ?? 0
+    const bx = ring[b] ?? 0
+    const bz = ring[b + 1] ?? 0
+    const t = raySegmentT(ox, oz, dx, dz, ax, az, bx, bz)
+    if (t === null) continue
+    const y = oy + dy * t
+    if (y < 0 || y > h) continue
+    let nx = az - bz
+    let nz = bx - ax
+    const midX = (ax + bx) / 2
+    const midZ = (az + bz) / 2
+    if (nx * (cx - midX) + nz * (cz - midZ) > 0) {
+      nx = -nx
+      nz = -nz
+    }
+    keep(t, nx, nz)
+  }
+  if (Math.abs(dy) > 1e-6) {
+    const t = (h - oy) / dy
+    const x = ox + dx * t
+    const z = oz + dz * t
+    if (pointInRing(x, z, ring)) {
+      const east = x - cx
+      const south = z - cz
+      const flat = Math.hypot(east, south) || 1
+      keep(t, east / flat, south / flat)
+    }
+  }
+  return best
+}
+
+function raySegmentT(
+  ox: number,
+  oz: number,
+  dx: number,
+  dz: number,
+  ax: number,
+  az: number,
+  bx: number,
+  bz: number,
+): number | null {
+  const ex = bx - ax
+  const ez = bz - az
+  const det = dx * ez - dz * ex
+  if (Math.abs(det) < 1e-8) return null
+  const t = ((ax - ox) * ez - (az - oz) * ex) / det
+  const u = ((ax - ox) * dz - (az - oz) * dx) / det
+  if (u < 0 || u > 1) return null
+  return t
 }
 
 function pointInRing(x: number, z: number, ring: number[]): boolean {

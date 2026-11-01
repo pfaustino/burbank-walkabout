@@ -197,6 +197,33 @@ html, body, #app {
   font-size: 13px;
 }
 
+#streetview {
+  position: fixed;
+  top: 168px;
+  left: 16px;
+  z-index: 4;
+  width: 320px;
+  background: rgba(16, 28, 40, 0.92);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+#streetview[hidden] { display: none; }
+
+#streetview p {
+  margin: 0;
+  padding: 6px 10px 4px;
+  font-size: 13px;
+}
+
+#streetview iframe {
+  display: block;
+  width: 320px;
+  height: 200px;
+  border: 0;
+}
+
 #order {
   position: fixed;
   top: 72px;

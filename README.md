@@ -23,6 +23,8 @@ A card lists the main keys the first time. **Got it** dismisses it.
 
 Two browser windows on that address share the street.
 
+Look at a building and a window on the left shows that block in Google Street View.
+
 ## On foot
 
 | Key | Action |

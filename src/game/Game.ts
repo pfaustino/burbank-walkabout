@@ -30,6 +30,7 @@ import { buildSigns, disposeDrawn, setSignGlow } from '../traffic/streetProps.ts
 import { bumpCars } from '../traffic/bumps.ts'
 import { createTraffic, gatherTraffic, parkOnLane, stepTraffic, vehicleHalf, type CarSim, type TrafficFile } from '../traffic/trafficSim.ts'
 import { Hud } from '../ui/Hud.ts'
+import { StreetView } from '../ui/StreetView.ts'
 import { PauseMenu } from '../ui/PauseMenu.ts'
 import { defaultSettings, type Settings } from '../ui/settings.ts'
 import { Minimap } from '../ui/Minimap.ts'
@@ -45,7 +46,8 @@ import { buildFoliage } from '../world/FoliageMesh.ts'
 import { type FoliageFile } from '../world/foliage.ts'
 import { Helicopter } from '../world/Helicopter.ts'
 import { tourOver } from '../world/helicopterSim.ts'
-import { buildLayout, describePlace, nearbySpot, type CityLayout, type MapFile } from '../world/layout.ts'
+import { aimBuilding, buildLayout, describePlace, nearbySpot, type CityLayout, type MapFile } from '../world/layout.ts'
+import { toLatLon } from '../world/geo.ts'
 import { planLamps, StreetLamps } from '../world/streetlamps.ts'
 import { buildStoreSigns, disposeStoreSigns, type Business } from '../world/storefronts.ts'
 
@@ -63,6 +65,9 @@ export class Game {
   private readonly layout: CityLayout
   private readonly peopleFile: PeopleFile
   private readonly hud: Hud
+  private readonly streetView = new StreetView()
+  private readonly aimDir = new THREE.Vector3()
+  private aimWait = 0
   private readonly walker: Walker
   private readonly citizensView: PuppetSet
   private readonly walkersView: PuppetSet
@@ -539,6 +544,27 @@ export class Game {
     showNearbyTiles(this.storefronts, camX, camZ, reach)
     showNearbyTiles(this.foliage.root, camX, camZ, reach)
     showNearbyTiles(this.lamps.root, camX, camZ, reach)
+    this.aimWait -= dt
+    if (this.aimWait <= 0) {
+      this.aimWait = 0.4
+      this.camera.getWorldDirection(this.aimDir)
+      const flat = Math.hypot(this.aimDir.x, this.aimDir.z) || 1
+      const feet = this.walker.mesh.position
+      const aimed = aimBuilding(
+        this.layout,
+        feet.x,
+        feet.y + 1.6,
+        feet.z,
+        this.aimDir.x / flat,
+        0,
+        this.aimDir.z / flat,
+      )
+      if (!aimed) this.streetView.clear()
+      else {
+        const spot = toLatLon(aimed.x, aimed.z)
+        this.streetView.show(aimed.name || 'Street View', spot.lat, spot.lng, aimed.heading)
+      }
+    }
     this.renderer.render(this.scene, this.camera)
   }
 

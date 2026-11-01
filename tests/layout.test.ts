@@ -4,6 +4,7 @@ import peopleJson from '../data/people.json'
 import type { PeopleFile } from '../src/actors/peopleSim.ts'
 import {
   BODY_RADIUS,
+  aimBuilding,
   buildLayout,
   describePlace,
   hitsBuilding,
@@ -25,6 +26,22 @@ describe('downtown layout', () => {
       const z = mark.door?.[1] ?? 0
       expect(hitsBuilding(layout, x, z, BODY_RADIUS)).toBe(false)
     }
+  })
+
+  it('finds City Hall when the look points at the door', () => {
+    const hall = layout.landmarks.find((mark) => mark.name === 'Burbank City Hall')
+    expect(hall?.door).toBeTruthy()
+    const doorX = hall!.door![0]
+    const doorZ = hall!.door![1]
+    const cx = (hall!.minX + hall!.maxX) / 2
+    const cz = (hall!.minZ + hall!.maxZ) / 2
+    const dx = cx - doorX
+    const dz = cz - doorZ
+    const len = Math.hypot(dx, dz)
+    const hit = aimBuilding(layout, doorX, 2, doorZ, dx / len, 0, dz / len)
+    expect(hit?.name).toBe('Burbank City Hall')
+    expect(hitsBuilding(layout, hit!.x, hit!.z, 0.2)).toBe(false)
+    expect(aimBuilding(layout, doorX, 2, doorZ, 0, 1, 0)).toBeNull()
   })
 
   it('stops a walk into City Hall', () => {
