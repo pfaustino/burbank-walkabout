@@ -44,6 +44,7 @@ describe('road route', () => {
     expect(cue!.cue.x).toBeGreaterThan(20)
     expect(cue!.cue.x).toBeLessThan(30)
     expect(Math.abs(cue!.cue.z)).toBeLessThan(2)
+    expect(cue!.cue.turn).toBe(0)
     expect(cue!.cue.remain).toBeGreaterThan(60)
     const line = routeLine(straight.lanes, route!)
     expect(line.length).toBeGreaterThan(1)
@@ -51,14 +52,30 @@ describe('road route', () => {
     expect(line[line.length - 1]!.x).toBeCloseTo(80, 0)
   })
 
-  it('puts the arrow on the next street when the corner is close', () => {
-    const route = buildRoute(straight, 90, 0, 100, 60)
+  it('shows a turn arrow on this street a few seconds before the corner', () => {
+    const route = buildRoute(straight, 10, 0, 100, 60)
     expect(route!.lanes).toEqual([0, 1])
-    const cue = cueOnRoute(straight, route!, 90, 1, 0)
-    expect(cue).not.toBeNull()
-    expect(cue!.cue.x).toBeCloseTo(100, 0)
-    expect(cue!.cue.z).toBeGreaterThan(3)
-    expect(Math.abs(cue!.cue.yaw)).toBeLessThan(0.2)
+    const early = cueOnRoute(straight, route!, 40, 0, 0, 12)
+    expect(early!.cue.turn).toBe(0)
+    const soon = cueOnRoute(straight, route!, 40, 0, 0, 20)
+    expect(soon!.cue.turn).toBe(-1)
+    expect(soon!.cue.x).toBeGreaterThan(50)
+    expect(soon!.cue.x).toBeLessThan(60)
+    expect(Math.abs(soon!.cue.z)).toBeLessThan(2)
+    expect(Math.abs(soon!.cue.yaw - Math.PI / 2)).toBeLessThan(0.2)
+    const close = cueOnRoute(straight, route!, 90, 1, 0, 12)
+    expect(close!.cue.turn).toBe(-1)
+    expect(close!.cue.x).toBeGreaterThan(92)
+    expect(close!.cue.x).toBeLessThan(100)
+    expect(Math.abs(close!.cue.z)).toBeLessThan(2)
+  })
+
+  it('marks a left turn when the next street is to the left', () => {
+    const left = net([lane(0, 0, 0, 100, 0, [1]), lane(1, 100, 0, 100, -80, [])])
+    const route = buildRoute(left, 80, 0, 100, -40)
+    const cue = cueOnRoute(left, route!, 80, 0, 0, 12)
+    expect(cue!.cue.turn).toBe(1)
+    expect(cue!.cue.x).toBeLessThan(100)
   })
 
   it('goes around the block when the stop is behind you', () => {

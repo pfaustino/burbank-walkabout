@@ -14,11 +14,16 @@ export type RoadCue = {
   z: number
   yaw: number
   remain: number
+  /** 1 is a left turn, -1 is a right turn, 0 is straight. */
+  turn: -1 | 0 | 1
 }
 
 const OFF = 28
 const BACK = 22
 const LEAD = 14
+const NOTICE = 4
+const PACE = 12
+const TURN = 0.55
 const FROM_START = -2
 
 type HeapItem = { id: number; g: number; f: number }
@@ -100,7 +105,14 @@ export function buildRoute(network: RoadNetwork, fromX: number, fromZ: number, t
 }
 
 /** The arrow for where the player is on this route. Null when they have left it. */
-export function cueOnRoute(network: RoadNetwork, route: RoadRoute, x: number, z: number, cursor: number): { cue: RoadCue; cursor: number } | null {
+export function cueOnRoute(
+  network: RoadNetwork,
+  route: RoadRoute,
+  x: number,
+  z: number,
+  cursor: number,
+  speed = PACE,
+): { cue: RoadCue; cursor: number } | null {
   const lanes = network.lanes
   let bestScore = Infinity
   let bestAlong = 0
@@ -126,8 +138,47 @@ export function cueOnRoute(network: RoadNetwork, route: RoadRoute, x: number, z:
   const lane = lanes[route.lanes[bestIndex]!]
   if (!lane) return null
   const remain = Math.max(0, route.length - bestAlong)
-  const pose = aheadOnRoute(route, lanes, bestIndex, bestDist, LEAD)
-  return { cue: { x: pose.x, z: pose.z, yaw: pose.yaw, remain }, cursor: nextCursor }
+  const turn = nextTurn(route, lanes, bestIndex, bestDist, speed)
+  const room = Math.max(1, turn.distance - 1)
+  const lead = turn.dir === 0 ? LEAD : Math.min(LEAD, room, Math.max(3, turn.distance - 5))
+  const pose = aheadOnRoute(route, lanes, bestIndex, bestDist, lead)
+  const yaw = turn.dir === 0 ? pose.yaw : sampleLane(lane, bestDist).yaw
+  return { cue: { x: pose.x, z: pose.z, yaw, remain, turn: turn.dir }, cursor: nextCursor }
+}
+
+/** The next real change of direction, if it is only a few seconds ahead. */
+function nextTurn(
+  route: RoadRoute,
+  lanes: Lane[],
+  index: number,
+  dist: number,
+  speed: number,
+): { dir: -1 | 0 | 1; distance: number } {
+  const here = lanes[route.lanes[index]!]
+  if (!here) return { dir: 0, distance: Infinity }
+  const base = sampleLane(here, dist).yaw
+  const warn = Math.max(speed, PACE) * NOTICE
+  let traveled = 0
+  let i = index
+  let d = dist
+  for (let guard = 0; guard < route.lanes.length + 2 && traveled < warn; guard++) {
+    const lane = lanes[route.lanes[i]!]
+    if (!lane) break
+    const last = i === route.lanes.length - 1
+    const end = last ? route.exit : lane.length
+    while (d + 0.5 < end && traveled < warn) {
+      const jump = Math.min(4, end - d, warn - traveled)
+      if (jump <= 0) break
+      d += jump
+      traveled += jump
+      const delta = wrap(sampleLane(lane, d).yaw - base)
+      if (Math.abs(delta) >= TURN) return { dir: delta > 0 ? 1 : -1, distance: Math.max(0, traveled - jump) }
+    }
+    if (last) break
+    i += 1
+    d = 0
+  }
+  return { dir: 0, distance: Infinity }
 }
 
 /** A point a few meters ahead, following the route onto the next street. */
@@ -275,6 +326,10 @@ function pop(heap: HeapItem[]): HeapItem | undefined {
     i = small
   }
   return top
+}
+
+function wrap(angle: number): number {
+  return Math.atan2(Math.sin(angle), Math.cos(angle))
 }
 
 function clamp(value: number, min: number, max: number): number {

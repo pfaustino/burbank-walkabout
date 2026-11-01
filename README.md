@@ -105,7 +105,7 @@ The words come from lines you send and lines people say back. Little words drop 
 
 **Make Deliveries** and **Pick up Fares** sit beside the chat. Both start on, and each click turns that kind of job off or on. Turn both off and the current ribbon goes away.
 
-A job shows up on its own while its button is on. The ribbon at the top is the current stop. Yellow is the pickup. Green is the dropoff. An arrow on the road points toward the next turn, then at the stop. The distance sits at the end of the ribbon. The corner map and the city map draw that drive in the same color as the stop.
+A job shows up on its own while its button is on. The ribbon at the top is the current stop. Yellow is the pickup. Green is the dropoff. An arrow on the road points along the street. A few seconds before a corner it becomes a left or right turn arrow, then points at the stop. The distance sits at the end of the ribbon. The corner map and the city map draw that drive in the same color as the stop.
 
 One job is a person waving for a ride. The next is an order from a shop, then a ride again. Drive to the spot and stop. The ribbon switches to the dropoff. Stop there and the fare, plus a tip, adds to the cash in the corner. A few blocks pays a few dollars, and a quicker trip pays a larger tip. Then there is a short break before the next one.
 

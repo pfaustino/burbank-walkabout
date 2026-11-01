@@ -38,6 +38,8 @@ export class DeliveryRun {
   private phase: DropPhase | 'gap' = 'gap'
   private wait = 0.6
   private readonly arrow: THREE.Group
+  private readonly arrowStraight: THREE.Group
+  private readonly arrowBend: THREE.Group
   private readonly arrowFace: THREE.MeshBasicMaterial
   private readonly arrowShade: THREE.MeshBasicMaterial
   private route: RoadRoute | null = null
@@ -83,6 +85,8 @@ export class DeliveryRun {
     })
     const arrow = buildArrow(this.arrowFace)
     this.arrow = arrow.group
+    this.arrowStraight = arrow.straight
+    this.arrowBend = arrow.bend
     this.arrowShade = arrow.shade
     this.arrow.visible = false
     this.haloMats = [
@@ -140,7 +144,7 @@ export class DeliveryRun {
     }
     const spot = this.goal()
     if ((!this.order && !this.ride) || !spot) return
-    this.placeCue(dt, pose.x, pose.z, spot)
+    this.placeCue(dt, pose.x, pose.z, spot, pose.speed)
     this.wave(dt, pose.x, pose.z)
     if (!parkedOn(pose.driving, pose.speed, pose.x, pose.z, spot, this.file.haloRadius, this.file.parkSpeed)) return
     if (this.phase === 'pickup') {
@@ -266,11 +270,15 @@ export class DeliveryRun {
     this.arrowShade.color.copy(this.arrowFace.color).multiplyScalar(0.72)
   }
 
-  private placeCue(dt: number, x: number, z: number, spot: Spot): void {
-    const cue = this.guide(dt, x, z, spot)
+  private placeCue(dt: number, x: number, z: number, spot: Spot, speed: number): void {
+    const cue = this.guide(dt, x, z, spot, speed)
     this.arrow.visible = true
     this.arrow.position.set(cue.x, 0.28, cue.z)
     this.arrow.rotation.set(0, cue.yaw, 0)
+    const flip = cue.turn < 0 ? -1 : 1
+    this.arrow.scale.set(1.6 * flip, 1.6, 1.6)
+    this.arrowStraight.visible = cue.turn === 0
+    this.arrowBend.visible = cue.turn !== 0
     this.hud.setOrderDistance(formatDistance(cue.remain))
     this.halo.visible = true
     const pulse = 1 + Math.sin(this.spin * 3.4) * 0.05
@@ -285,7 +293,7 @@ export class DeliveryRun {
   }
 
   /** Follow the current drive, and search again if the player leaves it or the stop changes. */
-  private guide(dt: number, x: number, z: number, spot: Spot): RoadCue {
+  private guide(dt: number, x: number, z: number, spot: Spot, speed: number): RoadCue {
     this.routeTime += dt
     const key = `${spot.x.toFixed(1)},${spot.z.toFixed(1)}`
     if (key !== this.routeKey) {
@@ -296,7 +304,7 @@ export class DeliveryRun {
     }
     const route = this.route
     if (route) {
-      const step = cueOnRoute(this.network, route, x, z, this.routeCursor)
+      const step = cueOnRoute(this.network, route, x, z, this.routeCursor, speed)
       if (step) {
         this.routeCursor = step.cursor
         return step.cue
@@ -306,7 +314,7 @@ export class DeliveryRun {
       this.route = buildRoute(this.network, x, z, spot.x, spot.z)
       this.routeCursor = 0
       this.routeTime = 0
-      const again = this.route ? cueOnRoute(this.network, this.route, x, z, 0) : null
+      const again = this.route ? cueOnRoute(this.network, this.route, x, z, 0, speed) : null
       if (again) {
         this.routeCursor = again.cursor
         return again.cue
@@ -317,7 +325,7 @@ export class DeliveryRun {
     const dist = Math.hypot(dx, dz)
     const lead = Math.min(26, Math.max(4, dist))
     const scale = dist > 0.01 ? lead / dist : 0
-    return { x: x + dx * scale, z: z + dz * scale, yaw: Math.atan2(dx, dz), remain: dist }
+    return { x: x + dx * scale, z: z + dz * scale, yaw: Math.atan2(dx, dz), remain: dist, turn: 0 }
   }
 }
 
@@ -334,9 +342,30 @@ function disposeDrawn(root: THREE.Object3D): void {
   for (const material of materials) material.dispose()
 }
 
-function buildArrow(face: THREE.MeshBasicMaterial): { group: THREE.Group; shade: THREE.MeshBasicMaterial } {
+function buildArrow(face: THREE.MeshBasicMaterial): {
+  group: THREE.Group
+  shade: THREE.MeshBasicMaterial
+  straight: THREE.Group
+  bend: THREE.Group
+} {
   const group = new THREE.Group()
   group.name = 'delivery-arrow'
+  const shade = new THREE.MeshBasicMaterial({
+    color: 0xc48f12,
+    fog: false,
+    depthTest: true,
+    depthWrite: false,
+    side: THREE.DoubleSide,
+  })
+  const straight = layArrow(straightShape(), face, shade)
+  const bend = layArrow(turnShape(), face, shade)
+  bend.visible = false
+  group.add(straight, bend)
+  group.scale.setScalar(1.6)
+  return { group, shade, straight, bend }
+}
+
+function straightShape(): THREE.Shape {
   const shape = new THREE.Shape()
   shape.moveTo(0, 1.55)
   shape.lineTo(-0.86, 0.18)
@@ -346,14 +375,27 @@ function buildArrow(face: THREE.MeshBasicMaterial): { group: THREE.Group; shade:
   shape.lineTo(0.34, 0.18)
   shape.lineTo(0.86, 0.18)
   shape.closePath()
+  return shape
+}
+
+/** A left turn. The group flips this for a right turn. */
+function turnShape(): THREE.Shape {
+  const shape = new THREE.Shape()
+  shape.moveTo(-0.32, -1.4)
+  shape.lineTo(-0.32, 0.42)
+  shape.lineTo(0.42, 0.42)
+  shape.lineTo(0.42, 0.98)
+  shape.lineTo(1.62, 0.1)
+  shape.lineTo(0.42, -0.78)
+  shape.lineTo(0.32, -0.12)
+  shape.lineTo(0.32, -1.4)
+  shape.closePath()
+  return shape
+}
+
+function layArrow(shape: THREE.Shape, face: THREE.MeshBasicMaterial, shade: THREE.MeshBasicMaterial): THREE.Group {
+  const group = new THREE.Group()
   const geo = new THREE.ShapeGeometry(shape)
-  const shade = new THREE.MeshBasicMaterial({
-    color: 0xc48f12,
-    fog: false,
-    depthTest: true,
-    depthWrite: false,
-    side: THREE.DoubleSide,
-  })
   const shadow = new THREE.Mesh(geo, shade)
   const front = new THREE.Mesh(geo, face)
   shadow.rotation.x = Math.PI / 2
@@ -362,8 +404,7 @@ function buildArrow(face: THREE.MeshBasicMaterial): { group: THREE.Group; shade:
   shadow.renderOrder = 4
   front.renderOrder = 5
   group.add(shadow, front)
-  group.scale.setScalar(1.6)
-  return { group, shade }
+  return group
 }
 
 function buildHalo(mats: THREE.MeshBasicMaterial[]): THREE.Group {
