@@ -203,17 +203,34 @@ html, body, #app {
   left: 50%;
   z-index: 5;
   transform: translateX(-50%);
-  max-width: min(640px, calc(100% - 280px));
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  width: max-content;
+  max-width: min(740px, calc(100vw - 32px));
   padding: 12px 18px;
   background: rgba(16, 28, 40, 0.9);
   border: 3px solid #ffc107;
   border-radius: 12px;
   font-size: 22px;
   font-weight: 750;
-  text-align: center;
+  text-align: left;
   pointer-events: none;
   text-shadow: 0 1px 2px #000;
 }
+
+#order-line,
+#order-away { white-space: nowrap; }
+
+#order-away {
+  flex: none;
+  padding-left: 16px;
+  border-left: 2px solid rgba(255, 246, 223, 0.4);
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+#order-away:empty { display: none; }
 
 #order.dropoff { border-color: #3ddc84; }
 

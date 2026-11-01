@@ -17,6 +17,8 @@ export class Hud {
   private readonly input: HTMLInputElement
   private readonly mic: HTMLButtonElement
   private readonly order: HTMLElement
+  private readonly orderLine: HTMLElement
+  private readonly orderAway: HTMLElement
   private readonly score: HTMLElement
   private readonly cashPop: HTMLElement
   private cash = 0
@@ -39,6 +41,8 @@ export class Hud {
     this.input = must('#say-input') as HTMLInputElement
     this.mic = must('#mic') as HTMLButtonElement
     this.order = must('#order')
+    this.orderLine = must('#order-line')
+    this.orderAway = must('#order-away')
     this.score = must('#score')
     this.cashPop = must('#cash-pop')
 
@@ -155,13 +159,19 @@ export class Hud {
   setOrder(text: string | null, dropoff = false): void {
     if (!text) {
       this.order.hidden = true
-      this.order.textContent = ''
+      this.orderLine.textContent = ''
+      this.orderAway.textContent = ''
       this.order.classList.remove('dropoff')
       return
     }
     this.order.hidden = false
-    if (this.order.textContent !== text) this.order.textContent = text
+    if (this.orderLine.textContent !== text) this.orderLine.textContent = text
     this.order.classList.toggle('dropoff', dropoff)
+  }
+
+  /** Metres to the stop, at the end of the fare ribbon. */
+  setOrderDistance(text: string): void {
+    if (this.orderAway.textContent !== text) this.orderAway.textContent = text
   }
 
   addPay(fare: number, tip: number): void {

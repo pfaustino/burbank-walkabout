@@ -38,11 +38,15 @@ export class DeliveryRun {
   private wait = 0.6
   private readonly arrow: THREE.Group
   private readonly arrowFace: THREE.MeshBasicMaterial
-  private readonly distance: THREE.Sprite
-  private readonly distanceMat: THREE.SpriteMaterial
-  private readonly distanceCanvas: HTMLCanvasElement
-  private distanceText = ''
+  private readonly arrowShade: THREE.MeshBasicMaterial
   private readonly aim = new THREE.Vector3()
+  private readonly camRight = new THREE.Vector3()
+  private readonly camUp = new THREE.Vector3()
+  private readonly camAhead = new THREE.Vector3()
+  private readonly arrowX = new THREE.Vector3()
+  private readonly arrowY = new THREE.Vector3()
+  private readonly arrowZ = new THREE.Vector3()
+  private readonly arrowBasis = new THREE.Matrix4()
   private readonly halo: THREE.Group
   private readonly haloMats: THREE.MeshBasicMaterial[]
   private spin = 0
@@ -71,14 +75,11 @@ export class DeliveryRun {
     this.hud = hud
     this.rng = rng
     this.file = file
-    this.arrowFace = new THREE.MeshBasicMaterial({ color: PICKUP, fog: false, depthTest: false })
-    this.arrow = buildArrow(this.arrowFace)
+    this.arrowFace = new THREE.MeshBasicMaterial({ color: PICKUP, fog: false, depthTest: false, side: THREE.DoubleSide })
+    const arrow = buildArrow(this.arrowFace)
+    this.arrow = arrow.group
+    this.arrowShade = arrow.shade
     this.arrow.visible = false
-    const label = buildDistanceLabel()
-    this.distance = label.sprite
-    this.distanceMat = label.material
-    this.distanceCanvas = label.canvas
-    this.distance.visible = false
     this.haloMats = [
       new THREE.MeshBasicMaterial({ color: PICKUP, transparent: true, opacity: 0.9, side: THREE.DoubleSide, depthWrite: false }),
       new THREE.MeshBasicMaterial({ color: PICKUP, transparent: true, opacity: 0.3, side: THREE.DoubleSide, depthWrite: false }),
@@ -86,7 +87,7 @@ export class DeliveryRun {
     ]
     this.halo = buildHalo(this.haloMats)
     this.halo.visible = false
-    this.scene.add(this.arrow, this.distance, this.halo)
+    this.scene.add(this.arrow, this.halo)
   }
 
   /** Turn each kind of job on or off. A job already on screen drops when its kind is turned off. */
@@ -147,11 +148,9 @@ export class DeliveryRun {
 
   dispose(): void {
     this.clearPassenger()
-    this.scene.remove(this.arrow, this.distance, this.halo)
+    this.scene.remove(this.arrow, this.halo)
     disposeDrawn(this.arrow)
     disposeDrawn(this.halo)
-    this.distanceMat.map?.dispose()
-    this.distanceMat.dispose()
   }
 
   private offer(pose: Spot): void {
@@ -197,7 +196,7 @@ export class DeliveryRun {
 
   private showRide(ride: TaxiRide, phase: DropPhase): void {
     const color = phase === 'dropoff' ? DROPOFF : HAIL
-    this.arrowFace.color.setHex(color)
+    this.tintArrow(color)
     for (const mat of this.haloMats) mat.color.setHex(color)
     this.hud.setOrder(taxiLine(ride, phase), phase === 'dropoff')
   }
@@ -237,34 +236,34 @@ export class DeliveryRun {
 
   private show(order: DeliveryOrder, phase: DropPhase): void {
     const color = phase === 'dropoff' ? DROPOFF : PICKUP
-    this.arrowFace.color.setHex(color)
+    this.tintArrow(color)
     for (const mat of this.haloMats) mat.color.setHex(color)
     this.hud.setOrder(orderLine(order, phase), phase === 'dropoff')
   }
 
   private hide(): void {
     this.arrow.visible = false
-    this.distance.visible = false
     this.halo.visible = false
+  }
+
+  private tintArrow(color: number): void {
+    this.arrowFace.color.setHex(color)
+    this.arrowShade.color.copy(this.arrowFace.color).multiplyScalar(0.72)
   }
 
   private placeCue(x: number, z: number, spot: Spot, camera: THREE.PerspectiveCamera): void {
     const dx = spot.x - x
     const dz = spot.z - z
-    const yaw = Math.atan2(dx, dz)
     const bob = Math.sin(this.spin * 3) * 5
     const order = document.querySelector('#order')
     const ribbonBottom = order instanceof HTMLElement && !order.hidden ? order.getBoundingClientRect().bottom : 72
     const mid = window.innerWidth / 2
     const depth = Math.max(5, camera.position.distanceTo(this.aim.set(x, 1.2, z)) * 0.62)
-    this.placeOnScreen(camera, mid, ribbonBottom + 42 + bob, depth, this.arrow.position)
-    this.placeOnScreen(camera, mid, ribbonBottom + 86 + bob, depth, this.distance.position)
+    const gap = Math.max(168, window.innerHeight * 0.2)
+    this.placeOnScreen(camera, mid, ribbonBottom + gap + bob, depth, this.arrow.position)
     this.arrow.visible = true
-    this.distance.visible = true
-    this.paintDistance(formatDistance(Math.hypot(dx, dz)))
-    this.arrow.rotation.order = 'YXZ'
-    this.arrow.rotation.y = yaw
-    this.arrow.rotation.x = -0.42
+    this.hud.setOrderDistance(formatDistance(Math.hypot(dx, dz)))
+    this.aimArrow(camera, dx, dz)
     this.halo.visible = true
     const pulse = 1 + Math.sin(this.spin * 3.4) * 0.05
     this.halo.position.set(spot.x, 0.12, spot.z)
@@ -277,32 +276,28 @@ export class DeliveryRun {
     if (column) column.opacity = 0.12 + Math.sin(this.spin * 2.2) * 0.05
   }
 
-  /** Park the arrow on the view, just under the fare ribbon. */
+  /** Lay the arrow flat to the screen, tip toward the stop. */
+  private aimArrow(camera: THREE.PerspectiveCamera, dx: number, dz: number): void {
+    this.camRight.setFromMatrixColumn(camera.matrixWorld, 0)
+    this.camUp.setFromMatrixColumn(camera.matrixWorld, 1)
+    this.camAhead.setFromMatrixColumn(camera.matrixWorld, 2).negate()
+    const side = dx * this.camRight.x + dz * this.camRight.z
+    const fore = dx * this.camAhead.x + dz * this.camAhead.z
+    const bearing = Math.atan2(side, fore)
+    this.arrowZ.copy(this.camRight).multiplyScalar(Math.sin(bearing)).addScaledVector(this.camUp, Math.cos(bearing))
+    this.arrowY.copy(this.camAhead).negate()
+    this.arrowX.crossVectors(this.arrowY, this.arrowZ).normalize()
+    this.arrowZ.crossVectors(this.arrowX, this.arrowY).normalize()
+    this.arrowBasis.makeBasis(this.arrowX, this.arrowY, this.arrowZ)
+    this.arrow.quaternion.setFromRotationMatrix(this.arrowBasis)
+  }
+
+  /** Park the arrow on the view, clear of the fare ribbon. */
   private placeOnScreen(camera: THREE.PerspectiveCamera, sx: number, sy: number, depth: number, out: THREE.Vector3): void {
     const width = Math.max(1, window.innerWidth)
     const height = Math.max(1, window.innerHeight)
     this.aim.set((sx / width) * 2 - 1, -(sy / height) * 2 + 1, 0.5).unproject(camera)
     out.copy(this.aim).sub(camera.position).normalize().multiplyScalar(depth).add(camera.position)
-  }
-
-  private paintDistance(text: string): void {
-    if (text === this.distanceText) return
-    this.distanceText = text
-    const canvas = this.distanceCanvas
-    const ctx = canvas.getContext('2d')
-    if (!ctx) return
-    ctx.clearRect(0, 0, canvas.width, canvas.height)
-    ctx.fillStyle = 'rgba(18, 14, 8, 0.88)'
-    ctx.beginPath()
-    ctx.roundRect(8, 14, canvas.width - 16, canvas.height - 28, 18)
-    ctx.fill()
-    ctx.fillStyle = '#fff6df'
-    ctx.textAlign = 'center'
-    ctx.textBaseline = 'middle'
-    ctx.font = '700 54px sans-serif'
-    ctx.fillText(text, canvas.width / 2, canvas.height / 2 + 1)
-    const map = this.distanceMat.map
-    if (map) map.needsUpdate = true
   }
 }
 
@@ -319,39 +314,30 @@ function disposeDrawn(root: THREE.Object3D): void {
   for (const material of materials) material.dispose()
 }
 
-function buildDistanceLabel(): { sprite: THREE.Sprite; material: THREE.SpriteMaterial; canvas: HTMLCanvasElement } {
-  const canvas = document.createElement('canvas')
-  canvas.width = 256
-  canvas.height = 96
-  const map = new THREE.CanvasTexture(canvas)
-  map.colorSpace = THREE.SRGBColorSpace
-  const material = new THREE.SpriteMaterial({ map, transparent: true, depthTest: false, fog: false })
-  const sprite = new THREE.Sprite(material)
-  sprite.name = 'delivery-distance'
-  sprite.scale.set(1.7, 0.64, 1)
-  sprite.renderOrder = 3
-  return { sprite, material, canvas }
-}
-
-function buildArrow(face: THREE.MeshBasicMaterial): THREE.Group {
+function buildArrow(face: THREE.MeshBasicMaterial): { group: THREE.Group; shade: THREE.MeshBasicMaterial } {
   const group = new THREE.Group()
   group.name = 'delivery-arrow'
-  const shaft = new THREE.BoxGeometry(0.7, 0.18, 2.1)
-  const head = new THREE.ConeGeometry(0.95, 1.5, 4)
-  const shade = new THREE.MeshBasicMaterial({ color: 0x1a1208, fog: false, depthTest: false })
-  const backShaft = new THREE.Mesh(shaft, shade)
-  const backHead = new THREE.Mesh(head, shade)
-  const frontShaft = new THREE.Mesh(shaft, face)
-  const frontHead = new THREE.Mesh(head, face)
-  backShaft.position.set(0, -0.08, -0.35)
-  frontShaft.position.set(0, 0, -0.35)
-  backHead.position.set(0, -0.08, 1.15)
-  frontHead.position.set(0, 0, 1.15)
-  for (const mesh of [backHead, frontHead]) mesh.rotation.x = Math.PI / 2
-  for (const mesh of [backShaft, backHead, frontShaft, frontHead]) mesh.renderOrder = 4
-  group.add(backShaft, backHead, frontShaft, frontHead)
-  group.scale.setScalar(0.36)
-  return group
+  const shape = new THREE.Shape()
+  shape.moveTo(0, 1.55)
+  shape.lineTo(-0.86, 0.18)
+  shape.lineTo(-0.34, 0.18)
+  shape.lineTo(-0.34, -1.35)
+  shape.lineTo(0.34, -1.35)
+  shape.lineTo(0.34, 0.18)
+  shape.lineTo(0.86, 0.18)
+  shape.closePath()
+  const geo = new THREE.ShapeGeometry(shape)
+  const shade = new THREE.MeshBasicMaterial({ color: 0xc48f12, fog: false, depthTest: false, side: THREE.DoubleSide })
+  const shadow = new THREE.Mesh(geo, shade)
+  const front = new THREE.Mesh(geo, face)
+  shadow.rotation.x = Math.PI / 2
+  front.rotation.x = Math.PI / 2
+  shadow.position.set(-0.07, -0.04, -0.08)
+  shadow.renderOrder = 4
+  front.renderOrder = 5
+  group.add(shadow, front)
+  group.scale.setScalar(0.5)
+  return { group, shade }
 }
 
 function buildHalo(mats: THREE.MeshBasicMaterial[]): THREE.Group {
