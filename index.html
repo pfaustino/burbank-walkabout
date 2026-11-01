@@ -59,7 +59,22 @@
             <h2>Sound</h2>
             <label>Ambient <input id="vol-ambient" type="range" min="0" max="100" value="100"></label>
             <label>Music <input id="vol-music" type="range" min="0" max="100" value="100"></label>
-            <p class="menu-hint">No music is playing. This level is saved.</p>
+            <label>Radio
+              <select id="radio-station">
+                <option value="">Off</option>
+                <option value="kfi">KFI 640</option>
+                <option value="kiis">KIIS 102.7</option>
+                <option value="kost">KOST 103.5</option>
+                <option value="myfm">MyFM 104.3</option>
+                <option value="alt">ALT 98.7</option>
+                <option value="real">Real 92.3</option>
+                <option value="klac">AM 570 LA Sports</option>
+                <option value="patriot">The Patriot 1150</option>
+                <option value="klos">95.5 KLOS</option>
+                <option value="cali">Cali 93.9</option>
+              </select>
+            </label>
+            <p class="menu-hint">The music slider is the radio. These are the stations' own live streams.</p>
             <label>Sound effects <input id="vol-sfx" type="range" min="0" max="100" value="100"></label>
           </section>
           <section id="menu-page-graphics" hidden>
@@ -111,6 +126,11 @@
       <div id="subtitle" aria-live="polite"></div>
       <div id="transcript" aria-live="polite"></div>
       <div id="bottom-bar">
+        <div id="radio">
+          <button id="radio-prev" type="button" aria-label="Previous station">‹</button>
+          <button id="radio-name" type="button">Radio off</button>
+          <button id="radio-next" type="button" aria-label="Next station">›</button>
+        </div>
         <form id="talk-bar">
           <button id="mic" type="button" aria-pressed="false">Mic</button>
           <input id="say-input" maxlength="240" autocomplete="off" placeholder="Talk to someone nearby…" />

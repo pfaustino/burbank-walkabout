@@ -1,3 +1,5 @@
+import { knownStation } from '../audio/radio.ts'
+
 export type ShadowSetting = 'off' | 'low' | 'high'
 export type QualitySetting = 'low' | 'medium' | 'high'
 
@@ -8,12 +10,14 @@ export type Settings = {
   shadows: ShadowSetting
   distance: number
   quality: QualitySetting
+  /** Station id, or empty when the radio is off. */
+  station: string
 }
 
 export const SETTINGS_KEY = 'burbank-settings'
 
 export function defaultSettings(): Settings {
-  return { ambient: 1, music: 1, sfx: 1, shadows: 'high', distance: 1, quality: 'high' }
+  return { ambient: 1, music: 1, sfx: 1, shadows: 'high', distance: 1, quality: 'high', station: '' }
 }
 
 function pick<T extends string>(value: unknown, allowed: readonly T[], fallback: T): T {
@@ -44,6 +48,7 @@ export function parseSettings(raw: string | null): Settings {
     shadows: pick(row.shadows, ['off', 'low', 'high'] as const, base.shadows),
     distance: clamp(row.distance, 0.45, 1, base.distance),
     quality: pick(row.quality, ['low', 'medium', 'high'] as const, base.quality),
+    station: knownStation(row.station) ? row.station : '',
   }
 }
 

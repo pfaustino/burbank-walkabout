@@ -21,7 +21,7 @@ import {
   type Spot,
   type TaxiRide,
 } from './orders.ts'
-import { buildRoute, cueOnRoute, type RoadCue, type RoadRoute } from './route.ts'
+import { buildRoute, cueOnRoute, routeLine, type RoadCue, type RoadRoute } from './route.ts'
 
 const PICKUP = 0xffc107
 const DROPOFF = 0x3ddc84
@@ -44,6 +44,8 @@ export class DeliveryRun {
   private routeCursor = 0
   private routeKey = ''
   private routeTime = 1
+  private trailRoute: RoadRoute | null = null
+  private trailPoints: { x: number; z: number }[] = []
   private readonly halo: THREE.Group
   private readonly haloMats: THREE.MeshBasicMaterial[]
   private spin = 0
@@ -109,6 +111,16 @@ export class DeliveryRun {
       this.hud.setOrder(null)
     }
     if (this.phase === 'gap' && (deliveries || fares)) this.wait = 0
+  }
+
+  /** The drive drawn on the maps. Empty while no job is on screen. */
+  get trail(): { points: readonly { x: number; z: number }[]; dropoff: boolean } | null {
+    if (this.phase === 'gap' || !this.route) return null
+    if (this.trailRoute !== this.route) {
+      this.trailRoute = this.route
+      this.trailPoints = routeLine(this.network.lanes, this.route)
+    }
+    return { points: this.trailPoints, dropoff: this.phase === 'dropoff' }
   }
 
   get marker(): { x: number; z: number; dropoff: boolean } | null {

@@ -1,5 +1,5 @@
 import mapJson from '../data/map.json'
-import { buildRoute, cueOnRoute, type RoadRoute } from '../src/delivery/route.ts'
+import { buildRoute, cueOnRoute, routeLine, type RoadRoute } from '../src/delivery/route.ts'
 import { buildNetwork, sampleLane, type Lane, type RoadNetwork } from '../src/traffic/network.ts'
 import { buildLayout, type MapFile } from '../src/world/layout.ts'
 import { describe, expect, it } from 'vitest'
@@ -45,6 +45,10 @@ describe('road route', () => {
     expect(cue!.cue.x).toBeLessThan(30)
     expect(Math.abs(cue!.cue.z)).toBeLessThan(2)
     expect(cue!.cue.remain).toBeGreaterThan(60)
+    const line = routeLine(straight.lanes, route!)
+    expect(line.length).toBeGreaterThan(1)
+    expect(line[0]!.x).toBeCloseTo(10, 0)
+    expect(line[line.length - 1]!.x).toBeCloseTo(80, 0)
   })
 
   it('puts the arrow on the next street when the corner is close', () => {

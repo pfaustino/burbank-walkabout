@@ -18,6 +18,7 @@ export type MapLabel = {
   font: number
 }
 
+const NO_TRAIL: readonly { x: number; z: number }[] = []
 const MIN_PPM = 0.04
 const MAX_PPM = 16
 const NAME_GAP = 168
@@ -117,6 +118,8 @@ export class StreetMap {
   private playerX = 0
   private playerZ = 0
   private playerYaw = 0
+  private route: readonly { x: number; z: number }[] = []
+  private routeDropoff = false
   private shown = false
   private fitted = false
   private panning = false
@@ -166,6 +169,15 @@ export class StreetMap {
     }
     this.clamp()
     this.resize()
+  }
+
+  /** Draw the current fare drive. The same array is kept until the route changes. */
+  setTrail(points: readonly { x: number; z: number }[] | null, dropoff: boolean): void {
+    const next = points && points.length > 0 ? points : NO_TRAIL
+    if (next === this.route && dropoff === this.routeDropoff) return
+    this.route = next
+    this.routeDropoff = dropoff
+    if (this.shown) this.draw()
   }
 
   hide(): void {
@@ -267,6 +279,7 @@ export class StreetMap {
       ctx.fillText(label.name, 0, 0)
       ctx.restore()
     }
+    this.drawRoute(ctx, cssW, cssH)
     this.drawPlayer(ctx, cssW, cssH)
     ctx.fillStyle = '#f0c14d'
     ctx.font = '700 14px Segoe UI, sans-serif'
@@ -294,6 +307,27 @@ export class StreetMap {
       }
       ctx.stroke()
     }
+  }
+
+  private drawRoute(ctx: CanvasRenderingContext2D, cssW: number, cssH: number): void {
+    if (this.route.length < 2) return
+    ctx.save()
+    ctx.lineJoin = 'round'
+    ctx.lineCap = 'round'
+    ctx.beginPath()
+    const first = this.route[0]!
+    ctx.moveTo((first.x - this.centerX) * this.ppm + cssW / 2, (first.z - this.centerZ) * this.ppm + cssH / 2)
+    for (let i = 1; i < this.route.length; i++) {
+      const spot = this.route[i]!
+      ctx.lineTo((spot.x - this.centerX) * this.ppm + cssW / 2, (spot.z - this.centerZ) * this.ppm + cssH / 2)
+    }
+    ctx.lineWidth = Math.max(4, 7 * Math.min(1, this.ppm))
+    ctx.strokeStyle = 'rgba(16, 28, 40, 0.88)'
+    ctx.stroke()
+    ctx.lineWidth = Math.max(2.5, 4 * Math.min(1, this.ppm))
+    ctx.strokeStyle = this.routeDropoff ? '#3ddc84' : '#ffc107'
+    ctx.stroke()
+    ctx.restore()
   }
 
   private drawPlayer(ctx: CanvasRenderingContext2D, cssW: number, cssH: number): void {

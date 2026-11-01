@@ -14,6 +14,7 @@ import { buildSidewalks, routeSidewalk, type SidewalkGraph } from '../actors/sid
 import { asideStep, createPeople, stepPeople, type PeopleFile, type PersonSim, type RoadThreat } from '../actors/peopleSim.ts'
 import { PuppetSet } from '../actors/PuppetSet.ts'
 import { Ambience } from '../audio/ambience.ts'
+import { paintRadio, Radio, stepStation } from '../audio/radio.ts'
 import { DeliveryRun } from '../delivery/DeliveryRun.ts'
 import type { DeliveryFile } from '../delivery/orders.ts'
 import { mountDevPanel, openSpot, shortcutPlaces } from '../dev/DevPanel.ts'
@@ -102,6 +103,7 @@ export class Game {
   private readonly city: THREE.Group
   private readonly lamps: StreetLamps
   private readonly ambience = new Ambience()
+  private readonly radio = new Radio()
   private dayHour = START_HOUR
   private stepX = 0
   private stepZ = 0
@@ -151,6 +153,7 @@ export class Game {
     }
     if (event.repeat) return
     this.ambience.resume()
+    this.radio.resume()
     if (event.code === 'KeyM') {
       if (this.paused) return
       this.setMap(!this.mapOpen)
@@ -195,6 +198,7 @@ export class Game {
   private readonly onPointer = (): void => {
     this.canvas.focus()
     this.ambience.resume()
+    this.radio.resume()
   }
 
   private readonly onContext = (event: Event): void => {
@@ -336,6 +340,12 @@ export class Game {
       onTutorial: () => this.hud.showCoach(),
     })
     this.applySettings(this.menu.settings)
+    mustRadio('#radio-prev').addEventListener('click', () => this.menu.setStation(stepStation(this.menu.settings.station, -1)))
+    mustRadio('#radio-next').addEventListener('click', () => this.menu.setStation(stepStation(this.menu.settings.station, 1)))
+    mustRadio('#radio-name').addEventListener('click', () => {
+      const station = this.menu.settings.station
+      this.menu.setStation(station ? '' : stepStation('', 1))
+    })
     window.addEventListener('resize', this.onResize)
     window.addEventListener('keydown', this.onKey)
     this.canvas.addEventListener('mousedown', this.onPointer)
@@ -352,6 +362,7 @@ export class Game {
     this.renderer.setAnimationLoop(this.frame)
     this.canvas.focus()
     this.ambience.resume()
+    this.radio.resume()
   }
 
   dispose(): void {
@@ -505,7 +516,10 @@ export class Game {
       people: this.citizens,
       heli: this.helicopter.pose,
       job: this.delivery.marker,
+      route: this.delivery.trail,
     })
+    const trail = this.delivery.trail
+    this.streetMap.setTrail(trail?.points ?? null, trail?.dropoff ?? false)
     this.wordnet.draw(dt)
     const camX = this.camera.position.x
     const camZ = this.camera.position.z
@@ -1163,6 +1177,8 @@ export class Game {
   private applySettings(settings: Settings): void {
     this.settings = settings
     this.ambience.setMix(settings.ambient, settings.music, settings.sfx)
+    this.radio.tune(settings.station, settings.music)
+    paintRadio(settings.station)
     this.renderer.setPixelRatio(this.pixelRatio())
     this.renderer.setSize(window.innerWidth, window.innerHeight)
     this.renderer.shadowMap.enabled = settings.shadows !== 'off'
@@ -1208,4 +1224,10 @@ export class Game {
     this.carView.setNight(sky.night)
     this.carView.follow(pos.x, pos.z)
   }
+}
+
+function mustRadio(id: string): HTMLButtonElement {
+  const el = document.querySelector(id)
+  if (!(el instanceof HTMLButtonElement)) throw new Error(`Missing ${id}`)
+  return el
 }

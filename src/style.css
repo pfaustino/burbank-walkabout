@@ -431,10 +431,28 @@ html, body, #app {
   z-index: 5;
   transform: translateX(-50%);
   display: flex;
+  flex-wrap: wrap;
   gap: 8px;
   align-items: stretch;
   width: min(860px, calc(100% - 520px));
 }
+
+#radio {
+  flex: 1 0 100%;
+  display: flex;
+  justify-content: center;
+  gap: 6px;
+}
+
+#radio button {
+  padding: 4px 12px;
+  background: #0e1a26;
+  color: var(--ink);
+  border: 1px solid var(--line);
+  font-size: 13px;
+}
+
+#radio-name { min-width: 148px; }
 
 #talk-bar {
   display: flex;

@@ -159,6 +159,42 @@ function aheadOnRoute(route: RoadRoute, lanes: Lane[], index: number, dist: numb
   return sampleLane(lane, dist)
 }
 
+/** Points along the drive, from where the route starts to the stop. */
+export function routeLine(lanes: readonly Lane[], route: RoadRoute): { x: number; z: number }[] {
+  const points: { x: number; z: number }[] = []
+  for (let i = 0; i < route.lanes.length; i++) {
+    const lane = lanes[route.lanes[i]!]
+    if (!lane) continue
+    const last = i === route.lanes.length - 1
+    const from = i === 0 ? route.enter : 0
+    const to = last ? route.exit : lane.length
+    appendSpan(points, lane, from, to)
+  }
+  const end = points[points.length - 1]
+  if (!end || Math.hypot(end.x - route.goalX, end.z - route.goalZ) > 4) {
+    points.push({ x: route.goalX, z: route.goalZ })
+  }
+  return points
+}
+
+function appendSpan(points: { x: number; z: number }[], lane: Lane, from: number, to: number): void {
+  if (to < from) return
+  remember(points, sampleLane(lane, from))
+  for (let i = 0; i < lane.pts.length; i++) {
+    const dist = lane.cum[i] ?? 0
+    if (dist <= from + 0.5 || dist >= to - 0.5) continue
+    const spot = lane.pts[i]
+    if (spot) remember(points, spot)
+  }
+  remember(points, sampleLane(lane, to))
+}
+
+function remember(points: { x: number; z: number }[], spot: { x: number; z: number }): void {
+  const prev = points[points.length - 1]
+  if (prev && Math.hypot(prev.x - spot.x, prev.z - spot.z) < 1.5) return
+  points.push({ x: spot.x, z: spot.z })
+}
+
 function finish(ids: number[], enter: number, exit: number, lanes: Lane[], goalX: number, goalZ: number): RoadRoute | null {
   if (ids.length === 0) return null
   let length = 0

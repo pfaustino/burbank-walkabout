@@ -45,6 +45,7 @@ export class Minimap {
     people: MinimapMarker[]
     heli: MinimapMarker
     job?: { x: number; z: number; dropoff: boolean } | null
+    route?: { points: readonly { x: number; z: number }[]; dropoff: boolean } | null
   }): void {
     const ctx = this.ctx
     const inner = SIZE - PAD * 2
@@ -107,6 +108,10 @@ export class Minimap {
       ctx.fill()
     }
 
+    if (input.route && input.route.points.length > 1) {
+      strokeTrail(ctx, input.route.points, input.route.dropoff, project)
+    }
+
     if (input.job) paintJob(ctx, project(input.job.x, input.job.z), input.job.dropoff, PAD, inner)
 
     const player = project(input.x, input.z)
@@ -138,6 +143,31 @@ export class Minimap {
   dispose(): void {
     this.ctx.clearRect(0, 0, SIZE, SIZE)
   }
+}
+
+function strokeTrail(
+  ctx: CanvasRenderingContext2D,
+  points: readonly { x: number; z: number }[],
+  dropoff: boolean,
+  project: (x: number, z: number) => { sx: number; sy: number },
+): void {
+  ctx.save()
+  ctx.lineJoin = 'round'
+  ctx.lineCap = 'round'
+  ctx.beginPath()
+  const first = project(points[0]!.x, points[0]!.z)
+  ctx.moveTo(first.sx, first.sy)
+  for (let i = 1; i < points.length; i++) {
+    const spot = project(points[i]!.x, points[i]!.z)
+    ctx.lineTo(spot.sx, spot.sy)
+  }
+  ctx.lineWidth = 5
+  ctx.strokeStyle = 'rgba(16, 28, 40, 0.8)'
+  ctx.stroke()
+  ctx.lineWidth = 3
+  ctx.strokeStyle = dropoff ? '#3ddc84' : '#ffc107'
+  ctx.stroke()
+  ctx.restore()
 }
 
 function paintJob(

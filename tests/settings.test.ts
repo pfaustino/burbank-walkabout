@@ -23,5 +23,6 @@ describe('pause menu settings', () => {
     expect(settings.shadows).toBe('off')
     expect(settings.distance).toBe(0.45)
     expect(settings.quality).toBe('high')
+    expect(settings.station).toBe('')
   })
 })

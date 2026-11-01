@@ -67,7 +67,15 @@ export class PauseMenu {
     must<HTMLSelectElement>('#gfx-shadows').value = s.shadows
     must<HTMLInputElement>('#gfx-distance').value = String(Math.round(s.distance * 100))
     must<HTMLSelectElement>('#gfx-quality').value = s.quality
+    must<HTMLSelectElement>('#radio-station').value = s.station
     this.label()
+  }
+
+  setStation(id: string): void {
+    this.settings = { ...this.settings, station: id }
+    must<HTMLSelectElement>('#radio-station').value = id
+    saveSettings(this.settings)
+    this.handlers.onChange(this.settings)
   }
 
   private read(): void {
@@ -78,6 +86,7 @@ export class PauseMenu {
       shadows: must<HTMLSelectElement>('#gfx-shadows').value as Settings['shadows'],
       distance: numberOf('#gfx-distance') / 100,
       quality: must<HTMLSelectElement>('#gfx-quality').value as Settings['quality'],
+      station: must<HTMLSelectElement>('#radio-station').value,
     }
     this.label()
     saveSettings(this.settings)
