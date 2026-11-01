@@ -155,8 +155,7 @@ export class Game {
       return
     }
     if (event.repeat) return
-    this.ambience.resume()
-    this.radio.resume()
+    this.onUnlock()
     if (event.code === 'KeyM') {
       if (this.paused) return
       this.setMap(!this.mapOpen)
@@ -200,6 +199,10 @@ export class Game {
 
   private readonly onPointer = (): void => {
     this.canvas.focus()
+    this.onUnlock()
+  }
+
+  private readonly onUnlock = (): void => {
     this.ambience.resume()
     this.radio.resume()
   }
@@ -347,10 +350,15 @@ export class Game {
     mustRadio('#radio-next').addEventListener('click', () => this.menu.setStation(stepStation(this.menu.settings.station, 1)))
     mustRadio('#radio-name').addEventListener('click', () => {
       const station = this.menu.settings.station
+      if (station && this.radio.isSilent()) {
+        this.radio.resume()
+        return
+      }
       this.menu.setStation(station ? '' : stepStation('', 1))
     })
     window.addEventListener('resize', this.onResize)
     window.addEventListener('keydown', this.onKey)
+    window.addEventListener('pointerdown', this.onUnlock)
     this.canvas.addEventListener('mousedown', this.onPointer)
     this.canvas.addEventListener('contextmenu', this.onContext)
     this.timer.connect(document)
@@ -364,8 +372,7 @@ export class Game {
     this.running = true
     this.renderer.setAnimationLoop(this.frame)
     this.canvas.focus()
-    this.ambience.resume()
-    this.radio.resume()
+    this.onUnlock()
   }
 
   dispose(): void {
@@ -375,6 +382,7 @@ export class Game {
     this.mic?.stop()
     window.removeEventListener('resize', this.onResize)
     window.removeEventListener('keydown', this.onKey)
+    window.removeEventListener('pointerdown', this.onUnlock)
     this.canvas.removeEventListener('mousedown', this.onPointer)
     this.canvas.removeEventListener('contextmenu', this.onContext)
     this.client.dispose()

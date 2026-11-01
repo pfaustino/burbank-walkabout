@@ -25,4 +25,10 @@ describe('pause menu settings', () => {
     expect(settings.quality).toBe('high')
     expect(settings.station).toBe('')
   })
+
+  it('keeps the last station and drops one the radio does not play', () => {
+    const settings = parseSettings(JSON.stringify({ station: 'kfi' }))
+    expect(settings.station).toBe('kfi')
+    expect(parseSettings(JSON.stringify({ station: 'nope' })).station).toBe('')
+  })
 })

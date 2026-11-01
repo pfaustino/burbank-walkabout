@@ -116,6 +116,11 @@ export class Radio {
     if (this.audio) this.audio.volume = on ? 0 : this.volume
   }
 
+  /** A saved station is selected, and the browser has not let it start yet. */
+  isSilent(): boolean {
+    return !!this.id && (!this.audio || this.audio.paused)
+  }
+
   /** Try again after a click or key, once the browser will allow sound. */
   resume(): void {
     if (!this.id || !this.audio || !this.audio.paused) return
