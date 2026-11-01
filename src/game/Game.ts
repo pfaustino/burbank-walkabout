@@ -495,7 +495,6 @@ export class Game {
       z: pos.z,
       driving: this.walker.driving,
       speed: moved,
-      camera: this.camera,
     })
     this.minimap.draw({
       x: pos.x,

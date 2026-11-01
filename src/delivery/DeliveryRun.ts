@@ -21,6 +21,7 @@ import {
   type Spot,
   type TaxiRide,
 } from './orders.ts'
+import { buildRoute, cueOnRoute, type RoadCue, type RoadRoute } from './route.ts'
 
 const PICKUP = 0xffc107
 const DROPOFF = 0x3ddc84
@@ -39,14 +40,10 @@ export class DeliveryRun {
   private readonly arrow: THREE.Group
   private readonly arrowFace: THREE.MeshBasicMaterial
   private readonly arrowShade: THREE.MeshBasicMaterial
-  private readonly aim = new THREE.Vector3()
-  private readonly camRight = new THREE.Vector3()
-  private readonly camUp = new THREE.Vector3()
-  private readonly camAhead = new THREE.Vector3()
-  private readonly arrowX = new THREE.Vector3()
-  private readonly arrowY = new THREE.Vector3()
-  private readonly arrowZ = new THREE.Vector3()
-  private readonly arrowBasis = new THREE.Matrix4()
+  private route: RoadRoute | null = null
+  private routeCursor = 0
+  private routeKey = ''
+  private routeTime = 1
   private readonly halo: THREE.Group
   private readonly haloMats: THREE.MeshBasicMaterial[]
   private spin = 0
@@ -75,7 +72,13 @@ export class DeliveryRun {
     this.hud = hud
     this.rng = rng
     this.file = file
-    this.arrowFace = new THREE.MeshBasicMaterial({ color: PICKUP, fog: false, depthTest: false, side: THREE.DoubleSide })
+    this.arrowFace = new THREE.MeshBasicMaterial({
+      color: PICKUP,
+      fog: false,
+      depthTest: true,
+      depthWrite: false,
+      side: THREE.DoubleSide,
+    })
     const arrow = buildArrow(this.arrowFace)
     this.arrow = arrow.group
     this.arrowShade = arrow.shade
@@ -114,7 +117,7 @@ export class DeliveryRun {
     return { x: spot.x, z: spot.z, dropoff: this.phase === 'dropoff' }
   }
 
-  update(dt: number, pose: { x: number; z: number; driving: boolean; speed: number; camera: THREE.PerspectiveCamera }): void {
+  update(dt: number, pose: { x: number; z: number; driving: boolean; speed: number }): void {
     this.spin += dt
     if (this.phase !== 'gap') this.elapsed += dt
     if (this.phase === 'gap') {
@@ -125,7 +128,7 @@ export class DeliveryRun {
     }
     const spot = this.goal()
     if ((!this.order && !this.ride) || !spot) return
-    this.placeCue(pose.x, pose.z, spot, pose.camera)
+    this.placeCue(dt, pose.x, pose.z, spot)
     this.wave(dt, pose.x, pose.z)
     if (!parkedOn(pose.driving, pose.speed, pose.x, pose.z, spot, this.file.haloRadius, this.file.parkSpeed)) return
     if (this.phase === 'pickup') {
@@ -251,19 +254,12 @@ export class DeliveryRun {
     this.arrowShade.color.copy(this.arrowFace.color).multiplyScalar(0.72)
   }
 
-  private placeCue(x: number, z: number, spot: Spot, camera: THREE.PerspectiveCamera): void {
-    const dx = spot.x - x
-    const dz = spot.z - z
-    const bob = Math.sin(this.spin * 3) * 5
-    const order = document.querySelector('#order')
-    const ribbonBottom = order instanceof HTMLElement && !order.hidden ? order.getBoundingClientRect().bottom : 72
-    const mid = window.innerWidth / 2
-    const depth = Math.max(5, camera.position.distanceTo(this.aim.set(x, 1.2, z)) * 0.62)
-    const gap = Math.max(168, window.innerHeight * 0.2)
-    this.placeOnScreen(camera, mid, ribbonBottom + gap + bob, depth, this.arrow.position)
+  private placeCue(dt: number, x: number, z: number, spot: Spot): void {
+    const cue = this.guide(dt, x, z, spot)
     this.arrow.visible = true
-    this.hud.setOrderDistance(formatDistance(Math.hypot(dx, dz)))
-    this.aimArrow(camera, dx, dz)
+    this.arrow.position.set(cue.x, 0.28, cue.z)
+    this.arrow.rotation.set(0, cue.yaw, 0)
+    this.hud.setOrderDistance(formatDistance(cue.remain))
     this.halo.visible = true
     const pulse = 1 + Math.sin(this.spin * 3.4) * 0.05
     this.halo.position.set(spot.x, 0.12, spot.z)
@@ -276,28 +272,40 @@ export class DeliveryRun {
     if (column) column.opacity = 0.12 + Math.sin(this.spin * 2.2) * 0.05
   }
 
-  /** Lay the arrow flat to the screen, tip toward the stop. */
-  private aimArrow(camera: THREE.PerspectiveCamera, dx: number, dz: number): void {
-    this.camRight.setFromMatrixColumn(camera.matrixWorld, 0)
-    this.camUp.setFromMatrixColumn(camera.matrixWorld, 1)
-    this.camAhead.setFromMatrixColumn(camera.matrixWorld, 2).negate()
-    const side = dx * this.camRight.x + dz * this.camRight.z
-    const fore = dx * this.camAhead.x + dz * this.camAhead.z
-    const bearing = Math.atan2(side, fore)
-    this.arrowZ.copy(this.camRight).multiplyScalar(Math.sin(bearing)).addScaledVector(this.camUp, Math.cos(bearing))
-    this.arrowY.copy(this.camAhead).negate()
-    this.arrowX.crossVectors(this.arrowY, this.arrowZ).normalize()
-    this.arrowZ.crossVectors(this.arrowX, this.arrowY).normalize()
-    this.arrowBasis.makeBasis(this.arrowX, this.arrowY, this.arrowZ)
-    this.arrow.quaternion.setFromRotationMatrix(this.arrowBasis)
-  }
-
-  /** Park the arrow on the view, clear of the fare ribbon. */
-  private placeOnScreen(camera: THREE.PerspectiveCamera, sx: number, sy: number, depth: number, out: THREE.Vector3): void {
-    const width = Math.max(1, window.innerWidth)
-    const height = Math.max(1, window.innerHeight)
-    this.aim.set((sx / width) * 2 - 1, -(sy / height) * 2 + 1, 0.5).unproject(camera)
-    out.copy(this.aim).sub(camera.position).normalize().multiplyScalar(depth).add(camera.position)
+  /** Follow the current drive, and search again if the player leaves it or the stop changes. */
+  private guide(dt: number, x: number, z: number, spot: Spot): RoadCue {
+    this.routeTime += dt
+    const key = `${spot.x.toFixed(1)},${spot.z.toFixed(1)}`
+    if (key !== this.routeKey) {
+      this.routeKey = key
+      this.route = buildRoute(this.network, x, z, spot.x, spot.z)
+      this.routeCursor = 0
+      this.routeTime = 0
+    }
+    const route = this.route
+    if (route) {
+      const step = cueOnRoute(this.network, route, x, z, this.routeCursor)
+      if (step) {
+        this.routeCursor = step.cursor
+        return step.cue
+      }
+    }
+    if (this.routeTime > 0.75) {
+      this.route = buildRoute(this.network, x, z, spot.x, spot.z)
+      this.routeCursor = 0
+      this.routeTime = 0
+      const again = this.route ? cueOnRoute(this.network, this.route, x, z, 0) : null
+      if (again) {
+        this.routeCursor = again.cursor
+        return again.cue
+      }
+    }
+    const dx = spot.x - x
+    const dz = spot.z - z
+    const dist = Math.hypot(dx, dz)
+    const lead = Math.min(26, Math.max(4, dist))
+    const scale = dist > 0.01 ? lead / dist : 0
+    return { x: x + dx * scale, z: z + dz * scale, yaw: Math.atan2(dx, dz), remain: dist }
   }
 }
 
@@ -327,7 +335,13 @@ function buildArrow(face: THREE.MeshBasicMaterial): { group: THREE.Group; shade:
   shape.lineTo(0.86, 0.18)
   shape.closePath()
   const geo = new THREE.ShapeGeometry(shape)
-  const shade = new THREE.MeshBasicMaterial({ color: 0xc48f12, fog: false, depthTest: false, side: THREE.DoubleSide })
+  const shade = new THREE.MeshBasicMaterial({
+    color: 0xc48f12,
+    fog: false,
+    depthTest: true,
+    depthWrite: false,
+    side: THREE.DoubleSide,
+  })
   const shadow = new THREE.Mesh(geo, shade)
   const front = new THREE.Mesh(geo, face)
   shadow.rotation.x = Math.PI / 2
@@ -336,7 +350,7 @@ function buildArrow(face: THREE.MeshBasicMaterial): { group: THREE.Group; shade:
   shadow.renderOrder = 4
   front.renderOrder = 5
   group.add(shadow, front)
-  group.scale.setScalar(0.5)
+  group.scale.setScalar(1.6)
   return { group, shade }
 }
 
