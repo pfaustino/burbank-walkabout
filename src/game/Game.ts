@@ -559,8 +559,7 @@ export class Game {
         0,
         this.aimDir.z / flat,
       )
-      if (!aimed) this.streetView.clear()
-      else {
+      if (aimed) {
         const spot = toLatLon(aimed.x, aimed.z)
         this.streetView.show(aimed.name || 'Street View', spot.lat, spot.lng, aimed.heading)
       }

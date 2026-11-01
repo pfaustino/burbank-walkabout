@@ -113,8 +113,11 @@
         </div>
       </div>
       <aside id="streetview" hidden>
-        <p id="streetview-name">Street View</p>
-        <iframe id="streetview-frame" title="Street View of the building ahead" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen loading="lazy"></iframe>
+        <button id="streetview-name" type="button">Street View</button>
+        <div id="streetview-stage">
+          <iframe id="streetview-frame" title="Street View of the building ahead" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
+          <button id="streetview-zoom" type="button" aria-label="Zoom in on this photo"></button>
+        </div>
       </aside>
       <div id="subtitle" aria-live="polite"></div>
       <div id="transcript" aria-live="polite"></div>

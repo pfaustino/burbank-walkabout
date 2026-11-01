@@ -211,11 +211,31 @@ html, body, #app {
 
 #streetview[hidden] { display: none; }
 
-#streetview p {
+#streetview.is-zoomed {
+  top: 50%;
+  left: 50%;
+  z-index: 8;
+  width: min(920px, calc(100vw - 40px));
+  transform: translate(-50%, -50%);
+}
+
+#streetview-name {
+  display: block;
+  width: 100%;
   margin: 0;
   padding: 6px 10px 4px;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
   font-size: 13px;
+  text-align: left;
+  cursor: zoom-in;
 }
+
+#streetview.is-zoomed #streetview-name { cursor: zoom-out; }
+
+#streetview-stage { position: relative; }
 
 #streetview iframe {
   display: block;
@@ -223,6 +243,21 @@ html, body, #app {
   height: 200px;
   border: 0;
 }
+
+#streetview.is-zoomed iframe {
+  width: 100%;
+  height: min(72vh, 640px);
+}
+
+#streetview-zoom {
+  position: absolute;
+  inset: 0;
+  border: 0;
+  background: transparent;
+  cursor: zoom-in;
+}
+
+#streetview.is-zoomed #streetview-zoom { display: none; }
 
 #order {
   position: fixed;
