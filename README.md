@@ -105,17 +105,44 @@ The words come from lines you send and lines people say back. Little words drop 
 
 **Make Deliveries** and **Pick up Fares** sit beside the chat. Both start on, and each click turns that kind of job off or on. Turn both off and the current ribbon goes away.
 
-A job shows up on its own while its button is on. The ribbon at the top is the current stop. Yellow is the pickup. Green is the dropoff. An arrow on the road points along the street. A few seconds before a corner it becomes a left or right turn arrow, then points at the stop. The distance sits at the end of the ribbon. The corner map and the city map draw that drive in the same color as the stop.
+A job shows up on its own while its button is on. The ribbon at the top is the current stop. Yellow is the pickup. Green is the dropoff.
 
 One job is a person waving for a ride. The next is an order from a shop, then a ride again. Drive to the spot and stop. The ribbon switches to the dropoff. Stop there and the fare, plus a tip, adds to the cash in the corner. A few blocks pays a few dollars, and a quicker trip pays a larger tip. Then there is a short break before the next one.
 
 Shops wear their OpenStreetMap names. Street blades name the road you are on.
 
-The radio sits above the chat. The arrows step through the stations, and the name turns it off. Esc, then Sound, has the same list. The music slider is the volume. KFI, KIIS, KOST, MyFM, ALT, Real 92.3, AM 570, and The Patriot play their iHeart streams. The rest play the streams from their own sites, including the BBC World Service, CBC Radio One, NHK World, DW, ABC NewsRadio, ABC Radio National, triple j, BBC Radio 6 Music, FIP, NTS, France Inter, Radio Nacional, and Radio Caroline.
+## GPS
+
+While a fare is active, a chevron sits on the road ahead of you and follows the driving lanes to the stop. A few seconds before a corner it becomes a left or right turn arrow, still on the street you are on. On the last stretch it points at the stop. The distance at the end of the ribbon is the length of that drive.
+
+The corner map and the city map draw the same route, yellow toward the pickup and green toward the dropoff. Leave the route and it draws a new one.
+
+## Radio
+
+The radio sits above the chat. The arrows step through the stations, and the name turns it off. **Esc**, then **Sound**, has the same list. The music slider is the volume. Each station plays from its own live stream.
+
+Los Angeles: KFI 640, KIIS 102.7, KOST 103.5, MyFM 104.3, ALT 98.7, Real 92.3, AM 570 LA Sports, The Patriot 1150, 95.5 KLOS, Cali 93.9, KPFK 90.7, LAist 89.3, and KCRW 89.9.
+
+Elsewhere: BBC World Service, CBC Radio One, NHK World Radio, DW English, ABC NewsRadio, ABC Radio National, triple j, BBC Radio 6 Music, FIP, NTS Radio, France Inter, Radio Nacional, and Radio Caroline.
+
+The street and the radio go quiet while the mic is listening and while an NPC is speaking. They come back when that voice stops.
+
+## Menu
+
+**Esc** pauses.
+
+| Page | What it does |
+|------|----------------|
+| **Sound** | Ambient, radio volume, the station list, and sound effects |
+| **Graphics** | Shadows, draw distance, and quality, for when the frame rate drops |
+| **Restore tutorial** | Brings the key card back |
+| **About** | The city, and where the map data comes from |
+
+**Esc** on a page goes back. **Esc** on the first page resumes. The choices stay on this computer.
 
 ## Voice
 
-The microphone stays in the browser. What you say is sent as text.
+The microphone stays in the browser. What you say is sent as text. While it is listening, and while an NPC's reply is playing, the street noise and the radio stay quiet.
 
 1. Speech-to-text turns your voice into text (or you type).
 2. That text is the only thing sent up.
@@ -139,7 +166,7 @@ During `npm run dev`, or with `?dev=1`, a panel sits in the corner.
 The streets, buildings, shops, and addresses are Burbank. To walk a different city, paste this prompt to the assistant in this repo and fill in the city.
 
 ```text
-Change this game from Burbank to CITY, STATE, COUNTRY. Keep the walk, driving, buses, helicopter, fares, street map, word stream, and address search. Only replace the place.
+Change this game from Burbank to CITY, STATE, COUNTRY. Keep the walk, driving, buses, helicopter, fares, the road arrow, street map, radio, pause menu, word stream, and address search. Only replace the place.
 
 Look up the OpenStreetMap relation for the city's administrative boundary. Download that relation with its outer geometry to tmp-CITY-boundary.json. Download buildings, highways, and parks inside the boundary with out geom. If Overpass times out, split the city into tiles and save them as tmp-CITY-part-1.json, tmp-CITY-part-2.json, and so on. Do not commit those tmp files.
 
