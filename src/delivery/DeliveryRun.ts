@@ -41,7 +41,6 @@ export class DeliveryRun {
   private readonly arrowStraight: THREE.Group
   private readonly arrowBend: THREE.Group
   private readonly arrowFace: THREE.MeshBasicMaterial
-  private readonly arrowShade: THREE.MeshBasicMaterial
   private route: RoadRoute | null = null
   private routeCursor = 0
   private routeKey = ''
@@ -87,7 +86,6 @@ export class DeliveryRun {
     this.arrow = arrow.group
     this.arrowStraight = arrow.straight
     this.arrowBend = arrow.bend
-    this.arrowShade = arrow.shade
     this.arrow.visible = false
     this.haloMats = [
       new THREE.MeshBasicMaterial({ color: PICKUP, transparent: true, opacity: 0.9, side: THREE.DoubleSide, depthWrite: false }),
@@ -267,7 +265,6 @@ export class DeliveryRun {
 
   private tintArrow(color: number): void {
     this.arrowFace.color.setHex(color)
-    this.arrowShade.color.copy(this.arrowFace.color).multiplyScalar(0.72)
   }
 
   private placeCue(dt: number, x: number, z: number, spot: Spot, speed: number): void {
@@ -344,25 +341,17 @@ function disposeDrawn(root: THREE.Object3D): void {
 
 function buildArrow(face: THREE.MeshBasicMaterial): {
   group: THREE.Group
-  shade: THREE.MeshBasicMaterial
   straight: THREE.Group
   bend: THREE.Group
 } {
   const group = new THREE.Group()
   group.name = 'delivery-arrow'
-  const shade = new THREE.MeshBasicMaterial({
-    color: 0xc48f12,
-    fog: false,
-    depthTest: true,
-    depthWrite: false,
-    side: THREE.DoubleSide,
-  })
-  const straight = layArrow(straightShape(), face, shade)
-  const bend = layArrow(turnShape(), face, shade)
+  const straight = layArrow(straightShape(), face)
+  const bend = layArrow(turnShape(), face)
   bend.visible = false
   group.add(straight, bend)
   group.scale.setScalar(1.6)
-  return { group, shade, straight, bend }
+  return { group, straight, bend }
 }
 
 function straightShape(): THREE.Shape {
@@ -378,32 +367,28 @@ function straightShape(): THREE.Shape {
   return shape
 }
 
-/** A left turn. The group flips this for a right turn. */
+/** A left turn. The stem runs forward and the head points left. The group flips this for a right turn. */
 function turnShape(): THREE.Shape {
   const shape = new THREE.Shape()
-  shape.moveTo(-0.32, -1.4)
-  shape.lineTo(-0.32, 0.42)
-  shape.lineTo(0.42, 0.42)
-  shape.lineTo(0.42, 0.98)
-  shape.lineTo(1.62, 0.1)
-  shape.lineTo(0.42, -0.78)
-  shape.lineTo(0.32, -0.12)
-  shape.lineTo(0.32, -1.4)
+  shape.moveTo(-0.34, -2)
+  shape.lineTo(-0.34, 0.34)
+  shape.lineTo(1.25, 0.34)
+  shape.lineTo(1.25, 0.82)
+  shape.lineTo(2.15, 0)
+  shape.lineTo(1.25, -0.82)
+  shape.lineTo(1.25, -0.34)
+  shape.lineTo(0.34, -0.34)
+  shape.lineTo(0.34, -2)
   shape.closePath()
   return shape
 }
 
-function layArrow(shape: THREE.Shape, face: THREE.MeshBasicMaterial, shade: THREE.MeshBasicMaterial): THREE.Group {
+function layArrow(shape: THREE.Shape, face: THREE.MeshBasicMaterial): THREE.Group {
   const group = new THREE.Group()
-  const geo = new THREE.ShapeGeometry(shape)
-  const shadow = new THREE.Mesh(geo, shade)
-  const front = new THREE.Mesh(geo, face)
-  shadow.rotation.x = Math.PI / 2
+  const front = new THREE.Mesh(new THREE.ShapeGeometry(shape), face)
   front.rotation.x = Math.PI / 2
-  shadow.position.set(-0.07, -0.04, -0.08)
-  shadow.renderOrder = 4
   front.renderOrder = 5
-  group.add(shadow, front)
+  group.add(front)
   return group
 }
 
