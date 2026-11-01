@@ -111,7 +111,7 @@ One job is a person waving for a ride. The next is an order from a shop, then a 
 
 Shops wear their OpenStreetMap names. Street blades name the road you are on.
 
-The radio sits above the chat. The arrows step through Burbank stations, and the name turns it off. Esc, then Sound, has the same list. The music slider is the volume. KFI, KIIS, KOST, MyFM, ALT, Real 92.3, AM 570, and The Patriot play their iHeart streams. 95.5 KLOS and Cali 93.9 play the streams from their own sites.
+The radio sits above the chat. The arrows step through Burbank stations, and the name turns it off. Esc, then Sound, has the same list. The music slider is the volume. KFI, KIIS, KOST, MyFM, ALT, Real 92.3, AM 570, and The Patriot play their iHeart streams. 95.5 KLOS, Cali 93.9, KPFK 90.7, LAist 89.3, and KCRW 89.9 play the streams from their own sites.
 
 ## Voice
 

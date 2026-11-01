@@ -10,6 +10,9 @@ export const STATIONS = [
   { id: 'patriot', name: 'The Patriot 1150', url: 'https://stream.revma.ihrhls.com/zc197' },
   { id: 'klos', name: '95.5 KLOS', url: 'https://playerservices.streamtheworld.com/api/livestream-redirect/KLOSFMAAC.aac' },
   { id: 'cali', name: 'Cali 93.9', url: 'https://playerservices.streamtheworld.com/api/livestream-redirect/KLLI_FMAAC.aac' },
+  { id: 'kpfk', name: 'KPFK 90.7', url: 'https://streams.pacifica.org:9000/kpfk_128' },
+  { id: 'laist', name: 'LAist 89.3', url: 'https://laist.streamguys1.com/kpcc-mp3' },
+  { id: 'kcrw', name: 'KCRW 89.9', url: 'https://streams.kcrw.com/kcrw_mp3' },
 ] as const
 
 const IDS = STATIONS.map((station) => station.id)
