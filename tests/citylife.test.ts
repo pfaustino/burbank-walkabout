@@ -155,6 +155,27 @@ describe('address search', () => {
     expect(findAddress('99999 Nowhere Lane', addresses, layout.file.roads)).toBeNull()
     expect(findAddress('   ', addresses, layout.file.roads)).toBeNull()
   })
+
+  it('lands on the crossing of two streets', () => {
+    const roads = [
+      { name: 'Magnolia Boulevard', kind: 'primary', w: 16, pts: [0, 0, 100, 0] },
+      { name: 'Buena Vista Street', kind: 'tertiary', w: 11, pts: [40, -30, 40, 40] },
+    ]
+    const cross = findAddress('Magnolia and Buena Vista', [], roads)
+    expect(cross?.x).toBeCloseTo(40)
+    expect(cross?.z).toBeCloseTo(0)
+    expect(findAddress('Magnolia & Buena Vista', [], roads)?.x).toBeCloseTo(40)
+    expect(findAddress('Magnolia at Buena Vista', [], roads)?.z).toBeCloseTo(0)
+    expect(findAddress('Magnolia and Magnolia', [], roads)).toBeNull()
+    expect(findAddress('Magnolia and Nowhere', [], roads)).toBeNull()
+
+    const real = findAddress('Magnolia and Buena Vista', addresses, layout.file.roads)
+    expect(real).toBeTruthy()
+    expect(nearestRoad(real?.x ?? 0, real?.z ?? 0, /magnolia/i)).toBeLessThan(20)
+    expect(nearestRoad(real?.x ?? 0, real?.z ?? 0, /buena vista/i)).toBeLessThan(20)
+    const swapped = findAddress('Buena Vista and Magnolia', addresses, layout.file.roads)
+    expect(Math.hypot((swapped?.x ?? 0) - (real?.x ?? 0), (swapped?.z ?? 0) - (real?.z ?? 0))).toBeLessThan(5)
+  })
 })
 
 describe('street lamps', () => {
@@ -178,3 +199,24 @@ describe('street lamps', () => {
     }
   })
 })
+
+function nearestRoad(x: number, z: number, name: RegExp): number {
+  let best = Infinity
+  for (const road of layout.file.roads) {
+    if (!name.test(road.name)) continue
+    const pts = road.pts
+    for (let i = 0; i < pts.length - 2; i += 2) {
+      const ax = pts[i] ?? 0
+      const az = pts[i + 1] ?? 0
+      const bx = pts[i + 2] ?? ax
+      const bz = pts[i + 3] ?? az
+      const dx = bx - ax
+      const dz = bz - az
+      const len2 = dx * dx + dz * dz
+      const t = len2 > 0 ? Math.max(0, Math.min(1, ((x - ax) * dx + (z - az) * dz) / len2)) : 0
+      const dist = Math.hypot(ax + t * dx - x, az + t * dz - z)
+      if (dist < best) best = dist
+    }
+  }
+  return best
+}

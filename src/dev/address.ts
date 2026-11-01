@@ -37,8 +37,15 @@ const OPTIONAL = new Set([
   'parkway',
 ])
 
-/** A house number, or the middle of a named street when no number is given. */
+const CROSSING = /\s+(?:and|at)\s+|\s*&\s*/i
+/** Centerlines farther apart than this are not the same junction. */
+const MEET = 36
+
+/** A house number, the middle of a named street, or where two streets meet. */
 export function findAddress(query: string, addresses: readonly AddressPin[], roads: readonly MapRoad[]): { x: number; z: number } | null {
+  const pieces = query.split(CROSSING)
+  if (pieces.length === 2) return findCrossing(pieces[0] ?? '', pieces[1] ?? '', roads)
+  if (pieces.length > 2) return null
   const { number, words: queryWords } = splitQuery(query)
   if (queryWords.length === 0) return null
   if (number) {
@@ -68,6 +75,95 @@ export function findAddress(query: string, addresses: readonly AddressPin[], roa
     }
   }
   return bestPts ? halfway(bestPts) : null
+}
+
+function findCrossing(left: string, right: string, roads: readonly MapRoad[]): { x: number; z: number } | null {
+  const leftWords = words(left)
+  const rightWords = words(right)
+  if (leftWords.length === 0 || rightWords.length === 0) return null
+  if (requiredKey(leftWords) === requiredKey(rightWords)) return null
+  const sideA = matchingRoads(leftWords, roads)
+  const sideB = matchingRoads(rightWords, roads)
+  if (sideA.length === 0 || sideB.length === 0) return null
+  let bestDist = MEET
+  let best: { x: number; z: number } | null = null
+  for (const roadA of sideA) {
+    for (const roadB of sideB) {
+      if (roadA === roadB || roadA.name === roadB.name) continue
+      const hit = polylinesNear(roadA.pts, roadB.pts, bestDist)
+      if (!hit || hit.dist > bestDist) continue
+      bestDist = hit.dist
+      best = { x: hit.x, z: hit.z }
+    }
+  }
+  return best
+}
+
+function matchingRoads(queryWords: string[], roads: readonly MapRoad[]): MapRoad[] {
+  const found: MapRoad[] = []
+  for (const road of roads) {
+    if (!road.name || road.kind === 'service' || road.kind === 'pedestrian') continue
+    if (streetScore(queryWords, words(road.name)) > 0) found.push(road)
+  }
+  return found
+}
+
+function requiredKey(tokens: string[]): string {
+  return tokens.filter((word) => !OPTIONAL.has(word)).join(' ')
+}
+
+/** Closest point between two polylines, when they come within maxDist. */
+function polylinesNear(a: number[], b: number[], maxDist: number): { dist: number; x: number; z: number } | null {
+  let best: { dist: number; x: number; z: number } | null = null
+  for (let i = 0; i < a.length - 2; i += 2) {
+    const ax = a[i] ?? 0
+    const az = a[i + 1] ?? 0
+    const bx = a[i + 2] ?? ax
+    const bz = a[i + 3] ?? az
+    for (let j = 0; j < b.length - 2; j += 2) {
+      const hit = segmentsNear(ax, az, bx, bz, b[j] ?? 0, b[j + 1] ?? 0, b[j + 2] ?? 0, b[j + 3] ?? 0)
+      if (hit.dist > maxDist) continue
+      if (!best || hit.dist < best.dist) best = hit
+    }
+  }
+  return best
+}
+
+function segmentsNear(
+  ax: number,
+  az: number,
+  bx: number,
+  bz: number,
+  cx: number,
+  cz: number,
+  dx: number,
+  dz: number,
+): { dist: number; x: number; z: number } {
+  const rx = bx - ax
+  const rz = bz - az
+  const sx = dx - cx
+  const sz = dz - cz
+  const qx = ax - cx
+  const qz = az - cz
+  const rr = rx * rx + rz * rz
+  const ss = sx * sx + sz * sz
+  const rs = rx * sx + rz * sz
+  const qr = qx * rx + qz * rz
+  const qs = qx * sx + qz * sz
+  const denom = rr * ss - rs * rs
+  let t = denom !== 0 ? (rs * qs - ss * qr) / denom : 0
+  t = t < 0 ? 0 : t > 1 ? 1 : t
+  let u = ss !== 0 ? (t * rs + qs) / ss : 0
+  if (u < 0 || u > 1) {
+    u = u < 0 ? 0 : 1
+    t = rr !== 0 ? (u * rs - qr) / rr : 0
+    t = t < 0 ? 0 : t > 1 ? 1 : t
+  }
+  const x1 = ax + t * rx
+  const z1 = az + t * rz
+  const x2 = cx + u * sx
+  const z2 = cz + u * sz
+  return { dist: Math.hypot(x1 - x2, z1 - z2), x: (x1 + x2) / 2, z: (z1 + z2) / 2 }
 }
 
 function splitQuery(raw: string): { number: string; words: string[] } {

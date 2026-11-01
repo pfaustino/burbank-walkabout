@@ -128,7 +128,7 @@ Copy `.env.example` to `.env` and set `OPENROUTER_API_KEY` and `FISH_AUDIO_API_K
 
 During `npm run dev`, or with `?dev=1`, a panel sits in the corner.
 
-- **Address** — type a house number and a street, then Enter. You land at that address when the map has it, or halfway along the street when you leave the number out.
+- **Address** — type a house number and a street, then Enter. You land at that address when the map has it, or halfway along the street when you leave the number out. Two streets joined by "and" land at the crossing, as in Magnolia and Buena Vista.
 - **Locations** — jump to a place: the library, Town Center, City Hall, Verdugo Park, Magnolia Park, St. Joseph's Hospital, IKEA, or Walmart.
 - **NPCs** — stand next to that person.
 
