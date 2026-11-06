@@ -115,6 +115,11 @@ export class DeliveryRun {
     if (this.phase === 'gap' && (deliveries || fares)) this.wait = 0
   }
 
+  /** A pickup or a dropoff is on the ribbon. The gap between jobs is not. */
+  get hasJob(): boolean {
+    return this.phase !== 'gap'
+  }
+
   /** The drive drawn on the maps. Empty while no job is on screen. */
   get trail(): { points: readonly { x: number; z: number }[]; dropoff: boolean } | null {
     if (this.phase === 'gap' || !this.route) return null
