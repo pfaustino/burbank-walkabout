@@ -16,7 +16,8 @@ const preset = params.get('name') || sessionStorage.getItem('burbank-name')
 
 function showLoading(): void {
   loading!.hidden = false
-  loading!.textContent = 'Loading the map…'
+  const line = loading!.querySelector('span')
+  if (line) line.textContent = 'loading... this could take a minute. If a WAIT button comes up, press it'
 }
 
 /** Let the status paint before the map build blocks the page. */

@@ -20,6 +20,14 @@
         font-family: "Segoe UI", system-ui, sans-serif;
         font-size: 22px;
         letter-spacing: 0.02em;
+        padding: 32px 28px;
+        box-sizing: border-box;
+        text-align: center;
+        line-height: 1.45;
+      }
+      #loading span {
+        display: block;
+        max-width: min(34rem, 100%);
       }
       #loading[hidden] { display: none; }
     </style>
@@ -143,7 +151,7 @@
         </div>
       </div>
       <div id="dev-panel" hidden></div>
-      <div id="loading" role="status" aria-live="polite">Loading the map…</div>
+      <div id="loading" role="status" aria-live="polite"><span>loading... this could take a minute. If a WAIT button comes up, press it</span></div>
       <div id="gate">
         <form id="gate-form">
           <h1>Burbank Walkabout</h1>
