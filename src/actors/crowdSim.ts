@@ -41,8 +41,74 @@ const HAIRS = [0x3a2a18, 0x1a120e, 0x1c1c1c, 0x2a2118, 0x4a3020, 0xc4b49a, 0x6a2
 const SHOES = [0x1c1c1c, 0xf2f2f2, 0x6b3a2a, 0x1e3a5f, 0x8c3d4a, 0xc4a574, 0x3a3f4a]
 const FEMALE = ['Maya', 'Elena', 'Nora', 'Hana', 'Ivy', 'Leah', 'Sofia', 'Clara', 'Nina', 'Ruby', 'Willa', 'Greta', 'Paige', 'Thea', 'Lila', 'Mara', 'Celia', 'Vera', 'Noor', 'Esme', 'Adele', 'Freya', 'Iris', 'Joan']
 const MALE = ['Owen', 'Felix', 'Hugo', 'Andre', 'Nico', 'Ellis', 'Jonah', 'Caleb', 'Miles', 'Theo', 'Arun', 'Diego', 'Malik', 'Simon', 'Peter', 'Colin', 'Ravi', 'Evan', 'Victor', 'Omar', 'Isaac', 'Leon', 'Grant', 'Wes']
-const LAST = ['Cho', 'Patel', 'Brooks', 'Diaz', 'Kim', 'Walsh', 'Singh', 'Berg', 'Costa', 'Park', 'Adler', 'Santos', 'Novak', 'Keller', 'Ibarra', 'Frost', 'Holland', 'Okada', 'Bauer', 'Silva', 'Navarro', 'Ellison', 'Duval', 'Hart', 'Kaplan', 'Moreau', 'Sato', 'Bennett', 'Crowley', 'Lang', 'Peters', 'Solano', 'Voss', 'Yamamoto', 'Delgado', 'Hoffman', 'McKay', 'Rahman', 'Vogel', 'Estes']
-const RESERVED = new Set(['June Alvarez', 'Marcus Bell', 'Priya Shah', 'Luis Ortega', 'Aisha Coleman', 'Kenji Mori', 'Rosa Nguyen', 'Sam Reyes'])
+const OTHER = ['Cho', 'Patel', 'Brooks', 'Diaz', 'Kim', 'Walsh', 'Singh', 'Berg', 'Costa', 'Park', 'Adler', 'Novak', 'Keller', 'Ibarra', 'Frost', 'Holland', 'Okada', 'Bauer', 'Silva', 'Navarro', 'Ellison', 'Duval', 'Hart', 'Kaplan', 'Moreau', 'Sato', 'Bennett', 'Crowley', 'Lang', 'Peters', 'Solano', 'Voss', 'Yamamoto', 'Delgado', 'Hoffman', 'McKay', 'Rahman', 'Vogel', 'Estes', 'Alvarez', 'Shah', 'Ortega', 'Coleman', 'Mori', 'Nguyen', 'Bell', 'Grant', 'Vasquez', 'Brennan', 'Wolfe', 'Perry', 'Larson', 'Quinn', 'Blake', 'Foster']
+/**
+ * Burbank, ACS 2020–2024. Armenian ancestry is 12,503 of 104,546 people.
+ * Filipino alone is 4,716. Surname weights are 2010 Census counts.
+ * A Filipino weight is that count times the share recorded as Asian.
+ */
+const POP = 104546
+const ARMENIAN_PEOPLE = 12503
+const FILIPINO_PEOPLE = 4716
+const ARMENIAN: readonly (readonly [string, number])[] = [
+  ['Vartanian', 2039],
+  ['Nazarian', 2004],
+  ['Hagopian', 1975],
+  ['Grigoryan', 1937],
+  ['Garabedian', 1879],
+  ['Sarkisian', 1833],
+  ['Markarian', 1775],
+  ['Simonian', 1701],
+  ['Petrosyan', 1449],
+  ['Sarkissian', 1443],
+  ['Krikorian', 1439],
+  ['Arakelian', 1291],
+  ['Karapetyan', 1260],
+  ['Avakian', 1243],
+  ['Grigorian', 1240],
+  ['Ohanian', 1210],
+  ['Boyajian', 1168],
+  ['Najarian', 1154],
+  ['Bedrosian', 1139],
+  ['Sargsyan', 1117],
+  ['Khachatryan', 1078],
+  ['Keshishian', 1064],
+  ['Akopyan', 1060],
+  ['Hovsepian', 1060],
+  ['Minassian', 1052],
+  ['Manukyan', 1050],
+  ['Tashjian', 1045],
+  ['Minasian', 1008],
+  ['Papazian', 1005],
+  ['Stepanian', 1005],
+  ['Derderian', 966],
+  ['Ghazarian', 965],
+  ['Kazarian', 945],
+  ['Melkonian', 939],
+  ['Berberian', 935],
+  ['Babayan', 925],
+]
+const FILIPINO: readonly (readonly [string, number])[] = [
+  ['Reyes', 18297],
+  ['Santos', 18279],
+  ['Cruz', 17345],
+  ['Dela Cruz', 12093],
+  ['Bautista', 10986],
+  ['Aquino', 7717],
+  ['Villanueva', 7605],
+  ['Domingo', 6098],
+  ['Tolentino', 5033],
+  ['Ocampo', 3745],
+  ['Espiritu', 3062],
+  ['Manalo', 2842],
+  ['Delos Santos', 2837],
+  ['Macaraeg', 982],
+]
+const ARMENIAN_SPANS = surnameSpans(ARMENIAN, ARMENIAN_PEOPLE)
+const FILIPINO_SPANS = surnameSpans(FILIPINO, FILIPINO_PEOPLE)
+export const ARMENIAN_SURNAMES: readonly string[] = ARMENIAN.map((entry) => entry[0])
+export const FILIPINO_SURNAMES: readonly string[] = FILIPINO.map((entry) => entry[0])
+const RESERVED = new Set(['June Alvarez', 'Marcus Vartanian', 'Priya Shah', 'Luis Ortega', 'Aisha Coleman', 'Kenji Mori', 'Rosa Nguyen', 'Sam Reyes'])
 
 export function crowdId(index: number): string {
   return `c${index}`
@@ -152,10 +218,19 @@ export function crowdPose(world: CrowdWorld, index: number, time: number): { x: 
 
 function personName(index: number, voice: PersonVoice, used: Set<string>): string {
   const firsts = voice === 'female' ? FEMALE : MALE
-  const span = firsts.length * LAST.length
-  for (let k = 0; k < span; k++) {
-    const slot = (index * 17 + k) % span
-    const name = `${firsts[Math.floor(slot / LAST.length) % firsts.length]!} ${LAST[slot % LAST.length]!}`
+  const bucket = (index * 7919) % POP
+  const lasts = lastChoices(bucket)
+  const preferred = lastName(bucket)
+  let start = 0
+  for (let i = 0; i < lasts.length; i++) {
+    if (lasts[i] === preferred) {
+      start = i
+      break
+    }
+  }
+  const combos = firsts.length * lasts.length
+  for (let k = 0; k < combos; k++) {
+    const name = `${firsts[(index + k) % firsts.length]!} ${lasts[(start + Math.floor(k / firsts.length)) % lasts.length]!}`
     if (used.has(name)) continue
     used.add(name)
     return name
@@ -163,6 +238,38 @@ function personName(index: number, voice: PersonVoice, used: Set<string>): strin
   const fallback = `Walker ${index}`
   used.add(fallback)
   return fallback
+}
+
+function lastChoices(bucket: number): readonly string[] {
+  if (bucket < ARMENIAN_PEOPLE) return ARMENIAN_SURNAMES
+  if (bucket < ARMENIAN_PEOPLE + FILIPINO_PEOPLE) return FILIPINO_SURNAMES
+  return OTHER
+}
+
+function lastName(bucket: number): string {
+  if (bucket < ARMENIAN_PEOPLE) return surnameAt(ARMENIAN_SPANS, bucket)
+  if (bucket < ARMENIAN_PEOPLE + FILIPINO_PEOPLE) return surnameAt(FILIPINO_SPANS, bucket - ARMENIAN_PEOPLE)
+  return OTHER[(bucket - ARMENIAN_PEOPLE - FILIPINO_PEOPLE) % OTHER.length]!
+}
+
+function surnameSpans(names: readonly (readonly [string, number])[], slots: number): { name: string; end: number }[] {
+  let weight = 0
+  for (const entry of names) weight += entry[1]
+  let used = 0
+  let prev = 0
+  return names.map((entry, index) => {
+    used += entry[1]
+    const end = index === names.length - 1 ? slots : Math.max(prev, Math.round((used / weight) * slots))
+    prev = end
+    return { name: entry[0], end }
+  })
+}
+
+function surnameAt(spans: readonly { name: string; end: number }[], bucket: number): string {
+  for (const span of spans) {
+    if (bucket < span.end) return span.name
+  }
+  return spans[spans.length - 1]!.name
 }
 
 function loopsFrom(layout: CityLayout): CrowdLoop[] {

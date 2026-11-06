@@ -3,7 +3,7 @@ import busesJson from '../data/buses.json'
 import crowdJson from '../data/crowd.json'
 import foliageJson from '../data/foliage.json'
 import mapJson from '../data/map.json'
-import { createCrowd, crowdCount, crowdId, crowdIndex, crowdPose, type CrowdFile } from '../src/actors/crowdSim.ts'
+import { ARMENIAN_SURNAMES, FILIPINO_SURNAMES, createCrowd, crowdCount, crowdId, crowdIndex, crowdPose, type CrowdFile } from '../src/actors/crowdSim.ts'
 import { createBuses, stepBuses, type BusFile } from '../src/traffic/busSim.ts'
 import { buildNetwork } from '../src/traffic/network.ts'
 import { createSeededRng } from '../src/util/seededRng.ts'
@@ -58,6 +58,29 @@ describe('downtown scenery', () => {
     const names = world.people.map((person) => person.name)
     expect(new Set(names).size).toBe(names.length)
     expect(names.every((name) => name.includes(' '))).toBe(true)
+    const armenian = new Set<string>(ARMENIAN_SURNAMES)
+    const filipino = new Set<string>(FILIPINO_SURNAMES)
+    let arm = 0
+    let fil = 0
+    for (const name of names) {
+      const surname = name.slice(name.indexOf(' ') + 1)
+      if (armenian.has(surname)) arm++
+      else if (filipino.has(surname)) fil++
+    }
+    expect(arm / names.length).toBeCloseTo(12503 / 104546, 2)
+    expect(fil / names.length).toBeCloseTo(4716 / 104546, 2)
+    const full = createCrowd(layout, { count: 2400, speed: file.speed }, createSeededRng(11))
+    let fullArm = 0
+    let fullFil = 0
+    for (const person of full.people) {
+      const surname = person.name.slice(person.name.indexOf(' ') + 1)
+      if (armenian.has(surname)) fullArm++
+      else if (filipino.has(surname)) fullFil++
+    }
+    expect(full.people).toHaveLength(2400)
+    expect(fullArm / full.people.length).toBeCloseTo(12503 / 104546, 2)
+    expect(fullFil / full.people.length).toBeCloseTo(4716 / 104546, 2)
+    expect(full.people.some((person) => person.name.startsWith('Walker '))).toBe(false)
     expect(crowdId(12)).toBe('c12')
     expect(crowdIndex('c12')).toBe(12)
     expect(crowdIndex('june')).toBeNull()
