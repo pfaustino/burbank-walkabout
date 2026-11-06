@@ -172,10 +172,15 @@ export class Hud {
     this.order.classList.toggle('dropoff', dropoff)
   }
 
-  /** Under the fare name, at the same size, while the player is still on foot. */
-  setCarPrompt(on: boolean): void {
+  /** Second line of the fare ribbon. Null hides it. */
+  setJobHint(text: string | null): void {
     if (this.order.hidden) return
-    if (this.orderHint.hidden !== !on) this.orderHint.hidden = !on
+    if (!text) {
+      this.orderHint.hidden = true
+      return
+    }
+    if (this.orderHint.textContent !== text) this.orderHint.textContent = text
+    this.orderHint.hidden = false
   }
 
   /** Metres to the stop, at the end of the fare ribbon. */

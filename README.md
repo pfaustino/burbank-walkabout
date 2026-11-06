@@ -102,7 +102,7 @@ The words come from lines you send and lines people say back. Little words drop 
 
 A job shows up on its own while its button is on. The ribbon at the top is the current stop. Yellow is the pickup. Green is the dropoff.
 
-One job is a person waving for a ride. The next is an order from a shop, then a ride again. On foot, a line under the fare ribbon says to approach a car and press **F** to drive it. Drive to the spot and stop. The ribbon switches to the dropoff. Stop there and the fare, plus a tip, adds to the cash in the corner. A few blocks pays a few dollars, and a quicker trip pays a larger tip. Then there is a short break before the next one.
+One job is a person waving for a ride. The next is an order from a shop, then a ride again. On foot, a line under the fare ribbon says to approach a car and press **F** to drive it. In a car or motorcycle, that line says to follow the arrows and the mini-map. Drive to the spot and stop. The ribbon switches to the dropoff. Stop there and the fare, plus a tip, adds to the cash in the corner. A few blocks pays a few dollars, and a quicker trip pays a larger tip. Then there is a short break before the next one.
 
 Shops wear their OpenStreetMap names. Street blades name the road you are on.
 

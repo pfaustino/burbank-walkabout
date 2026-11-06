@@ -521,8 +521,7 @@ export class Game {
       driving: this.walker.driving,
       speed: moved,
     })
-    const onFoot = !this.walker.driving && !this.walker.riding && !this.walker.flying
-    this.hud.setCarPrompt(this.delivery.hasJob && onFoot)
+    this.hud.setJobHint(this.jobHint())
     this.minimap.draw({
       x: pos.x,
       z: pos.z,
@@ -1004,6 +1003,14 @@ export class Game {
       if (!best || dist < best.dist) best = { bus, dist }
     }
     return best
+  }
+
+  /** Under the fare name: walk up to a car, then follow the route once you have it. */
+  private jobHint(): string | null {
+    if (!this.delivery.hasJob) return null
+    if (this.walker.driving && this.drivenId) return 'follow the arrows and mini-map'
+    if (this.walker.riding || this.walker.flying) return null
+    return 'Approach a car. F to drive it.'
   }
 
   private nearbyText(): string {
