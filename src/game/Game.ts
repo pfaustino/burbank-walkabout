@@ -521,6 +521,8 @@ export class Game {
       driving: this.walker.driving,
       speed: moved,
     })
+    const onFoot = !this.walker.driving && !this.walker.riding && !this.walker.flying
+    this.hud.setCarPrompt(this.delivery.hasJob && onFoot)
     this.minimap.draw({
       x: pos.x,
       z: pos.z,
@@ -1022,7 +1024,7 @@ export class Game {
       return 'The helicopter is on its way'
     }
     const lead = this.leadText()
-    if (lead && !this.walker.driving && !this.walker.riding && !this.walker.flying) return this.withCarPrompt(lead)
+    if (lead && !this.walker.driving && !this.walker.riding && !this.walker.flying) return lead
     const pos = this.walker.mesh.position
     const car = this.nearestStoppedCar(pos.x, pos.z)
     const bus = this.nearestStoppedBus(pos.x, pos.z)
@@ -1039,20 +1041,14 @@ export class Game {
     const near = this.nearest()
     if (!near) {
       this.hud.setPlaceholder('Talk to the block')
-      return this.withCarPrompt('Nobody on this corner yet.')
+      return 'Nobody on this corner yet.'
     }
     if (near.dist <= this.peopleFile.talkRange) {
       this.hud.setPlaceholder(`Talk to ${near.name}`)
-      return this.withCarPrompt(`${near.name} is close · E to talk`)
+      return `${near.name} is close · E to talk`
     }
     this.hud.setPlaceholder('Walk closer, or talk to the block')
-    return this.withCarPrompt(`${near.name} is ${Math.round(near.dist)} m away`)
-  }
-
-  /** On foot during a job, say to take a car. A nearer stopped car or bus already says what F does. */
-  private withCarPrompt(text: string): string {
-    if (!this.delivery.hasJob) return text
-    return `${text} · F to grab a car`
+    return `${near.name} is ${Math.round(near.dist)} m away`
   }
 
   private nearestApproach(x: number, z: number): string | null {

@@ -18,6 +18,7 @@ export class Hud {
   private readonly mic: HTMLButtonElement
   private readonly order: HTMLElement
   private readonly orderLine: HTMLElement
+  private readonly orderHint: HTMLElement
   private readonly orderAway: HTMLElement
   private readonly score: HTMLElement
   private readonly cashPop: HTMLElement
@@ -42,6 +43,7 @@ export class Hud {
     this.mic = must('#mic') as HTMLButtonElement
     this.order = must('#order')
     this.orderLine = must('#order-line')
+    this.orderHint = must('#order-hint')
     this.orderAway = must('#order-away')
     this.score = must('#score')
     this.cashPop = must('#cash-pop')
@@ -161,12 +163,19 @@ export class Hud {
       this.order.hidden = true
       this.orderLine.textContent = ''
       this.orderAway.textContent = ''
+      this.orderHint.hidden = true
       this.order.classList.remove('dropoff')
       return
     }
     this.order.hidden = false
     if (this.orderLine.textContent !== text) this.orderLine.textContent = text
     this.order.classList.toggle('dropoff', dropoff)
+  }
+
+  /** Under the fare name, at the same size, while the player is still on foot. */
+  setCarPrompt(on: boolean): void {
+    if (this.order.hidden) return
+    if (this.orderHint.hidden !== !on) this.orderHint.hidden = !on
   }
 
   /** Metres to the stop, at the end of the fare ribbon. */
