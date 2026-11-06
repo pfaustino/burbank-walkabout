@@ -260,16 +260,13 @@ html, body, #app {
 #streetview.is-zoomed #streetview-zoom { display: none; }
 
 #order {
-  position: fixed;
-  top: 72px;
-  left: 50%;
-  z-index: 5;
-  transform: translateX(-50%);
+  flex: 1 0 100%;
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: 16px;
-  width: max-content;
-  max-width: min(740px, calc(100vw - 32px));
+  box-sizing: border-box;
+  max-width: 100%;
   padding: 12px 18px;
   background: rgba(16, 28, 40, 0.9);
   border: 3px solid #ffc107;
@@ -280,6 +277,8 @@ html, body, #app {
   pointer-events: none;
   text-shadow: 0 1px 2px #000;
 }
+
+#order[hidden] { display: none; }
 
 #order-copy {
   display: flex;
