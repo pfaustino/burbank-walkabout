@@ -88,6 +88,9 @@ html, body, #app {
 
 .coach-rest { color: var(--muted); font-size: 14px; }
 
+#coach .is-done { color: #9ddeb4; }
+#coach .is-done::after { content: " ✓"; }
+
 #coach-ok {
   border: 0;
   border-radius: 8px;

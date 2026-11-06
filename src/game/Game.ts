@@ -522,6 +522,7 @@ export class Game {
       driving: this.walker.driving,
       speed: moved,
     })
+    this.hud.markControls(this.walker.taughtWalk, this.walker.taughtLook)
     this.hud.setJobHint(this.jobHint())
     this.minimap.draw({
       x: pos.x,

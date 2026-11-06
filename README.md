@@ -19,7 +19,7 @@ npm run dev
 
 Open http://127.0.0.1:5174 . The first screen stays on **Loading the map…** until the city is ready. Add `?dev=1` outside Vite dev to show the jump panel. `?name=` skips the name gate.
 
-A card lists the main keys the first time. **Got it** dismisses it.
+The first time, a card stays until you walk with **W A S D** and right-drag to look. The fare ribbon waits until you have done both. **Restore tutorial** shows the other keys.
 
 Two browser windows on that address share the street.
 

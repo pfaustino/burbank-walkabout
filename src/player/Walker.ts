@@ -44,6 +44,8 @@ export class Walker {
   private lift = 0
   private bank = 0
   private dragging = false
+  private walkTaught = 0
+  private lookTaught = 0
 
   constructor(
     layout: CityLayout,
@@ -92,6 +94,16 @@ export class Walker {
   /** Gas and brake keys while driving: 1, 0, or -1. */
   get throttle(): number {
     return this.driveMode ? this.pedal : 0
+  }
+
+  /** They have walked a step with W A S D. */
+  get taughtWalk(): boolean {
+    return this.walkTaught >= 1.5
+  }
+
+  /** They have right-dragged the camera. */
+  get taughtLook(): boolean {
+    return this.lookTaught >= 24
   }
 
   /** 0 is planted, 1 is the tires sliding in a hard turn. */
@@ -262,6 +274,8 @@ export class Walker {
 
     const length = Math.hypot(wishX, wishZ)
     let speed = 0
+    const fromX = this.mesh.position.x
+    const fromZ = this.mesh.position.z
     if (length > 0) {
       wishX /= length
       wishZ /= length
@@ -281,6 +295,8 @@ export class Walker {
       this.mesh.position.z = next.z
       this.mesh.rotation.y = Math.atan2(worldX, worldZ)
     }
+    const wasd = this.keys.has('KeyW') || this.keys.has('KeyA') || this.keys.has('KeyS') || this.keys.has('KeyD')
+    if (wasd) this.walkTaught += Math.hypot(this.mesh.position.x - fromX, this.mesh.position.z - fromZ)
 
     if (this.grounded) {
       this.mesh.position.y = 0
@@ -491,6 +507,7 @@ export class Walker {
   private onMouseMove = (event: MouseEvent): void => {
     this.dragging = (event.buttons & 2) !== 0
     if (this.paused || !this.dragging) return
+    this.lookTaught += Math.abs(event.movementX) + Math.abs(event.movementY)
     this.yaw -= event.movementX * 0.0022
     this.pitch += event.movementY * 0.0018
     this.pitch = THREE.MathUtils.clamp(this.pitch, PITCH_MIN, PITCH_MAX)

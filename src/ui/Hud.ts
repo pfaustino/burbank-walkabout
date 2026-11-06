@@ -22,8 +22,13 @@ export class Hud {
   private readonly orderAway: HTMLElement
   private readonly score: HTMLElement
   private readonly cashPop: HTMLElement
+  private readonly coach: HTMLElement
+  private readonly coachWalk: HTMLElement
+  private readonly coachLook: HTMLElement
+  private readonly coachMore: HTMLElement
   private cash = 0
   private subTimer = 0
+  private fareHeld = false
 
   constructor(handlers: {
     onSay: (text: string) => void
@@ -47,6 +52,10 @@ export class Hud {
     this.orderAway = must('#order-away')
     this.score = must('#score')
     this.cashPop = must('#cash-pop')
+    this.coach = must('#coach')
+    this.coachWalk = must('#coach-walk')
+    this.coachLook = must('#coach-look')
+    this.coachMore = must('#coach-more')
 
     const form = must('#talk-bar') as HTMLFormElement
     form.addEventListener('submit', (event) => {
@@ -79,32 +88,51 @@ export class Hud {
     toggle(fares)
   }
 
+  /** The fare ribbon stays hidden until they have walked and looked. */
+  get holdingFare(): boolean {
+    return this.fareHeld
+  }
+
+  /** Check off the opening card. Both done, and the fare ribbon may show. */
+  markControls(walk: boolean, look: boolean): void {
+    this.coachWalk.classList.toggle('is-done', walk)
+    this.coachLook.classList.toggle('is-done', look)
+    if (!this.fareHeld || !walk || !look) return
+    this.fareHeld = false
+    this.coach.hidden = true
+    if (this.orderLine.textContent) this.order.hidden = false
+    try {
+      localStorage.setItem('burbank-coach', '1')
+    } catch {
+      /* The lesson stays finished for this visit. */
+    }
+  }
+
   private mountCoach(): void {
-    const coach = must('#coach')
     const ok = must('#coach-ok') as HTMLButtonElement
     ok.addEventListener('click', () => {
-      coach.hidden = true
+      this.coach.hidden = true
       try {
         localStorage.setItem('burbank-coach', '1')
       } catch {
         /* The card stays dismissed for this visit. */
       }
     })
-    this.dragCoach(coach)
+    this.dragCoach(this.coach)
+    let seen = false
     try {
-      if (localStorage.getItem('burbank-coach') === '1') coach.hidden = true
+      seen = localStorage.getItem('burbank-coach') === '1'
     } catch {
       /* Private browsing still shows the card. */
     }
+    this.fareHeld = !seen
+    this.coach.hidden = seen
+    this.coachMore.hidden = true
   }
 
   showCoach(): void {
-    must('#coach').hidden = false
-    try {
-      localStorage.removeItem('burbank-coach')
-    } catch {
-      /* The card is visible for this visit. */
-    }
+    this.coach.hidden = false
+    this.coachMore.hidden = this.fareHeld
   }
 
   private dragCoach(coach: HTMLElement): void {
@@ -167,9 +195,9 @@ export class Hud {
       this.order.classList.remove('dropoff')
       return
     }
-    this.order.hidden = false
     if (this.orderLine.textContent !== text) this.orderLine.textContent = text
     this.order.classList.toggle('dropoff', dropoff)
+    this.order.hidden = this.fareHeld
   }
 
   /** Second line of the fare ribbon. Null hides it. */

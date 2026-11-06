@@ -39,11 +39,14 @@
         <div id="place">Downtown Burbank</div>
         <div id="coach">
           <p class="coach-title">Getting around</p>
-          <p><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> walk</p>
-          <p>Shift run · drag to look · Space hop</p>
-          <p><kbd>F</kbd> drive a stopped car, ride a bus, or get back out</p>
-          <p class="coach-rest">E talk · V mic · H helicopter · M map</p>
-          <button id="coach-ok" type="button">Got it</button>
+          <p id="coach-walk"><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> walk</p>
+          <p id="coach-look">Right-drag to look</p>
+          <div id="coach-more" hidden>
+            <p>Shift run · Space hop</p>
+            <p><kbd>F</kbd> drive a stopped car, ride a bus, or get back out</p>
+            <p class="coach-rest">E talk · V mic · H helicopter · M map</p>
+            <button id="coach-ok" type="button">Got it</button>
+          </div>
         </div>
         <div id="score">$0</div>
         <div id="nearby"></div>
