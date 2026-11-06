@@ -10,6 +10,8 @@ export type CarDesc = {
   x: number
   z: number
   yaw: number
+  /** Tail lamps lit. Stopped and slowing cars, not one under throttle. */
+  braking?: boolean
 }
 
 const KEEP = new Set(['Windows', 'Black', 'Grey', 'Headlights', 'TailLights', 'Material.007'])
@@ -29,6 +31,8 @@ type DrawnCar = {
   shown: boolean
   mats: THREE.Material[]
   lamps: THREE.MeshStandardMaterial[]
+  tails: THREE.MeshStandardMaterial[]
+  brakes: THREE.MeshBasicMaterial[]
 }
 
 let templates: Record<CarModel, THREE.Group> | null = null
@@ -128,6 +132,7 @@ export class CarSet {
         continue
       }
       if (!root.parent) this.scene.add(root)
+      paintTails(car.tails, car.brakes, desc.braking === true)
       if (desc.id === snapId) {
         root.position.set(desc.x, 0, desc.z)
         root.rotation.y = desc.yaw
@@ -164,6 +169,8 @@ export class CarSet {
     root.rotation.y = desc.yaw
     const mats: THREE.Material[] = []
     const lamps: THREE.MeshStandardMaterial[] = []
+    const tails: THREE.MeshStandardMaterial[] = []
+    const brakes: THREE.MeshBasicMaterial[] = []
     const paint = desc.model !== 'taxi'
     root.traverse((obj) => {
       if (!(obj instanceof THREE.Mesh)) return
@@ -177,6 +184,15 @@ export class CarSet {
           copy.emissive.setHex(0xfff2cc)
           copy.emissiveIntensity = this.night * 2.6
           lamps.push(copy)
+        } else if (copy instanceof THREE.MeshStandardMaterial && copy.name === 'TailLights') {
+          copy.emissive.setHex(0xff2a18)
+          copy.emissiveIntensity = 0
+          tails.push(copy)
+          const glow = brakeBar(obj)
+          if (glow) {
+            mats.push(glow)
+            brakes.push(glow)
+          }
         } else if (paint && copy instanceof THREE.MeshStandardMaterial && !KEEP.has(copy.name)) {
           copy.color.set(desc.color)
         }
@@ -184,10 +200,15 @@ export class CarSet {
       })
       obj.material = next.length === 1 ? next[0]! : next
     })
-    return { root, yaw: desc.yaw, shown: false, mats, lamps }
+    return { root, yaw: desc.yaw, shown: false, mats, lamps, tails, brakes }
   }
 
   private drop(id: string, car: DrawnCar): void {
+    car.root.traverse((obj) => {
+      if (!(obj instanceof THREE.Mesh)) return
+      const material = obj.material
+      if (!Array.isArray(material) && material.name === 'BrakeGlow') obj.geometry.dispose()
+    })
     this.scene.remove(car.root)
     for (const material of car.mats) material.dispose()
     this.cars.delete(id)
@@ -268,6 +289,44 @@ function block(
   mesh.castShadow = true
   mesh.receiveShadow = true
   return mesh
+}
+
+function paintTails(tails: readonly THREE.MeshStandardMaterial[], brakes: readonly THREE.MeshBasicMaterial[], on: boolean): void {
+  const glow = on ? 6 : 0
+  for (const tail of tails) {
+    if (tail.emissiveIntensity === glow) continue
+    tail.emissiveIntensity = glow
+    tail.toneMapped = !on
+    tail.color.setHex(on ? 0xff4a32 : 0x6e1818)
+  }
+  for (const brake of brakes) {
+    if (brake.opacity === (on ? 1 : 0)) continue
+    brake.opacity = on ? 1 : 0
+  }
+}
+
+/** A lamp just behind the tail lens, facing the chase camera. */
+function brakeBar(tail: THREE.Mesh): THREE.MeshBasicMaterial | null {
+  tail.geometry.computeBoundingBox()
+  const box = tail.geometry.boundingBox
+  if (!box) return null
+  const mat = new THREE.MeshBasicMaterial({
+    name: 'BrakeGlow',
+    color: 0xff2414,
+    transparent: true,
+    opacity: 0,
+    depthWrite: false,
+    toneMapped: false,
+    side: THREE.DoubleSide,
+  })
+  const width = Math.max(0.16, box.max.x - box.min.x)
+  const height = Math.max(0.1, box.max.y - box.min.y)
+  const bar = new THREE.Mesh(new THREE.PlaneGeometry(width, height), mat)
+  bar.position.set((box.min.x + box.max.x) / 2, (box.min.y + box.max.y) / 2, box.min.z - 0.03)
+  bar.rotation.y = Math.PI
+  bar.renderOrder = 3
+  tail.add(bar)
+  return mat
 }
 
 function ground(scene: THREE.Group): THREE.Group {

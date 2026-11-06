@@ -488,6 +488,7 @@ export class Game {
     this.keepDrivenBump()
     const wall = this.walker.takeWallHit()
     if (wall > 0) hits.push({ x: pos.x, z: pos.z, impact: wall })
+    this.paintBrakes()
     this.carView.sync(this.cars, dt, this.drivenId, { x: pos.x, z: pos.z, reach: CAR_DRAW * this.settings.distance })
     this.busView.sync(this.buses, dt, { x: pos.x, z: pos.z, reach: BUS_DRAW * this.settings.distance })
     this.dayHour = advanceHour(this.dayHour, dt)
@@ -621,6 +622,17 @@ export class Game {
     for (const disc of list) hold.push(disc)
     if (this.placeFoot()) hold.push(this.footDisc)
     return hold
+  }
+
+  /** The car you are driving. Brake lamps stay off only while W is accelerating. */
+  private paintBrakes(): void {
+    if (!this.drivenId) return
+    const gas = this.walker.throttle > 0
+    for (const car of this.cars) {
+      if (car.id !== this.drivenId) continue
+      car.braking = !gas
+      return
+    }
   }
 
   private drivenRide(): NetCarRide | null {

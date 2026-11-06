@@ -24,6 +24,8 @@ export type CarSim = {
   knockZ?: number
   /** Seconds left on a cut-off honk. Fresh values are above 1.4. */
   horn?: number
+  /** Tail lamps. On while stopped or slowing, off while the speed is rising. */
+  braking?: boolean
 }
 
 /** True when a driven car is close in front and this car should brake and honk. */
@@ -254,6 +256,7 @@ export function stepTraffic(
     } else if (hard) desired = 0
     const rate = desired >= car.speed ? 7 : 14
     const step = rate * dt
+    const was = car.speed
     car.speed += Math.max(-step, Math.min(step, desired - car.speed))
     if (car.speed < 0.05) car.speed = 0
     const gap = lane.stopAt - car.dist
@@ -293,6 +296,7 @@ export function stepTraffic(
     if (redWait) car.wait = 0
     else if (hard || blocked || car.speed < 0.25) car.wait = (car.wait ?? 0) + dt
     else car.wait = Math.max(0, (car.wait ?? 0) - dt)
+    car.braking = car.speed < 0.05 || car.speed + 0.02 < was
     fadeKnock(car, dt)
     self.x = car.x
     self.z = car.z
