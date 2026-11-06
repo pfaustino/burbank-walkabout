@@ -93,10 +93,12 @@ export class Hud {
     return this.fareHeld
   }
 
-  /** Check off the opening card. Both done, and the fare ribbon may show. */
+  /** WASD clears after enough keypresses, then the card moves on to looking. */
   markControls(walk: boolean, look: boolean): void {
-    this.coachWalk.classList.toggle('is-done', walk)
-    this.coachLook.classList.toggle('is-done', look)
+    if (this.fareHeld) {
+      this.coachWalk.hidden = walk
+      this.coachLook.hidden = !walk
+    }
     if (!this.fareHeld || !walk || !look) return
     this.fareHeld = false
     this.coach.hidden = true

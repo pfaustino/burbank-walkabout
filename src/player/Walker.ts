@@ -44,7 +44,7 @@ export class Walker {
   private lift = 0
   private bank = 0
   private dragging = false
-  private walkTaught = 0
+  private walkPresses = 0
   private lookTaught = 0
 
   constructor(
@@ -96,9 +96,9 @@ export class Walker {
     return this.driveMode ? this.pedal : 0
   }
 
-  /** They have walked a step with W A S D. */
+  /** Twenty presses of W, A, S, or D, in any mix. */
   get taughtWalk(): boolean {
-    return this.walkTaught >= 1.5
+    return this.walkPresses >= 20
   }
 
   /** They have right-dragged the camera. */
@@ -274,8 +274,6 @@ export class Walker {
 
     const length = Math.hypot(wishX, wishZ)
     let speed = 0
-    const fromX = this.mesh.position.x
-    const fromZ = this.mesh.position.z
     if (length > 0) {
       wishX /= length
       wishZ /= length
@@ -295,8 +293,6 @@ export class Walker {
       this.mesh.position.z = next.z
       this.mesh.rotation.y = Math.atan2(worldX, worldZ)
     }
-    const wasd = this.keys.has('KeyW') || this.keys.has('KeyA') || this.keys.has('KeyS') || this.keys.has('KeyD')
-    if (wasd) this.walkTaught += Math.hypot(this.mesh.position.x - fromX, this.mesh.position.z - fromZ)
 
     if (this.grounded) {
       this.mesh.position.y = 0
@@ -490,6 +486,9 @@ export class Walker {
   private onKeyDown = (event: KeyboardEvent): void => {
     if (typingTarget(event.target)) return
     this.keys.add(event.code)
+    if (!this.paused && (event.code === 'KeyW' || event.code === 'KeyA' || event.code === 'KeyS' || event.code === 'KeyD')) {
+      this.walkPresses++
+    }
     if (event.code === 'Space') {
       event.preventDefault()
       if (!event.repeat) this.tryJump()
