@@ -75,7 +75,7 @@ export function taxiPay(seconds: number, file: DeliveryFile): { fare: number; ti
 }
 
 export function taxiLine(ride: TaxiRide, phase: DropPhase): string {
-  if (phase === 'pickup') return `${ride.passenger} is waving for a ride`
+  if (phase === 'pickup') return `${ride.passenger} called for a ride`
   return `Take ${ride.passenger} to ${ride.street}`
 }
 

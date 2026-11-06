@@ -83,7 +83,7 @@ describe('delivery orders', () => {
   it('hails a ride that pays more than a delivery', () => {
     const ride = planTaxi(layout, network, spawn, createSeededRng(0xd45e), file)
     expect(ride).toBeTruthy()
-    expect(taxiLine(ride!, 'pickup')).toBe(`${ride!.passenger} is waving for a ride`)
+    expect(taxiLine(ride!, 'pickup')).toBe(`${ride!.passenger} called for a ride`)
     expect(taxiLine(ride!, 'dropoff')).toBe(`Take ${ride!.passenger} to ${ride!.street}`)
     const trip = Math.hypot(ride!.dropoff.x - ride!.pickup.x, ride!.dropoff.z - ride!.pickup.z)
     expect(trip).toBeGreaterThan(file.minTrip - 1)
