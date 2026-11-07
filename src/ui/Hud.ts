@@ -52,6 +52,8 @@ export class Hud {
     this.orderAway = must('#order-away')
     this.score = must('#score')
     this.cashPop = must('#cash-pop')
+    this.cash = readCash()
+    this.score.textContent = `$${this.cash}`
     this.coach = must('#coach')
     this.coachWalk = must('#coach-walk')
     this.coachLook = must('#coach-look')
@@ -221,6 +223,7 @@ export class Hud {
   addPay(fare: number, tip: number): void {
     this.cash += fare + tip
     this.score.textContent = `$${this.cash}`
+    writeCash(this.cash)
     const pop = document.createElement('div')
     pop.className = 'cash-float'
     const base = document.createElement('strong')
@@ -300,6 +303,28 @@ export class Hud {
     this.subTimer = window.setTimeout(() => {
       this.subtitle.textContent = ''
     }, 7000)
+  }
+}
+
+const CASH_KEY = 'burbank-cash'
+
+function readCash(): number {
+  try {
+    const raw = localStorage.getItem(CASH_KEY)
+    if (!raw) return 0
+    const n = Number(raw)
+    if (!Number.isFinite(n) || n < 0) return 0
+    return Math.floor(n)
+  } catch {
+    return 0
+  }
+}
+
+function writeCash(cash: number): void {
+  try {
+    localStorage.setItem(CASH_KEY, String(cash))
+  } catch {
+    /* Private browsing keeps the total for this visit. */
   }
 }
 
