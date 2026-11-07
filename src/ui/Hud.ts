@@ -27,10 +27,11 @@ export class Hud {
   private readonly coachLook: HTMLElement
   private readonly coachMore: HTMLElement
   private cash = 0
+  private readonly cashKey: string
   private subTimer = 0
   private fareHeld = false
 
-  constructor(handlers: {
+  constructor(playerName: string, handlers: {
     onSay: (text: string) => void
     onMic: () => void
     onHear: (enabled: boolean) => void
@@ -39,6 +40,7 @@ export class Hud {
     onJobs: (deliveries: boolean, fares: boolean) => void
   }) {
     this.handlers = handlers
+    this.cashKey = cashKey(playerName)
     this.place = must('#place')
     this.nearby = must('#nearby')
     this.net = must('#net-status')
@@ -52,7 +54,7 @@ export class Hud {
     this.orderAway = must('#order-away')
     this.score = must('#score')
     this.cashPop = must('#cash-pop')
-    this.cash = readCash()
+    this.cash = readCash(this.cashKey)
     this.score.textContent = `$${this.cash}`
     this.coach = must('#coach')
     this.coachWalk = must('#coach-walk')
@@ -223,7 +225,7 @@ export class Hud {
   addPay(fare: number, tip: number): void {
     this.cash += fare + tip
     this.score.textContent = `$${this.cash}`
-    writeCash(this.cash)
+    writeCash(this.cashKey, this.cash)
     const pop = document.createElement('div')
     pop.className = 'cash-float'
     const base = document.createElement('strong')
@@ -308,21 +310,34 @@ export class Hud {
 
 const CASH_KEY = 'burbank-cash'
 
-function readCash(): number {
+function cashKey(name: string): string {
+  return `${CASH_KEY}:${name}`
+}
+
+function parseCash(raw: string): number {
+  const n = Number(raw)
+  if (!Number.isFinite(n) || n < 0) return 0
+  return Math.floor(n)
+}
+
+function readCash(key: string): number {
   try {
-    const raw = localStorage.getItem(CASH_KEY)
-    if (!raw) return 0
-    const n = Number(raw)
-    if (!Number.isFinite(n) || n < 0) return 0
-    return Math.floor(n)
+    const own = localStorage.getItem(key)
+    if (own !== null) return parseCash(own)
+    const shared = localStorage.getItem(CASH_KEY)
+    if (shared === null) return 0
+    const amount = parseCash(shared)
+    localStorage.setItem(key, String(amount))
+    localStorage.removeItem(CASH_KEY)
+    return amount
   } catch {
     return 0
   }
 }
 
-function writeCash(cash: number): void {
+function writeCash(key: string, cash: number): void {
   try {
-    localStorage.setItem(CASH_KEY, String(cash))
+    localStorage.setItem(key, String(cash))
   } catch {
     /* Private browsing keeps the total for this visit. */
   }

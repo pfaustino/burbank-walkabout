@@ -285,7 +285,7 @@ export class Game {
     this.citizensView = new PuppetSet(this.scene)
     this.walkersView = new PuppetSet(this.scene)
 
-    this.hud = new Hud({
+    this.hud = new Hud(playerName, {
       onSay: (text) => this.submit(text),
       onMic: () => this.toggleMic(),
       onHear: (enabled) => {
