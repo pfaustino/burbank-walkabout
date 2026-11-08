@@ -1,5 +1,5 @@
 import { overlapsCapsule } from '../src/traffic/bodies.ts'
-import { indoorReply, nearestEntrance, planInterior, classifyBuilding, type InteriorKind } from '../src/world/interior.ts'
+import { atBuilding, indoorReply, interiorGuest, interiorPersona, nearestEntrance, planInterior, classifyBuilding, type InteriorKind } from '../src/world/interior.ts'
 import type { CityLayout, MapBuilding } from '../src/world/layout.ts'
 import type { Business } from '../src/world/storefronts.ts'
 import { describe, expect, it } from 'vitest'
@@ -87,6 +87,21 @@ describe('building interiors', () => {
     const home = planInterior(1, 'residential', 'Home')
     const hall = planInterior(1, 'civic', 'Hall')
     expect(hall.maxX - hall.minX).toBeGreaterThan(home.maxX - home.minX)
+  })
+
+  it('rebuilds the same indoor person from their id', () => {
+    const hall = box(0, 0, 20, 16, { name: 'Burbank City Hall', h: 10, door: [0, -12] })
+    const layout = layoutOf([hall])
+    const plan = planInterior(0, 'civic', 'Burbank City Hall')
+    const guest = interiorGuest(layout, [], 'in-0-0')
+    expect(guest?.person.name).toBe(plan.people[0]?.name)
+    expect(guest?.person.voice).toBe(plan.people[0]?.voice)
+    expect(guest?.title).toBe('Burbank City Hall')
+    expect(interiorPersona(plan.people[0]!, 'Burbank City Hall')).toContain('You work the front desk.')
+    expect(interiorGuest(layout, [], 'in-0-9')).toBeNull()
+    expect(interiorGuest(layout, [], 'june')).toBeNull()
+    expect(atBuilding(hall, 0, -12, 6.5)).toBe(true)
+    expect(atBuilding(hall, 80, 80, 6.5)).toBe(false)
   })
 
   it('answers as the person in the room', () => {

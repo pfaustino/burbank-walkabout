@@ -885,10 +885,12 @@ export class Game {
     this.hud.setSubtitle(msg.name, msg.text)
     this.wordnet.hear(msg.text)
     if (msg.kind === 'npc') {
-      if (crowdIndex(msg.id) !== null) {
-        this.crowdView.say(msg.id, msg.text)
-        this.beginErrand(msg.id, msg.text)
-      } else this.citizensView.say(msg.id, msg.text)
+      if (!this.noteInside(msg.id, msg.text)) {
+        if (crowdIndex(msg.id) !== null) {
+          this.crowdView.say(msg.id, msg.text)
+          this.beginErrand(msg.id, msg.text)
+        } else this.citizensView.say(msg.id, msg.text)
+      }
     } else this.walkersView.say(msg.id, msg.text)
     if (msg.aloud && this.hear) {
       const token = msg.kind === 'npc' ? this.startTalk() : 0
@@ -1131,6 +1133,16 @@ export class Game {
       this.hud.pushLine(visit.plan.title, 'Step closer if you want an answer.')
       return
     }
+    if (this.client.connected) {
+      this.client.send({
+        type: 'talk',
+        npcId: near.person.id,
+        text,
+        x: visit.backX,
+        z: visit.backZ,
+      })
+      return
+    }
     const reply = indoorReply(near.person, text, visit.plan.title)
     this.hud.pushLine(near.person.name, reply)
     this.hud.setSubtitle(near.person.name, reply)
@@ -1139,6 +1151,15 @@ export class Game {
     if (!this.hear) return
     const token = this.startTalk()
     speak(reply, near.person.voice, () => this.stopTalk(token))
+  }
+
+  private noteInside(id: string, text: string): boolean {
+    const visit = this.visit
+    if (!visit) return false
+    const index = visit.plan.people.findIndex((person) => person.id === id)
+    if (index < 0) return false
+    visit.figures[index]?.setBubble(text)
+    return true
   }
 
   private insideText(): string | null {

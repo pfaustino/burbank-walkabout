@@ -2,6 +2,7 @@ import { createReadStream, existsSync, readFileSync, statSync } from 'node:fs'
 import { createServer, type IncomingMessage, type ServerResponse } from 'node:http'
 import { extname, join, sep } from 'node:path'
 import { WebSocket, WebSocketServer } from 'ws'
+import businessesJson from '../data/businesses.json' with { type: 'json' }
 import crowdJson from '../data/crowd.json' with { type: 'json' }
 import mapJson from '../data/map.json' with { type: 'json' }
 import peopleJson from '../data/people.json' with { type: 'json' }
@@ -21,6 +22,8 @@ import {
 } from '../src/net/protocol.ts'
 import { createSeededRng } from '../src/util/seededRng.ts'
 import { buildLayout, describePlace, hitsBuilding, mapBrief, type MapFile } from '../src/world/layout.ts'
+import { atBuilding, interiorGuest, interiorPersona } from '../src/world/interior.ts'
+import type { Business } from '../src/world/storefronts.ts'
 
 loadDotEnv()
 
@@ -160,6 +163,33 @@ function handle(walker: Walker, msg: ClientMsg): void {
     return
   }
 
+  const guest = interiorGuest(layout, businessesJson as Business[], msg.npcId)
+  if (guest) {
+    const building = layout.buildings[guest.building]
+    const reach = peopleFile.talkRange + talkSlack
+    if (!building || !atBuilding(building, walker.x, walker.z, reach)) {
+      send(walker.socket, { type: 'error', message: `${guest.person.name} is too far to hear you.` })
+      return
+    }
+    const spot = building.door
+      ? { x: building.door[0], z: building.door[1] }
+      : { x: (building.minX + building.maxX) / 2, z: (building.minZ + building.maxZ) / 2 }
+    void answer(
+      walker,
+      {
+        id: guest.person.id,
+        name: guest.person.name,
+        voice: guest.person.voice,
+        persona: interiorPersona(guest.person, guest.title),
+      },
+      spot.x,
+      spot.z,
+      msg.text,
+      guest.title,
+    )
+    return
+  }
+
   const person = people.find((entry) => entry.id === msg.npcId)
   const def = peopleFile.people.find((entry) => entry.id === msg.npcId)
   if (!person || !def) {
@@ -177,8 +207,7 @@ function handle(walker: Walker, msg: ClientMsg): void {
 
 type Speaker = { id: string; name: string; voice: PersonVoice; persona: string }
 
-function answer(walker: Walker, speaker: Speaker, x: number, z: number, text: string): void {
-  const place = describePlace(layout, x, z)
+function answer(walker: Walker, speaker: Speaker, x: number, z: number, text: string, place = describePlace(layout, x, z)): void {
   const history = walker.history.get(speaker.id) ?? []
   void npcReply({
     speaker,

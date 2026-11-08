@@ -218,6 +218,40 @@ export function planInterior(index: number, kind: InteriorKind, title: string): 
   }
 }
 
+/** The same person the client built for this building. The id is `in-<building>-<slot>`. */
+export function interiorGuest(
+  layout: CityLayout,
+  businesses: readonly Business[],
+  id: string,
+): { person: InteriorPerson; title: string; building: number } | null {
+  const match = /^in-(\d+)-(\d+)$/.exec(id)
+  if (!match) return null
+  const index = Number(match[1])
+  const slot = Number(match[2])
+  if (!Number.isInteger(index) || !Number.isInteger(slot)) return null
+  const building = layout.buildings[index]
+  if (!building) return null
+  const found = classifyBuilding(building, businesses)
+  const person = planInterior(index, found.kind, found.title).people[slot]
+  if (!person || person.id !== id) return null
+  return { person, title: found.title, building: index }
+}
+
+/** True when the player is at the door or along the walls of this building. */
+export function atBuilding(building: MapBuilding, x: number, z: number, reach: number): boolean {
+  if (building.door) {
+    const dx = building.door[0] - x
+    const dz = building.door[1] - z
+    if (dx * dx + dz * dz <= reach * reach) return true
+  }
+  return x >= building.minX - reach && x <= building.maxX + reach && z >= building.minZ - reach && z <= building.maxZ + reach
+}
+
+export function interiorPersona(person: InteriorPerson, title: string): string {
+  const role = person.role.replace(/^I\b/, 'You')
+  return `You are ${person.name}. ${role} You are inside ${title} in Burbank, and you are staying here. Answer from that life, in your own words. Do not recite it unless they asked.`
+}
+
 export function indoorReply(person: { id: string; name: string; role: string }, text: string, place: string): string {
   const greet = greetingLine(person, text)
   if (greet) return greet
