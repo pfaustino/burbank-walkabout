@@ -46,6 +46,8 @@ export class Walker {
   private dragging = false
   private walkPresses = 0
   private lookTaught = 0
+  private room: { minX: number; maxX: number; minZ: number; maxZ: number } | null = null
+  private savedDist = 8.5
 
   constructor(
     layout: CityLayout,
@@ -237,12 +239,38 @@ export class Walker {
       this.mesh.position.z = z
       return
     }
+    if (this.room) {
+      this.mesh.position.set(x, 0, z)
+      this.velocityY = 0
+      this.grounded = true
+      this.carSpeed = 0
+      return
+    }
     const radius = this.driveMode ? CAR_RADIUS : BODY_RADIUS
     const next = slide(this.layout, x, z, x, z, radius)
     this.mesh.position.set(next.x, 0, next.z)
     this.velocityY = 0
     this.grounded = true
     this.carSpeed = 0
+  }
+
+  /** Indoor rooms ignore the city map. Null returns to the streets. */
+  setRoom(room: { minX: number; maxX: number; minZ: number; maxZ: number } | null): void {
+    if (room) {
+      if (!this.room) this.savedDist = this.cameraDist
+      this.room = room
+      return
+    }
+    this.room = null
+    this.cameraDist = this.savedDist
+  }
+
+  /** Camera yaw. The body turns to match a step in that direction. */
+  face(yaw: number): void {
+    this.yaw = yaw
+    const worldX = -Math.sin(yaw)
+    const worldZ = -Math.cos(yaw)
+    this.mesh.rotation.y = Math.atan2(worldX, worldZ)
   }
 
   update(dt: number): void {
@@ -412,6 +440,7 @@ export class Walker {
 
   /** Push the player out of a vehicle that moved into them after they stepped. */
   shoveOut(discs: readonly Disc[]): void {
+    if (this.room) return
     if (this.flyMode || this.rideMode) return
     const blocks = this.driveClear
     blocks.length = 0
@@ -444,6 +473,10 @@ export class Walker {
   }
 
   private solid(x: number, z: number, radius: number): boolean {
+    if (this.room) {
+      const box = this.room
+      return x < box.minX + radius || x > box.maxX - radius || z < box.minZ + radius || z > box.maxZ - radius
+    }
     if (hitsBuilding(this.layout, x, z, radius)) return true
     let hit = false
     this.posts.near(x, z, radius + 1, (post) => {
@@ -453,6 +486,10 @@ export class Walker {
   }
 
   private updateCamera(): void {
+    if (this.room) {
+      this.updateRoomCamera()
+      return
+    }
     const dist = this.flyMode ? THREE.MathUtils.clamp(this.cameraDist, 10, 28) : this.fitCamera(this.cameraDist)
     const cosPitch = Math.cos(this.pitch)
     const ox = Math.sin(this.yaw) * dist * cosPitch
@@ -464,6 +501,18 @@ export class Walker {
     const lookY = this.flyMode ? pos.y + 0.4 : pos.y + (this.driveMode ? 1.15 : 1.45) + sky * dist * 0.85
     this.camera.position.set(pos.x + ox, camY, pos.z + oz)
     this.camera.lookAt(pos.x, lookY, pos.z)
+  }
+
+  private updateRoomCamera(): void {
+    const dist = THREE.MathUtils.clamp(Math.min(this.cameraDist, 3.6), DIST_MIN, 3.6)
+    const pitch = THREE.MathUtils.clamp(this.pitch, -0.35, 0.85)
+    const cosPitch = Math.cos(pitch)
+    const ox = Math.sin(this.yaw) * dist * cosPitch
+    const oz = Math.cos(this.yaw) * dist * cosPitch
+    const oy = THREE.MathUtils.clamp(1.15 + Math.sin(pitch) * dist * 0.85, 0.8, 2.15)
+    const pos = this.mesh.position
+    this.camera.position.set(pos.x + ox, pos.y + oy, pos.z + oz)
+    this.camera.lookAt(pos.x, pos.y + 1.2 + Math.sin(pitch) * 0.4, pos.z)
   }
 
   private fitCamera(desired: number): number {
@@ -478,7 +527,7 @@ export class Walker {
   }
 
   private tryJump(): void {
-    if (this.paused || !this.grounded || this.driveMode || this.flyMode || this.rideMode) return
+    if (this.room || this.paused || !this.grounded || this.driveMode || this.flyMode || this.rideMode) return
     this.velocityY = playerJson.jumpSpeed
     this.grounded = false
   }

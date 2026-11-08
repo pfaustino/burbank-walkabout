@@ -88,6 +88,24 @@ export function hitsBuilding(layout: CityLayout, x: number, z: number, radius: n
   return hit
 }
 
+/** Building indexes whose box is within `radius` of the point. */
+export function buildingsNear(layout: CityLayout, x: number, z: number, radius: number): number[] {
+  const grid = gridOf(buildingGrids, layout, BUILDING_CELL, () => layout.buildings)
+  const found: number[] = []
+  const seen = new Set<number>()
+  visitCells(grid, x - radius, z - radius, x + radius, z + radius, (i) => {
+    if (seen.has(i)) return false
+    seen.add(i)
+    const building = layout.buildings[i]
+    if (!building) return false
+    if (x < building.minX - radius || x > building.maxX + radius) return false
+    if (z < building.minZ - radius || z > building.maxZ + radius) return false
+    found.push(i)
+    return false
+  })
+  return found
+}
+
 export type AimHit = {
   name: string
   /** A point on the street side of the wall, for a street-level photo. */

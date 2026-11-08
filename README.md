@@ -34,7 +34,7 @@ Look at a building and a window on the left shows that block in Google Street Vi
 | Right-drag | Look |
 | Wheel | Camera distance |
 | **Space** | Hop |
-| **E** | Talk box |
+| **E** | Talk, or go through a door. Inside, E by the door leaves |
 | **V** or **Mic** | Push to talk |
 | **Enter** | Send the line |
 | **Hear** | Speak replies on this computer |
@@ -44,6 +44,8 @@ Look at a building and a window on the left shows that block in Google Street Vi
 | **Esc** | Menu |
 
 **F** picks whichever stopped vehicle is closer. Say something with nobody close and it goes to other players within earshot, still as text, spoken on their machine if Hear is on.
+
+Walk up to a building and press **E** to go inside. The room matches the place: a home, a restaurant, an office, a shop, a hotel lobby, or a civic hall. People inside will talk. Press **E** by the door to step back out.
 
 ## Driving
 

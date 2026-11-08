@@ -47,11 +47,20 @@ import { type FoliageFile } from '../world/foliage.ts'
 import { Helicopter } from '../world/Helicopter.ts'
 import { tourOver } from '../world/helicopterSim.ts'
 import { aimBuilding, buildLayout, describePlace, nearbySpot, type CityLayout, type MapFile } from '../world/layout.ts'
+import { createInterior, disposeInterior, EXIT_REACH, indoorReply, nearestEntrance, type InteriorPerson, type InteriorScene } from '../world/interior.ts'
 import { toLatLon } from '../world/geo.ts'
 import { planLamps, StreetLamps } from '../world/streetlamps.ts'
 import { buildStoreSigns, disposeStoreSigns, type Business } from '../world/storefronts.ts'
 
 const WALK_HINT = 'WASD walk · Shift run · right-drag look · Space hop · E talk · V mic · F drive or ride · H helicopter · M map'
+const INDOOR_HINT = 'WASD walk · E talk · E by the door to leave'
+
+function doorLine(name: string): string {
+  const label = name.trim()
+  if (!label) return 'E to go inside'
+  const short = label.length > 36 ? `${label.slice(0, 35)}…` : label
+  return `E to enter ${short}`
+}
 const DRIVE_HINT = 'WASD drive · A/D steer · Shift faster · F park · M map'
 const RIDE_HINT = 'Riding the bus · F to hop off · M map'
 const FLY_HINT = 'WASD fly · A/D turn · Space up · C down · Shift faster · H land · M map'
@@ -112,6 +121,8 @@ export class Game {
   private dayHour = START_HOUR
   private stepX = 0
   private stepZ = 0
+  private readonly streetPos = new THREE.Vector3()
+  private visit: (InteriorScene & { backX: number; backZ: number; backYaw: number }) | null = null
   private readonly rng: () => number
   private sim: PersonSim[]
   private citizens: NetPerson[] = []
@@ -178,7 +189,7 @@ export class Game {
     if (this.paused) return
     if (event.code === 'KeyE') {
       event.preventDefault()
-      this.hud.focusTalk()
+      this.pressEnter()
     } else if (event.code === 'KeyV') {
       this.toggleMic()
     } else if (event.code === 'KeyH') {
@@ -380,6 +391,7 @@ export class Game {
 
   dispose(): void {
     this.running = false
+    this.leaveBuilding()
     this.renderer.setAnimationLoop(null)
     this.timer.disconnect()
     this.mic?.stop()
@@ -422,10 +434,16 @@ export class Game {
     this.syncVehicles()
     this.syncPeople()
     this.syncBlockers()
-    this.walker.blockers = this.withoutRemotes()
+    this.walker.blockers = this.visit ? this.visit.plan.blockers : this.withoutRemotes()
     this.walker.ignoreBlocker = this.drivenId ? `car:${this.drivenId}` : null
     this.walker.update(dt)
-    const pos = this.walker.mesh.position
+    if (this.visit) {
+      for (const fig of this.visit.figures) fig.update(dt, 0)
+    }
+    const live = this.walker.mesh.position
+    const pos = this.streetPos
+    if (this.visit) pos.set(this.visit.backX, 0, this.visit.backZ)
+    else pos.copy(live)
     this.time += dt
     this.copyDrivenCar(pos.x, pos.z)
     this.applyRemoteCars()
@@ -451,7 +469,7 @@ export class Game {
     this.foliage.update(this.time)
     if (!this.walker.flying && this.helicopter.incoming) this.helicopter.aim(pos.x, pos.z)
     this.helicopter.update(dt, this.time, this.walker.flying ? this.walker.flight : null)
-    if (!this.walker.flying && this.helicopter.arrived) {
+    if (!this.visit && !this.walker.flying && this.helicopter.arrived) {
       const pose = this.helicopter.pose
       this.walker.beginFly(pose.x, pose.y, pose.z, pose.yaw)
       this.helicopter.board()
@@ -482,7 +500,7 @@ export class Game {
       dt,
       this.withFoot(this.blockers),
     )
-    if (!this.walker.flying && !this.walker.riding) this.walker.shoveOut(this.vehicleDiscs)
+    if (!this.visit && !this.walker.flying && !this.walker.riding) this.walker.shoveOut(this.vehicleDiscs)
     this.copyDrivenCar(pos.x, pos.z)
     const hits = bumpCars(this.cars, this.layout, this.trafficFile.restitution)
     this.keepDrivenBump()
@@ -493,14 +511,14 @@ export class Game {
     this.busView.sync(this.buses, dt, { x: pos.x, z: pos.z, reach: BUS_DRAW * this.settings.distance })
     this.dayHour = advanceHour(this.dayHour, dt)
     this.applySky()
-    const moved = dt > 0 ? Math.hypot(pos.x - this.stepX, pos.z - this.stepZ) / dt : 0
-    this.stepX = pos.x
-    this.stepZ = pos.z
-    this.ambience.crunch(hits, pos.x, pos.z, this.walker.facing, this.trafficFile.crunch)
+    const moved = dt > 0 ? Math.hypot(live.x - this.stepX, live.z - this.stepZ) / dt : 0
+    this.stepX = live.x
+    this.stepZ = live.z
+    this.ambience.crunch(hits, live.x, live.z, this.walker.facing, this.trafficFile.crunch)
     this.ambience.update(dt, {
       hour: this.dayHour,
-      x: pos.x,
-      z: pos.z,
+      x: live.x,
+      z: live.z,
       yaw: this.walker.facing,
       speed: Math.min(12, moved),
       driving: this.walker.driving,
@@ -514,7 +532,8 @@ export class Game {
       cars: this.cars,
       buses: this.buses,
     })
-    this.hud.setPlace(`${formatHour(this.dayHour)} · ${describePlace(this.layout, pos.x, pos.z)}`)
+    const where = this.visit ? this.visit.plan.title : describePlace(this.layout, pos.x, pos.z)
+    this.hud.setPlace(`${formatHour(this.dayHour)} · ${where}`)
     this.hud.setNearby(this.nearbyText())
     this.delivery.update(dt, {
       x: pos.x,
@@ -546,7 +565,7 @@ export class Game {
     showNearbyTiles(this.foliage.root, camX, camZ, reach)
     showNearbyTiles(this.lamps.root, camX, camZ, reach)
     this.aimWait -= dt
-    if (this.aimWait <= 0) {
+    if (this.aimWait <= 0 && !this.visit) {
       this.aimWait = 0.4
       this.camera.getWorldDirection(this.aimDir)
       const flat = Math.hypot(this.aimDir.x, this.aimDir.z) || 1
@@ -786,7 +805,7 @@ export class Game {
 
   private placeFoot(): boolean {
     if (this.walker.flying || this.walker.riding || this.walker.driving) return false
-    const pos = this.walker.mesh.position
+    const pos = this.visit ? this.streetPos : this.walker.mesh.position
     this.footDisc.x = pos.x
     this.footDisc.z = pos.z
     this.footDisc.r = PERSON_RADIUS
@@ -823,6 +842,10 @@ export class Game {
     const clean = text.trim().slice(0, 240)
     if (!clean) return
     this.hud.setDraft('')
+    if (this.visit) {
+      this.answerInside(clean)
+      return
+    }
     if (!this.client.connected) {
       const waiting = this.nearest()
       if (waiting && waiting.dist <= this.peopleFile.talkRange) this.hold(waiting.id)
@@ -936,7 +959,7 @@ export class Game {
   }
 
   private toggleHeli(): void {
-    if (this.walker.driving || this.walker.riding) return
+    if (this.visit || this.walker.driving || this.walker.riding) return
     if (this.walker.flying) {
       this.walker.endFly()
       this.helicopter.release()
@@ -948,7 +971,7 @@ export class Game {
   }
 
   private toggleVehicle(): void {
-    if (this.walker.flying) return
+    if (this.visit || this.walker.flying) return
     if (this.walker.driving) {
       this.parkCar()
       return
@@ -1026,7 +1049,116 @@ export class Game {
     return 'Approach a car. F to drive it.'
   }
 
+  private pressEnter(): void {
+    if (this.visit) {
+      if (this.atInsideDoor()) {
+        this.leaveBuilding()
+        return
+      }
+      this.hud.focusTalk()
+      return
+    }
+    if (this.walker.driving || this.walker.riding || this.walker.flying) {
+      this.hud.focusTalk()
+      return
+    }
+    const pos = this.walker.mesh.position
+    const door = nearestEntrance(this.layout, pos.x, pos.z)
+    const near = this.nearest()
+    const talking = near !== null && near.dist <= this.peopleFile.talkRange && (!door || near.dist <= door.dist)
+    if (talking || !door || !this.tryEnter()) this.hud.focusTalk()
+  }
+
+  private tryEnter(): boolean {
+    if (this.visit || this.walker.driving || this.walker.riding || this.walker.flying) return false
+    const pos = this.walker.mesh.position
+    const door = nearestEntrance(this.layout, pos.x, pos.z)
+    if (!door) return false
+    const building = this.layout.buildings[door.index]
+    if (!building) return false
+    const made = createInterior(door.index, building, businessesJson as Business[])
+    this.scene.add(made.group)
+    this.visit = { ...made, backX: pos.x, backZ: pos.z, backYaw: this.walker.facing }
+    this.walker.setRoom(made.plan)
+    this.walker.teleport(made.plan.enterX, made.plan.enterZ)
+    this.walker.face(Math.PI)
+    this.stepX = made.plan.enterX
+    this.stepZ = made.plan.enterZ
+    this.hud.setStatus(INDOOR_HINT)
+    return true
+  }
+
+  private leaveBuilding(): void {
+    const visit = this.visit
+    if (!visit) return
+    this.visit = null
+    this.walker.setRoom(null)
+    this.walker.teleport(visit.backX, visit.backZ)
+    this.walker.face(visit.backYaw)
+    this.stepX = visit.backX
+    this.stepZ = visit.backZ
+    disposeInterior(visit)
+    this.hud.setStatus(WALK_HINT)
+  }
+
+  private atInsideDoor(): boolean {
+    const visit = this.visit
+    if (!visit) return false
+    const pos = this.walker.mesh.position
+    return Math.hypot(pos.x - visit.plan.doorX, pos.z - visit.plan.doorZ) <= EXIT_REACH
+  }
+
+  private nearestInside(): { person: InteriorPerson; index: number; dist: number } | null {
+    const visit = this.visit
+    if (!visit) return null
+    const pos = this.walker.mesh.position
+    let best: { person: InteriorPerson; index: number; dist: number } | null = null
+    visit.plan.people.forEach((person, index) => {
+      const dist = Math.hypot(person.x - pos.x, person.z - pos.z)
+      if (!best || dist < best.dist) best = { person, index, dist }
+    })
+    return best
+  }
+
+  private answerInside(text: string): void {
+    const visit = this.visit
+    if (!visit) return
+    this.hud.pushLine('You', text)
+    this.hud.setSubtitle('You', text)
+    this.wordnet.hear(text)
+    const near = this.nearestInside()
+    if (!near || near.dist > this.peopleFile.talkRange) {
+      this.hud.pushLine(visit.plan.title, 'Step closer if you want an answer.')
+      return
+    }
+    const reply = indoorReply(near.person, text, visit.plan.title)
+    this.hud.pushLine(near.person.name, reply)
+    this.hud.setSubtitle(near.person.name, reply)
+    this.wordnet.hear(reply)
+    visit.figures[near.index]?.setBubble(reply)
+    if (!this.hear) return
+    const token = this.startTalk()
+    speak(reply, near.person.voice, () => this.stopTalk(token))
+  }
+
+  private insideText(): string | null {
+    if (!this.visit) return null
+    if (this.atInsideDoor()) {
+      this.hud.setPlaceholder('Step outside')
+      return 'E to step outside'
+    }
+    const near = this.nearestInside()
+    if (near && near.dist <= this.peopleFile.talkRange) {
+      this.hud.setPlaceholder(`Talk to ${near.person.name}`)
+      return `${near.person.name} is close · E to talk`
+    }
+    this.hud.setPlaceholder(this.visit.plan.title)
+    return this.visit.plan.title
+  }
+
   private nearbyText(): string {
+    const inside = this.insideText()
+    if (inside) return inside
     if (this.walker.flying) {
       this.hud.setPlaceholder('Flying')
       return 'Above the streets · H to land'
@@ -1046,18 +1178,26 @@ export class Game {
     const lead = this.leadText()
     if (lead && !this.walker.driving && !this.walker.riding && !this.walker.flying) return lead
     const pos = this.walker.mesh.position
+    const door = nearestEntrance(this.layout, pos.x, pos.z)
+    const nearPerson = this.nearest()
+    const personWins = nearPerson !== null && nearPerson.dist <= this.peopleFile.talkRange && (!door || nearPerson.dist <= door.dist)
+    const enter = door && !personWins ? doorLine(door.name) : null
     const car = this.nearestStoppedCar(pos.x, pos.z)
     const bus = this.nearestStoppedBus(pos.x, pos.z)
     if (car && (!bus || car.dist <= bus.dist)) {
       this.hud.setPlaceholder('Drive')
-      return 'F to drive'
+      return enter ? `${enter} · F to drive` : 'F to drive'
     }
     if (bus) {
       this.hud.setPlaceholder('Ride the bus')
-      return 'F to ride the bus'
+      return enter ? `${enter} · F to ride` : 'F to ride the bus'
     }
     const waiting = this.nearestApproach(pos.x, pos.z)
     if (waiting) return waiting
+    if (enter) {
+      this.hud.setPlaceholder('Go inside')
+      return enter
+    }
     const near = this.nearest()
     if (!near) {
       this.hud.setPlaceholder('Talk to the block')
@@ -1202,6 +1342,7 @@ export class Game {
   }
 
   private moveTo(x: number, z: number): void {
+    this.leaveBuilding()
     this.walker.teleport(x, z)
     const pos = this.walker.mesh.position
     this.client.sendMove(pos.x, pos.z, this.walker.facing, this.drivenRide())
