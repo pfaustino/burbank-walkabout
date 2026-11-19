@@ -20,6 +20,7 @@ import type { DeliveryFile } from '../delivery/orders.ts'
 import { mountDevPanel, shortcutPlaces } from '../dev/DevPanel.ts'
 import { CityClient, clientUrl } from '../net/Client.ts'
 import type { NetCarRide, NetPerson, NetPlayer, SpeechMsg } from '../net/protocol.ts'
+import { loadLastLocation, saveLastLocation } from '../player/lastLocation.ts'
 import { Walker } from '../player/Walker.ts'
 import { BusSet } from '../traffic/BusSet.ts'
 import { CarSet } from '../traffic/CarSet.ts'
@@ -92,6 +93,10 @@ export class Game {
   private readonly signs: THREE.Group
   private drivenId: string | null = null
   private gatherLeft = 2
+  private saveLeft = 1
+  private savedX = 0
+  private savedZ = 0
+  private savedYaw = 0
   private riddenId: string | null = null
   private readonly crowd: CrowdWorld
   private readonly crowdView: CrowdSet
@@ -201,6 +206,22 @@ export class Game {
     }
   }
 
+  private readonly saveLocation = (): void => {
+    const pos = this.visit ? { x: this.visit.backX, z: this.visit.backZ } : this.walker.mesh.position
+    const yaw = this.visit ? this.visit.backYaw : this.walker.facing
+    if (
+      Math.abs(pos.x - this.savedX) < 0.05 &&
+      Math.abs(pos.z - this.savedZ) < 0.05 &&
+      Math.abs(yaw - this.savedYaw) < 0.02
+    ) {
+      return
+    }
+    this.savedX = pos.x
+    this.savedZ = pos.z
+    this.savedYaw = yaw
+    saveLastLocation(pos.x, pos.z, yaw)
+  }
+
   private setMap(open: boolean): void {
     if (open === this.mapOpen) return
     this.mapOpen = open
@@ -287,7 +308,12 @@ export class Game {
     this.minimap = new Minimap(this.layout)
     this.cityMap = new CityMap(() => this.setMap(false))
 
-    this.walker = new Walker(this.layout, this.camera, this.layout.file.spawn, playerName)
+    const start = loadLastLocation(this.layout)
+    this.walker = new Walker(this.layout, this.camera, start, playerName)
+    if (start.yaw !== undefined) this.walker.face(start.yaw)
+    this.savedX = start.x
+    this.savedZ = start.z
+    this.savedYaw = this.walker.facing
     this.walker.setPosts([
       ...this.foliage.trunks,
       ...planLamps(this.layout).map((post) => ({ x: post.x, z: post.z, r: 0.16 })),
@@ -373,6 +399,8 @@ export class Game {
     window.addEventListener('resize', this.onResize)
     window.addEventListener('keydown', this.onKey)
     window.addEventListener('pointerdown', this.onUnlock)
+    window.addEventListener('pagehide', this.saveLocation)
+    window.addEventListener('beforeunload', this.saveLocation)
     this.canvas.addEventListener('mousedown', this.onPointer)
     this.canvas.addEventListener('contextmenu', this.onContext)
     this.timer.connect(document)
@@ -391,6 +419,7 @@ export class Game {
 
   dispose(): void {
     this.running = false
+    this.saveLocation()
     this.leaveBuilding()
     this.renderer.setAnimationLoop(null)
     this.timer.disconnect()
@@ -398,6 +427,8 @@ export class Game {
     window.removeEventListener('resize', this.onResize)
     window.removeEventListener('keydown', this.onKey)
     window.removeEventListener('pointerdown', this.onUnlock)
+    window.removeEventListener('pagehide', this.saveLocation)
+    window.removeEventListener('beforeunload', this.saveLocation)
     this.canvas.removeEventListener('mousedown', this.onPointer)
     this.canvas.removeEventListener('contextmenu', this.onContext)
     this.client.dispose()
@@ -445,6 +476,11 @@ export class Game {
     if (this.visit) pos.set(this.visit.backX, 0, this.visit.backZ)
     else pos.copy(live)
     this.time += dt
+    this.saveLeft -= dt
+    if (this.saveLeft <= 0) {
+      this.saveLeft = 1
+      this.saveLocation()
+    }
     this.copyDrivenCar(pos.x, pos.z)
     this.applyRemoteCars()
     this.releaseCrowd(pos.x, pos.z)
