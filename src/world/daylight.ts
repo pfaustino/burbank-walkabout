@@ -1,5 +1,5 @@
-/** One real-world day, compressed so a walk can reach dusk. */
-export const DAY_SECONDS = 12 * 60
+/** One real-world day, compressed (2 real hours = 24 in-game hours; 1 in-game minute = 5s). */
+export const DAY_SECONDS = 120 * 60
 export const START_HOUR = 9.5
 
 export type SkySample = {
