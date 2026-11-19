@@ -476,11 +476,23 @@ function facadeTexture(floors: number): THREE.CanvasTexture {
     ctx.fillRect(0, 0, canvas.width, canvas.height)
     for (let floor = 0; floor < floors; floor++) {
       const y = floor * row
-      ctx.fillStyle = '#5d6c78'
-      ctx.fillRect(10, y + 16, 18, 28)
-      ctx.fillRect(36, y + 16, 18, 28)
       ctx.fillStyle = '#ddd8d0'
       ctx.fillRect(0, y + row - 4, canvas.width, 4)
+      ctx.fillStyle = '#5d6c78'
+      ctx.fillRect(10, y + 16, 18, 28)
+      if (floor === floors - 1) {
+        // Ground-floor entrance door reaching the sidewalk
+        ctx.fillStyle = '#38322e'
+        ctx.fillRect(35, y + 18, 20, row - 18)
+        ctx.fillStyle = '#544234'
+        ctx.fillRect(37, y + 20, 16, row - 20)
+        ctx.fillStyle = '#5d6c78'
+        ctx.fillRect(40, y + 24, 10, 14)
+        ctx.fillStyle = '#d8c088'
+        ctx.fillRect(50, y + 43, 2, 4)
+      } else {
+        ctx.fillRect(36, y + 16, 18, 28)
+      }
     }
   }
   const texture = new THREE.CanvasTexture(canvas)
