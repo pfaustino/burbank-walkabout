@@ -91,6 +91,7 @@ export function buildCityMesh(layout: CityLayout): THREE.Group {
   const tiles = new Map<string, THREE.Group>()
   const grass = new THREE.MeshStandardMaterial({ color: 0x7f9a62, roughness: 1 })
   const roofMat = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.92 })
+  const doorMat = new THREE.MeshStandardMaterial({ map: doorTexture(), roughness: 0.72 })
   const wallMats = new Map<number, THREE.MeshStandardMaterial>()
 
   const buildKey = (key: string): void => {
@@ -115,6 +116,7 @@ export function buildCityMesh(layout: CityLayout): THREE.Group {
       tile.add(mesh)
     }
     const roofs: THREE.BufferGeometry[] = []
+    const doors: THREE.BufferGeometry[] = []
     const walls = new Map<number, THREE.BufferGeometry[]>()
     for (const building of bucket.buildings) {
       const shape = shapeFromRing(building.ring)
@@ -138,8 +140,11 @@ export function buildCityMesh(layout: CityLayout): THREE.Group {
         list.push(paint(wall, color))
         walls.set(floors, list)
       }
+      const door = buildingDoorGeometry(building)
+      if (door) doors.push(door)
     }
     if (roofs.length > 0) addMerged(tile, roofs, roofMat)
+    if (doors.length > 0) addMerged(tile, doors, doorMat)
     for (const [floors, parts] of walls) {
       let material = wallMats.get(floors)
       if (!material) {
@@ -476,23 +481,11 @@ function facadeTexture(floors: number): THREE.CanvasTexture {
     ctx.fillRect(0, 0, canvas.width, canvas.height)
     for (let floor = 0; floor < floors; floor++) {
       const y = floor * row
-      ctx.fillStyle = '#ddd8d0'
-      ctx.fillRect(0, y + row - 4, canvas.width, 4)
       ctx.fillStyle = '#5d6c78'
       ctx.fillRect(10, y + 16, 18, 28)
-      if (floor === floors - 1) {
-        // Ground-floor entrance door reaching the sidewalk
-        ctx.fillStyle = '#38322e'
-        ctx.fillRect(35, y + 18, 20, row - 18)
-        ctx.fillStyle = '#544234'
-        ctx.fillRect(37, y + 20, 16, row - 20)
-        ctx.fillStyle = '#5d6c78'
-        ctx.fillRect(40, y + 24, 10, 14)
-        ctx.fillStyle = '#d8c088'
-        ctx.fillRect(50, y + 43, 2, 4)
-      } else {
-        ctx.fillRect(36, y + 16, 18, 28)
-      }
+      ctx.fillRect(36, y + 16, 18, 28)
+      ctx.fillStyle = '#ddd8d0'
+      ctx.fillRect(0, y + row - 4, canvas.width, 4)
     }
   }
   const texture = new THREE.CanvasTexture(canvas)
@@ -502,6 +495,89 @@ function facadeTexture(floors: number): THREE.CanvasTexture {
   texture.needsUpdate = true
   facadeCache.set(floors, texture)
   return texture
+}
+
+function doorTexture(): THREE.CanvasTexture {
+  const canvas = document.createElement('canvas')
+  canvas.width = 64
+  canvas.height = 128
+  const ctx = canvas.getContext('2d')
+  if (ctx) {
+    ctx.fillStyle = '#38322e'
+    ctx.fillRect(0, 0, 64, 128)
+    ctx.fillStyle = '#544234'
+    ctx.fillRect(6, 6, 52, 122)
+    ctx.fillStyle = '#5d6c78'
+    ctx.fillRect(14, 16, 36, 40)
+    ctx.fillStyle = '#d8c088'
+    ctx.fillRect(46, 68, 5, 10)
+  }
+  const texture = new THREE.CanvasTexture(canvas)
+  texture.colorSpace = THREE.SRGBColorSpace
+  texture.needsUpdate = true
+  return texture
+}
+
+function buildingDoorGeometry(building: MapBuilding): THREE.BufferGeometry | null {
+  const ring = building.ring
+  if (ring.length < 6) return null
+  let best: { x: number; z: number; nx: number; nz: number; score: number } | null = null
+  for (let i = 0; i < ring.length; i += 2) {
+    const j = (i + 2) % ring.length
+    const ax = ring[i] ?? 0
+    const az = ring[i + 1] ?? 0
+    const bx = ring[j] ?? 0
+    const bz = ring[j + 1] ?? 0
+    const dx = bx - ax
+    const dz = bz - az
+    const len = Math.hypot(dx, dz)
+    if (len < 1.4) continue
+    const tx = dx / len
+    const tz = dz / len
+    let px: number
+    let pz: number
+    let score: number
+    if (building.door) {
+      const margin = Math.min(0.75, len * 0.25)
+      const proj = Math.max(margin, Math.min(len - margin, (building.door[0] - ax) * tx + (building.door[1] - az) * tz))
+      px = ax + tx * proj
+      pz = az + tz * proj
+      score = -Math.hypot(px - building.door[0], pz - building.door[1])
+    } else {
+      px = (ax + bx) / 2
+      pz = (az + bz) / 2
+      score = len
+    }
+    if (!best || score > best.score) {
+      let nx = tz
+      let nz = -tx
+      if (pointInRing(px + nx * 0.5, pz + nz * 0.5, ring)) {
+        nx = -nx
+        nz = -nz
+      }
+      best = { x: px, z: pz, nx, nz, score }
+    }
+  }
+  if (!best) return null
+  const doorH = Math.min(2.35, Math.max(1.6, building.h * 0.8))
+  const geo = new THREE.PlaneGeometry(1.15, doorH)
+  geo.rotateY(Math.atan2(best.nx, best.nz))
+  geo.translate(best.x + best.nx * 0.03, doorH / 2, best.z + best.nz * 0.03)
+  return geo
+}
+
+function pointInRing(x: number, z: number, ring: readonly number[]): boolean {
+  let inside = false
+  for (let i = 0, j = ring.length - 2; i < ring.length; j = i, i += 2) {
+    const xi = ring[i] ?? 0
+    const zi = ring[i + 1] ?? 0
+    const xj = ring[j] ?? 0
+    const zj = ring[j + 1] ?? 0
+    if ((zi > z) !== (zj > z) && x < ((xj - xi) * (z - zi)) / (zj - zi || 1e-9) + xi) {
+      inside = !inside
+    }
+  }
+  return inside
 }
 
 const facadeCache = new Map<number, THREE.CanvasTexture>()
