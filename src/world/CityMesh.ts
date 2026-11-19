@@ -93,6 +93,7 @@ export function buildCityMesh(layout: CityLayout): THREE.Group {
   const roofMat = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.92 })
   const doorMat = new THREE.MeshStandardMaterial({ map: doorTexture(), roughness: 0.72 })
   const wallMats = new Map<number, THREE.MeshStandardMaterial>()
+  const roadSegs = roadSegments(layout)
 
   const buildKey = (key: string): void => {
     const bucket = buckets.get(key)
@@ -140,7 +141,7 @@ export function buildCityMesh(layout: CityLayout): THREE.Group {
         list.push(paint(wall, color))
         walls.set(floors, list)
       }
-      const door = buildingDoorGeometry(building)
+      const door = buildingDoorGeometry(building, roadSegs)
       if (door) doors.push(door)
     }
     if (roofs.length > 0) addMerged(tile, roofs, roofMat)
@@ -518,10 +519,83 @@ function doorTexture(): THREE.CanvasTexture {
   return texture
 }
 
-function buildingDoorGeometry(building: MapBuilding): THREE.BufferGeometry | null {
+interface RoadSeg {
+  ax: number
+  az: number
+  bx: number
+  bz: number
+  tx: number
+  tz: number
+  half: number
+  minX: number
+  maxX: number
+  minZ: number
+  maxZ: number
+}
+
+function roadSegments(layout: CityLayout): RoadSeg[] {
+  const segs: RoadSeg[] = []
+  for (const road of layout.file.roads) {
+    const half = road.w * 0.5
+    for (let i = 0; i < road.pts.length - 2; i += 2) {
+      const ax = road.pts[i] ?? 0
+      const az = road.pts[i + 1] ?? 0
+      const bx = road.pts[i + 2] ?? 0
+      const bz = road.pts[i + 3] ?? 0
+      const dx = bx - ax
+      const dz = bz - az
+      const length = Math.hypot(dx, dz)
+      if (length < 3) continue
+      segs.push({
+        ax,
+        az,
+        bx,
+        bz,
+        tx: dx / length,
+        tz: dz / length,
+        half,
+        minX: Math.min(ax, bx),
+        maxX: Math.max(ax, bx),
+        minZ: Math.min(az, bz),
+        maxZ: Math.max(az, bz),
+      })
+    }
+  }
+  return segs
+}
+
+function facesRoad(
+  mx: number,
+  mz: number,
+  tx: number,
+  tz: number,
+  nx: number,
+  nz: number,
+  segs: readonly RoadSeg[],
+): boolean {
+  const reach = 24
+  for (const seg of segs) {
+    const pad = seg.half + reach
+    if (mx < seg.minX - pad || mx > seg.maxX + pad || mz < seg.minZ - pad || mz > seg.maxZ + pad) continue
+    const dx = seg.bx - seg.ax
+    const dz = seg.bz - seg.az
+    const len2 = dx * dx + dz * dz || 1
+    const t = Math.max(0, Math.min(1, ((mx - seg.ax) * dx + (mz - seg.az) * dz) / len2))
+    const ox = seg.ax + dx * t - mx
+    const oz = seg.az + dz * t - mz
+    const dist = Math.hypot(ox, oz)
+    if (dist < 1.5 || dist > pad) continue
+    if ((ox * nx + oz * nz) / dist < 0.75) continue
+    if (Math.abs(seg.tx * tx + seg.tz * tz) < 0.7) continue
+    return true
+  }
+  return false
+}
+
+function buildingDoorGeometry(building: MapBuilding, segs: readonly RoadSeg[]): THREE.BufferGeometry | null {
   const ring = building.ring
   if (ring.length < 6) return null
-  let best: { x: number; z: number; nx: number; nz: number; score: number } | null = null
+  let best: { x: number; z: number; nx: number; nz: number; street: boolean; score: number } | null = null
   for (let i = 0; i < ring.length; i += 2) {
     const j = (i + 2) % ring.length
     const ax = ring[i] ?? 0
@@ -548,15 +622,18 @@ function buildingDoorGeometry(building: MapBuilding): THREE.BufferGeometry | nul
       pz = (az + bz) / 2
       score = len
     }
-    if (!best || score > best.score) {
-      let nx = tz
-      let nz = -tx
-      if (pointInRing(px + nx * 0.5, pz + nz * 0.5, ring)) {
-        nx = -nx
-        nz = -nz
-      }
-      best = { x: px, z: pz, nx, nz, score }
+    let nx = tz
+    let nz = -tx
+    if (pointInRing(px + nx * 0.5, pz + nz * 0.5, ring)) {
+      nx = -nx
+      nz = -nz
     }
+    const street = building.door ? true : facesRoad(px, pz, tx, tz, nx, nz, segs)
+    const better =
+      !best ||
+      (street && !best.street) ||
+      (street === best.street && score > best.score)
+    if (better) best = { x: px, z: pz, nx, nz, street, score }
   }
   if (!best) return null
   const doorH = Math.min(2.35, Math.max(1.6, building.h * 0.8))
