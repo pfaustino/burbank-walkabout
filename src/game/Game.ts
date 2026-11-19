@@ -227,8 +227,15 @@ export class Game {
     this.mapOpen = open
     this.walker.paused = open || this.paused
     if (open) {
-      const pos = this.walker.mesh.position
-      this.cityMap.show(pos.x, pos.z)
+      const pos = this.visit ? { x: this.visit.backX, z: this.visit.backZ } : this.walker.mesh.position
+      const job = this.delivery.marker
+      const errand = this.guides.values().next().value
+      const dest = job
+        ? { x: job.x, z: job.z, mode: 'driving' as const }
+        : errand
+          ? { x: errand.goalX, z: errand.goalZ, mode: 'walking' as const }
+          : null
+      this.cityMap.show(pos.x, pos.z, dest)
     } else {
       this.cityMap.hide()
     }

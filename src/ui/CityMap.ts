@@ -2,7 +2,13 @@ import { toLatLon } from '../world/geo.ts'
 
 const KEY = import.meta.env.VITE_GOOGLE_MAPS_EMBED_KEY ?? ''
 
-/** Google's map, centered on the player, with a Map / Satellite switch. */
+export interface MapDestination {
+  x: number
+  z: number
+  mode?: 'driving' | 'walking'
+}
+
+/** Google's map, centered on the player (with destination trail when active), with a Map / Satellite switch. */
 export class CityMap {
   private readonly root = must('#street-map')
   private readonly frame = must<HTMLIFrameElement>('#street-map-frame')
@@ -12,6 +18,7 @@ export class CityMap {
   private readonly onClose: () => void
   private lat = 0
   private lng = 0
+  private dest: { lat: number; lng: number; mode: 'driving' | 'walking' } | null = null
   private kind: 'roadmap' | 'satellite' = 'roadmap'
 
   constructor(onClose: () => void) {
@@ -21,10 +28,16 @@ export class CityMap {
     this.close.addEventListener('click', this.onClose)
   }
 
-  show(x: number, z: number): void {
+  show(x: number, z: number, destination?: MapDestination | null): void {
     const spot = toLatLon(x, z)
     this.lat = spot.lat
     this.lng = spot.lng
+    if (destination) {
+      const end = toLatLon(destination.x, destination.z)
+      this.dest = { lat: end.lat, lng: end.lng, mode: destination.mode ?? 'driving' }
+    } else {
+      this.dest = null
+    }
     this.root.hidden = false
     this.paint()
   }
@@ -58,13 +71,22 @@ export class CityMap {
     this.road.setAttribute('aria-pressed', this.kind === 'roadmap' ? 'true' : 'false')
     this.sat.setAttribute('aria-pressed', this.kind === 'satellite' ? 'true' : 'false')
     if (!KEY) return
-    const query = new URLSearchParams({
-      key: KEY,
-      center: `${this.lat.toFixed(5)},${this.lng.toFixed(5)}`,
-      zoom: '17',
-      maptype: this.kind,
-    })
-    const src = `https://www.google.com/maps/embed/v1/view?${query}`
+    const here = `${this.lat.toFixed(5)},${this.lng.toFixed(5)}`
+    const src = this.dest
+      ? `https://www.google.com/maps/embed/v1/directions?${new URLSearchParams({
+          key: KEY,
+          origin: here,
+          destination: `${this.dest.lat.toFixed(5)},${this.dest.lng.toFixed(5)}`,
+          mode: this.dest.mode,
+          maptype: this.kind,
+        })}`
+      : `https://www.google.com/maps/embed/v1/place?${new URLSearchParams({
+          key: KEY,
+          q: here,
+          center: here,
+          zoom: '17',
+          maptype: this.kind,
+        })}`
     if (this.frame.src !== src) this.frame.src = src
   }
 }
