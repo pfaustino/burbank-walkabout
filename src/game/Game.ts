@@ -52,14 +52,14 @@ import { toLatLon } from '../world/geo.ts'
 import { planLamps, StreetLamps } from '../world/streetlamps.ts'
 import { buildStoreSigns, disposeStoreSigns, type Business } from '../world/storefronts.ts'
 
-const WALK_HINT = 'WASD walk · Shift run · right-drag look · Space hop · E talk · V mic · F drive or ride · H helicopter · M map'
-const INDOOR_HINT = 'WASD walk · E talk · E by the door to leave'
+const WALK_HINT = 'WASD walk · Shift run · right-drag look · Space hop · E talk · V mic · F enter, drive, or ride · H helicopter · M map'
+const INDOOR_HINT = 'WASD walk · E talk · F by the door to leave'
 
 function doorLine(name: string): string {
   const label = name.trim()
-  if (!label) return 'E to go inside'
+  if (!label) return 'F to go inside'
   const short = label.length > 36 ? `${label.slice(0, 35)}…` : label
-  return `E to enter ${short}`
+  return `F to enter ${short}`
 }
 const DRIVE_HINT = 'WASD drive · A/D steer · Shift faster · F park · M map'
 const RIDE_HINT = 'Riding the bus · F to hop off · M map'
@@ -189,7 +189,7 @@ export class Game {
     if (this.paused) return
     if (event.code === 'KeyE') {
       event.preventDefault()
-      this.pressEnter()
+      this.hud.focusTalk()
     } else if (event.code === 'KeyV') {
       this.toggleMic()
     } else if (event.code === 'KeyH') {
@@ -197,7 +197,7 @@ export class Game {
       this.toggleHeli()
     } else if (event.code === 'KeyF') {
       event.preventDefault()
-      this.toggleVehicle()
+      this.interact()
     }
   }
 
@@ -972,8 +972,12 @@ export class Game {
     this.helicopter.aim(pos.x, pos.z)
   }
 
-  private toggleVehicle(): void {
-    if (this.visit || this.walker.flying) return
+  private interact(): void {
+    if (this.walker.flying) return
+    if (this.visit) {
+      if (this.atInsideDoor()) this.leaveBuilding()
+      return
+    }
     if (this.walker.driving) {
       this.parkCar()
       return
@@ -985,6 +989,9 @@ export class Game {
     const pos = this.walker.mesh.position
     const car = this.nearestStoppedCar(pos.x, pos.z)
     const bus = this.nearestStoppedBus(pos.x, pos.z)
+    const vehicleDist = Math.min(car?.dist ?? Infinity, bus?.dist ?? Infinity)
+    const door = nearestEntrance(this.layout, pos.x, pos.z)
+    if (door && door.dist <= vehicleDist && this.tryEnter()) return
     if (car && (!bus || car.dist <= bus.dist)) {
       car.car.driver = 'you'
       car.car.speed = 0
@@ -1049,26 +1056,6 @@ export class Game {
     if (this.walker.driving && this.drivenId) return 'follow the arrows and mini-map'
     if (this.walker.riding || this.walker.flying) return null
     return 'Approach a car. F to drive it.'
-  }
-
-  private pressEnter(): void {
-    if (this.visit) {
-      if (this.atInsideDoor()) {
-        this.leaveBuilding()
-        return
-      }
-      this.hud.focusTalk()
-      return
-    }
-    if (this.walker.driving || this.walker.riding || this.walker.flying) {
-      this.hud.focusTalk()
-      return
-    }
-    const pos = this.walker.mesh.position
-    const door = nearestEntrance(this.layout, pos.x, pos.z)
-    const near = this.nearest()
-    const talking = near !== null && near.dist <= this.peopleFile.talkRange && (!door || near.dist <= door.dist)
-    if (talking || !door || !this.tryEnter()) this.hud.focusTalk()
   }
 
   private tryEnter(): boolean {
@@ -1166,7 +1153,7 @@ export class Game {
     if (!this.visit) return null
     if (this.atInsideDoor()) {
       this.hud.setPlaceholder('Step outside')
-      return 'E to step outside'
+      return 'F to step outside'
     }
     const near = this.nearestInside()
     if (near && near.dist <= this.peopleFile.talkRange) {
@@ -1200,25 +1187,24 @@ export class Game {
     if (lead && !this.walker.driving && !this.walker.riding && !this.walker.flying) return lead
     const pos = this.walker.mesh.position
     const door = nearestEntrance(this.layout, pos.x, pos.z)
-    const nearPerson = this.nearest()
-    const personWins = nearPerson !== null && nearPerson.dist <= this.peopleFile.talkRange && (!door || nearPerson.dist <= door.dist)
-    const enter = door && !personWins ? doorLine(door.name) : null
+    const enter = door ? doorLine(door.name) : null
     const car = this.nearestStoppedCar(pos.x, pos.z)
     const bus = this.nearestStoppedBus(pos.x, pos.z)
-    if (car && (!bus || car.dist <= bus.dist)) {
-      this.hud.setPlaceholder('Drive')
-      return enter ? `${enter} · F to drive` : 'F to drive'
-    }
-    if (bus) {
-      this.hud.setPlaceholder('Ride the bus')
-      return enter ? `${enter} · F to ride` : 'F to ride the bus'
-    }
-    const waiting = this.nearestApproach(pos.x, pos.z)
-    if (waiting) return waiting
-    if (enter) {
+    const vehicleDist = Math.min(car?.dist ?? Infinity, bus?.dist ?? Infinity)
+    if (enter && door && door.dist <= vehicleDist) {
       this.hud.setPlaceholder('Go inside')
       return enter
     }
+    if (car && (!bus || car.dist <= bus.dist)) {
+      this.hud.setPlaceholder('Drive')
+      return 'F to drive'
+    }
+    if (bus) {
+      this.hud.setPlaceholder('Ride the bus')
+      return 'F to ride the bus'
+    }
+    const waiting = this.nearestApproach(pos.x, pos.z)
+    if (waiting) return waiting
     const near = this.nearest()
     if (!near) {
       this.hud.setPlaceholder('Talk to the block')
