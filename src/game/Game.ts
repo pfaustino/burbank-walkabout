@@ -570,6 +570,7 @@ export class Game {
       skid: this.walker.skidding,
       braking: this.walker.braking,
       onFoot: !this.walker.driving && !this.walker.flying && !this.walker.riding,
+      planted: this.walker.planted,
       altitude: this.walker.flying ? pos.y : 0,
       muted: this.paused || this.listening || this.talking,
       cars: this.cars,

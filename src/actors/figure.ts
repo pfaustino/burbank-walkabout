@@ -2,10 +2,12 @@ import * as THREE from 'three'
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js'
 import { clone as cloneSkeleton } from 'three/addons/utils/SkeletonUtils.js'
 import type { PersonVoice } from './peopleSim.ts'
+import { footfalls } from './stride.ts'
 
 export type Figure = {
   root: THREE.Group
-  update(dt: number, speed: number): void
+  /** Advance the pose. True when a foot plants during this step. */
+  update(dt: number, speed: number): boolean
   setBubble(text: string | null): void
   dispose(): void
 }
@@ -96,7 +98,11 @@ export function createFigure(
       const action = actions[mode]
       if (mode === 'walk') action.timeScale = THREE.MathUtils.clamp(speed / 1.35, 0.85, 1.45)
       if (mode === 'run') action.timeScale = THREE.MathUtils.clamp(speed / 4.2, 0.9, 1.55)
+      const before = action.time
+      const duration = action.getClip().duration
       mixer.update(dt)
+      if (mode === 'idle') return false
+      return footfalls(before, action.time, duration) > 0
     },
     setBubble(text) {
       const mat = bubble.material

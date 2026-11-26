@@ -45,6 +45,7 @@ export class Walker {
   private bank = 0
   private dragging = false
   private walkPresses = 0
+  private stepped = false
   private lookTaught = 0
   private room: { minX: number; maxX: number; minZ: number; maxZ: number } | null = null
   private savedDist = 8.5
@@ -106,6 +107,11 @@ export class Walker {
   /** They have right-dragged the camera. */
   get taughtLook(): boolean {
     return this.lookTaught >= 24
+  }
+
+  /** A foot hit the ground this frame while walking. */
+  get planted(): boolean {
+    return this.stepped
   }
 
   /** 0 is planted, 1 is the tires sliding in a hard turn. */
@@ -275,7 +281,9 @@ export class Walker {
 
   update(dt: number): void {
     const speed = this.paused ? 0 : this.move(dt)
-    this.figure.update(dt, speed)
+    const foot = this.figure.update(dt, speed)
+    const walking = !this.paused && !this.driveMode && !this.flyMode && !this.rideMode && this.grounded
+    this.stepped = walking && foot
     this.updateCamera()
   }
 

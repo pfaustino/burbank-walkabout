@@ -14,6 +14,8 @@ export type AmbienceWorld = {
   skid: number
   braking: boolean
   onFoot: boolean
+  /** A foot planted this frame. Steps stay on the walk cycle. */
+  planted: boolean
   altitude: number
   muted: boolean
   cars: readonly Mover[]
@@ -33,7 +35,7 @@ export class Ambience {
   private trafficPan: StereoPannerNode | null = null
   private busGain: GainNode | null = null
   private busPan: StereoPannerNode | null = null
-  private stepAt = 0
+  private stepSide = 1
   private chirpAt = 1.4
   private honkAt = 3
   private hissAt = 2
@@ -86,14 +88,7 @@ export class Ambience {
       }
     } else this.busGain.gain.setTargetAtTime(0, now, 0.2)
 
-    if (world.onFoot && world.speed > 0.4 && world.speed < 14) {
-      const gap = world.speed > 3.2 ? 0.32 : Math.min(0.62, 0.78 / world.speed)
-      this.stepAt -= dt
-      if (this.stepAt <= 0) {
-        this.step(now, world.speed)
-        this.stepAt = gap
-      }
-    } else this.stepAt = 0.05
+    if (world.onFoot && world.planted && world.speed > 0.4) this.step(now, world.speed)
 
     const day = world.hour >= 5.5 && world.hour <= 19
     this.chirpAt -= dt
@@ -375,25 +370,64 @@ export class Ambience {
     return { gain: amp, pan }
   }
 
+  /** Heel tap, a short body thud, then the sole grit. Left and right feet trade sides. */
   private step(when: number, speed: number): void {
     const ctx = this.ctx
     const buffer = this.noise
     if (!ctx || !buffer || !this.master) return
-    const source = ctx.createBufferSource()
-    source.buffer = buffer
-    const filter = ctx.createBiquadFilter()
-    filter.type = 'bandpass'
-    filter.frequency.value = 140 + Math.random() * 180 + speed * 18
-    filter.Q.value = 0.8
-    const amp = ctx.createGain()
-    amp.gain.setValueAtTime(0.0001, when)
-    amp.gain.exponentialRampToValueAtTime(0.16, when + 0.012)
-    amp.gain.exponentialRampToValueAtTime(0.0001, when + 0.09)
-    source.connect(filter)
-    filter.connect(amp)
-    amp.connect(this.out('sfx'))
-    source.start(when)
-    source.stop(when + 0.1)
+    const running = speed > 6
+    const loud = running ? 0.46 : 0.32
+    const pan = ctx.createStereoPanner()
+    pan.pan.value = this.stepSide * (running ? 0.16 : 0.28)
+    this.stepSide = -this.stepSide
+    pan.connect(this.out('sfx'))
+
+    const heel = ctx.createBufferSource()
+    heel.buffer = buffer
+    const low = ctx.createBiquadFilter()
+    low.type = 'lowpass'
+    low.frequency.setValueAtTime(running ? 980 : 680, when)
+    low.frequency.exponentialRampToValueAtTime(120, when + 0.07)
+    const heelAmp = ctx.createGain()
+    heelAmp.gain.setValueAtTime(0.0001, when)
+    heelAmp.gain.exponentialRampToValueAtTime(loud, when + 0.008)
+    heelAmp.gain.exponentialRampToValueAtTime(0.0001, when + 0.08)
+    heel.connect(low)
+    low.connect(heelAmp)
+    heelAmp.connect(pan)
+    heel.start(when)
+    heel.stop(when + 0.09)
+
+    const thud = ctx.createOscillator()
+    thud.type = 'sine'
+    const pitch = (running ? 150 : 108) * (0.94 + Math.random() * 0.12)
+    thud.frequency.setValueAtTime(pitch, when)
+    thud.frequency.exponentialRampToValueAtTime(46, when + 0.06)
+    const thudAmp = ctx.createGain()
+    thudAmp.gain.setValueAtTime(0.0001, when)
+    thudAmp.gain.exponentialRampToValueAtTime(loud * 0.62, when + 0.005)
+    thudAmp.gain.exponentialRampToValueAtTime(0.0001, when + 0.07)
+    thud.connect(thudAmp)
+    thudAmp.connect(pan)
+    thud.start(when)
+    thud.stop(when + 0.08)
+
+    const scuffAt = when + 0.018
+    const scuff = ctx.createBufferSource()
+    scuff.buffer = buffer
+    const grit = ctx.createBiquadFilter()
+    grit.type = 'bandpass'
+    grit.frequency.value = running ? 1900 : 1250
+    grit.Q.value = 0.7
+    const scuffAmp = ctx.createGain()
+    scuffAmp.gain.setValueAtTime(0.0001, scuffAt)
+    scuffAmp.gain.exponentialRampToValueAtTime(loud * 0.32, scuffAt + 0.008)
+    scuffAmp.gain.exponentialRampToValueAtTime(0.0001, scuffAt + 0.055)
+    scuff.connect(grit)
+    grit.connect(scuffAmp)
+    scuffAmp.connect(pan)
+    scuff.start(scuffAt)
+    scuff.stop(scuffAt + 0.06)
   }
 
   private chirp(when: number): void {
