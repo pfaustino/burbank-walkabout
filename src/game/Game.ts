@@ -772,6 +772,10 @@ export class Game {
     car.yaw = this.walker.facing
     car.speed = this.walker.driveSpeed
     car.driver = 'you'
+    car.slideX = 0
+    car.slideZ = 0
+    car.spin = 0
+    car.yawOff = 0
     const disc = this.vehicleDiscs[index]
     if (!disc) return
     disc.x = x
@@ -812,8 +816,11 @@ export class Game {
     const pos = this.walker.mesh.position
     const dx = car.x - pos.x
     const dz = car.z - pos.z
-    if (Math.hypot(dx, dz) < 0.001 && Math.abs(car.speed - this.walker.driveSpeed) < 0.04) return
-    this.walker.nudge(dx, dz, car.speed)
+    let dyaw = car.yaw - this.walker.facing
+    while (dyaw > Math.PI) dyaw -= Math.PI * 2
+    while (dyaw < -Math.PI) dyaw += Math.PI * 2
+    if (Math.hypot(dx, dz) < 0.001 && Math.abs(car.speed - this.walker.driveSpeed) < 0.04 && Math.abs(dyaw) < 0.001) return
+    this.walker.nudge(dx, dz, car.speed, dyaw)
   }
 
   private crowdBlocks(): Disc[] {

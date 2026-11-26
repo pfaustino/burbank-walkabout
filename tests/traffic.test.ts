@@ -198,6 +198,101 @@ describe('traffic', () => {
     expect(deep.speed).toBeGreaterThan(3)
   })
 
+  it('throws a car sideways and turns it when the blow is off to one side', () => {
+    const nose = sideCrash(14, 0.95)
+    const center = sideCrash(14, 0)
+    bumpCars([nose.hitter, nose.victim], layout, file.restitution)
+    bumpCars([center.hitter, center.victim], layout, file.restitution)
+
+    const noseSlide = (nose.victim.slideX ?? 0) * nose.sideX + (nose.victim.slideZ ?? 0) * nose.sideZ
+    const noseSpeed = Math.abs(nose.victim.speed)
+    expect(noseSlide).toBeGreaterThan(4)
+    expect(noseSlide).toBeGreaterThan(noseSpeed)
+    expect(Math.abs(nose.victim.yawOff ?? 0)).toBeGreaterThan(Math.abs(center.victim.yawOff ?? 0) + 0.05)
+
+    const start = nose.victim.dist
+    for (let t = 0; t < 0.4; t += 0.05) stepTraffic([nose.victim], network, file, t, 0.05, () => 0.2, [])
+    const pose = sampleLane(network.lanes[nose.victim.lane]!, nose.victim.dist)
+    const fx = Math.sin(pose.yaw)
+    const fz = Math.cos(pose.yaw)
+    const off = (nose.victim.x - pose.x) * nose.sideX + (nose.victim.z - pose.z) * nose.sideZ
+    const ahead = (nose.victim.x - pose.x) * fx + (nose.victim.z - pose.z) * fz
+    expect(off).toBeGreaterThan(1.2)
+    expect(off).toBeGreaterThan(Math.abs(ahead))
+    expect(nose.victim.dist).toBeGreaterThanOrEqual(start)
+  })
+
+  it('hits harder and shoves farther when the car is going faster', () => {
+    const slow = sideCrash(8, 0.9)
+    const fast = sideCrash(26, 0.9)
+    bumpCars([slow.hitter, slow.victim], layout, file.restitution)
+    bumpCars([fast.hitter, fast.victim], layout, file.restitution)
+    const slowMag = Math.hypot(slow.victim.slideX ?? 0, slow.victim.slideZ ?? 0)
+    const fastMag = Math.hypot(fast.victim.slideX ?? 0, fast.victim.slideZ ?? 0)
+    expect(fastMag).toBeGreaterThan(slowMag * 1.45)
+    expect(Math.abs(fast.victim.yawOff ?? 0)).toBeGreaterThan(Math.abs(slow.victim.yawOff ?? 0))
+
+    for (let t = 0; t < 0.35; t += 0.05) {
+      stepTraffic([slow.victim], network, file, t, 0.05, () => 0.2, [])
+      stepTraffic([fast.victim], network, file, t, 0.05, () => 0.2, [])
+    }
+    const slowPose = sampleLane(network.lanes[slow.victim.lane]!, slow.victim.dist)
+    const fastPose = sampleLane(network.lanes[fast.victim.lane]!, fast.victim.dist)
+    const slowOff = (slow.victim.x - slowPose.x) * slow.sideX + (slow.victim.z - slowPose.z) * slow.sideZ
+    const fastOff = (fast.victim.x - fastPose.x) * fast.sideX + (fast.victim.z - fastPose.z) * fast.sideZ
+    expect(fastOff).toBeGreaterThan(slowOff + 0.35)
+  })
+
+  it('sends a stopped car along an angled blow', () => {
+    const lane = network.lanes.find((entry) => entry.signal === null && entry.length > 80)
+    expect(lane).toBeTruthy()
+    const pose = sampleLane(lane!, 52)
+    const fx = Math.sin(pose.yaw)
+    const fz = Math.cos(pose.yaw)
+    const sideX = fz
+    const sideZ = -fx
+    const victim = carOn(lane!.id, 52)
+    victim.id = 'v-angle'
+    victim.x = pose.x
+    victim.z = pose.z
+    victim.yaw = pose.yaw
+    victim.speed = 0
+    const hitter = carOn(lane!.id, 24)
+    hitter.id = 'h-angle'
+    const hx = -sideX * 1.15 + fx * 1.15
+    const hz = -sideZ * 1.15 + fz * 1.15
+    hitter.x = pose.x + hx
+    hitter.z = pose.z + hz
+    hitter.yaw = Math.atan2(-hx, -hz)
+    hitter.speed = 15
+    const hits = bumpCars([hitter, victim], layout, file.restitution)
+    expect(hits.length).toBeGreaterThan(0)
+    const vvx = Math.sin(victim.yaw) * victim.speed + (victim.slideX ?? 0)
+    const vvz = Math.cos(victim.yaw) * victim.speed + (victim.slideZ ?? 0)
+    const hitX = Math.sin(hitter.yaw)
+    const hitZ = Math.cos(hitter.yaw)
+    const alongBlow = vvx * hitX + vvz * hitZ
+    const alongNose = vvx * fx + vvz * fz
+    const alongSide = vvx * sideX + vvz * sideZ
+    expect(alongBlow).toBeGreaterThan(4)
+    expect(Math.abs(alongSide)).toBeGreaterThan(1.5)
+    expect(Math.abs(alongBlow)).toBeGreaterThan(Math.abs(alongNose) * 0.5)
+  })
+
+  it('pushes a driven car along the blow and turns it', () => {
+    const hit = sideCrash(16, 0.85)
+    hit.victim.driver = 'you'
+    const x0 = hit.victim.x
+    const z0 = hit.victim.z
+    const yaw0 = hit.victim.yaw
+    bumpCars([hit.hitter, hit.victim], layout, file.restitution)
+    const off = (hit.victim.x - x0) * hit.sideX + (hit.victim.z - z0) * hit.sideZ
+    expect(off).toBeGreaterThan(0.8)
+    expect(Math.abs(hit.victim.yaw - yaw0)).toBeGreaterThan(0.05)
+    expect(hit.victim.slideX ?? 0).toBe(0)
+    expect(hit.victim.slideZ ?? 0).toBe(0)
+  })
+
   it('keeps a sideways bump beside the lane, then lets it fade', () => {
     const lane = network.lanes.find((entry) => entry.signal === null && entry.length > 80)
     expect(lane).toBeTruthy()
@@ -426,6 +521,36 @@ function nearestRoadPoint(
     }
   }
   return { x: px, z: pz, dist: best }
+}
+
+function sideCrash(speed: number, along: number): {
+  victim: CarSim
+  hitter: CarSim
+  sideX: number
+  sideZ: number
+} {
+  const lane = network.lanes.find((entry) => entry.signal === null && entry.length > 80)
+  if (!lane) throw new Error('no open lane')
+  const dist = 44
+  const pose = sampleLane(lane, dist)
+  const fx = Math.sin(pose.yaw)
+  const fz = Math.cos(pose.yaw)
+  const sideX = fz
+  const sideZ = -fx
+  const victim = carOn(lane.id, dist)
+  victim.id = `v-${speed}-${along}`
+  victim.x = pose.x
+  victim.z = pose.z
+  victim.yaw = pose.yaw
+  victim.speed = 0
+  const hitter = carOn(lane.id, dist - 28)
+  hitter.id = `h-${speed}-${along}`
+  const apart = 1.45
+  hitter.x = pose.x - sideX * apart + fx * along
+  hitter.z = pose.z - sideZ * apart + fz * along
+  hitter.yaw = Math.atan2(sideX, sideZ)
+  hitter.speed = speed
+  return { victim, hitter, sideX, sideZ }
 }
 
 function carOn(lane: number, dist: number): CarSim {

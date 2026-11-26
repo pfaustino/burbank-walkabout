@@ -430,12 +430,16 @@ export class Walker {
     else if (this.open(pos.x, pos.z + dz, CAR_RADIUS)) pos.z += dz
   }
 
-  /** Move the driven car off a hit and take the new forward speed. */
-  nudge(dx: number, dz: number, speed: number): void {
+  /** Move the driven car off a hit, take the new forward speed, and yaw with an off-center blow. */
+  nudge(dx: number, dz: number, speed: number, yawDelta = 0): void {
     if (!this.driveMode) return
     this.mesh.position.x += dx
     this.mesh.position.z += dz
     this.carSpeed = THREE.MathUtils.clamp(speed, -6, trafficJson.driveBoost)
+    if (yawDelta === 0) return
+    this.carYaw += yawDelta
+    this.slideYaw += yawDelta
+    this.mesh.rotation.y = this.carYaw
   }
 
   /** Push the player out of a vehicle that moved into them after they stepped. */

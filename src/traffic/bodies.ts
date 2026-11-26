@@ -197,7 +197,7 @@ export function overlapsCapsule(
   return dist < radius + other.r
 }
 
-/** Gap between two capsules. Negative means overlap. `nx, nz` pushes the first body away. */
+/** Gap between two capsules. Negative means overlap. `nx, nz` pushes the first body away. `px, pz` and `qx, qz` are the closest points on each center line. */
 export function capsuleContact(
   x: number,
   z: number,
@@ -205,7 +205,7 @@ export function capsuleContact(
   len: number,
   radius: number,
   other: Disc,
-): { gap: number; nx: number; nz: number } {
+): { gap: number; nx: number; nz: number; px: number; pz: number; qx: number; qz: number } {
   const otherLen = other.len ?? 0
   const otherYaw = other.yaw ?? 0
   const fx = Math.sin(yaw)
@@ -241,7 +241,7 @@ export function capsuleContact(
     nx /= dist
     nz /= dist
   }
-  return { gap: dist - radius - other.r, nx, nz }
+  return { gap: dist - radius - other.r, nx, nz, px: hit.px, pz: hit.pz, qx: hit.qx, qz: hit.qz }
 }
 
 function escapeCircle(disc: Disc, x: number, z: number, radius: number): { x: number; z: number } | null {

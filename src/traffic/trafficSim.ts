@@ -22,6 +22,12 @@ export type CarSim = {
   /** Sideways shove left over from a bump, in meters. It fades back onto the lane. */
   knockX?: number
   knockZ?: number
+  /** Velocity still carrying the car off the lane after a hit, in meters per second. */
+  slideX?: number
+  slideZ?: number
+  /** Spin from an off-center hit, in radians per second, and the yaw it has added. */
+  spin?: number
+  yawOff?: number
   /** Seconds left on a cut-off honk. Fresh values are above 1.4. */
   horn?: number
   /** Tail lamps. On while stopped or slowing, off while the speed is rising. */
@@ -160,8 +166,7 @@ export function gatherTraffic(
       car.x = spot.x
       car.z = spot.z
       car.yaw = spot.yaw
-      car.knockX = 0
-      car.knockZ = 0
+      clearDrift(car)
       nearby++
       break
     }
@@ -180,6 +185,7 @@ export function parkOnLane(car: CarSim, network: RoadNetwork): void {
   car.yaw = pose.yaw
   car.speed = 0
   car.driver = null
+  clearDrift(car)
 }
 
 export function stepTraffic(
@@ -305,16 +311,51 @@ export function stepTraffic(
   }
 }
 
+function clearDrift(car: CarSim): void {
+  car.knockX = 0
+  car.knockZ = 0
+  car.slideX = 0
+  car.slideZ = 0
+  car.spin = 0
+  car.yawOff = 0
+}
+
 function fadeKnock(car: CarSim, dt: number): void {
   const fade = Math.exp(-3.2 * dt)
   let kx = (car.knockX ?? 0) * fade
   let kz = (car.knockZ ?? 0) * fade
+  const slideFade = Math.exp(-1.8 * dt)
+  let sx = (car.slideX ?? 0) * slideFade
+  let sz = (car.slideZ ?? 0) * slideFade
+  kx += sx * dt
+  kz += sz * dt
+  const reach = Math.hypot(kx, kz)
+  if (reach > 5.5) {
+    const scale = 5.5 / reach
+    kx *= scale
+    kz *= scale
+  }
   if (Math.abs(kx) < 0.04) kx = 0
   if (Math.abs(kz) < 0.04) kz = 0
+  if (Math.abs(sx) < 0.08) sx = 0
+  if (Math.abs(sz) < 0.08) sz = 0
   car.knockX = kx
   car.knockZ = kz
+  car.slideX = sx
+  car.slideZ = sz
   car.x += kx
   car.z += kz
+
+  const spinFade = Math.exp(-2.4 * dt)
+  let spin = (car.spin ?? 0) * spinFade
+  let yawOff = (car.yawOff ?? 0) * fade + spin * dt
+  if (yawOff > 1.25) yawOff = 1.25
+  else if (yawOff < -1.25) yawOff = -1.25
+  if (Math.abs(spin) < 0.03) spin = 0
+  if (Math.abs(yawOff) < 0.012) yawOff = 0
+  car.spin = spin
+  car.yawOff = yawOff
+  car.yaw += yawOff
 }
 
 function lightSpeed(lane: Lane, car: CarSim, lamp: Lamp): number {
