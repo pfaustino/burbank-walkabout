@@ -16,7 +16,8 @@
 
 - Street socket: `ws://127.0.0.1:8787`, proxied by Vite at `/ws`
 - `DIALOG=local` — scripted replies
-- `OPENROUTER_API_KEY` plus `DIALOG=live` — model replies
+- `NVIDIA_API_KEY` and `NVIDIA_MODEL` — NVIDIA NIM replies
+- `OPENROUTER_API_KEY` plus `DIALOG=live` — OpenRouter replies when no NVIDIA key is set
 - NPC talk distance is a little wider on the server than the prompt, so a just-arrived player still counts
 
 ## Test scenarios

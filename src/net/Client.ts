@@ -1,9 +1,9 @@
-import type { ClientMsg, NetCarRide, NetPerson, NetPlayer, ServerMsg, SpeechMsg } from './protocol.ts'
+import type { ClientMsg, NetCarRide, NetPerson, NetPlayer, ReplyMode, ServerMsg, SpeechMsg } from './protocol.ts'
 
 export class CityClient {
   id = ''
   connected = false
-  replies: 'local' | 'openrouter' = 'local'
+  replies: ReplyMode = 'local'
   private readonly url: string
   private readonly name: string
   private readonly handlers: {
@@ -104,7 +104,7 @@ export class CityClient {
     if (msg.type === 'snapshot') {
       this.handlers.onPeople(msg.people)
       this.handlers.onPlayers(msg.players.filter((player) => player.id !== this.id))
-      const mode = this.replies === 'openrouter' ? 'live replies' : 'local replies'
+      const mode = this.replies === 'local' ? 'local replies' : 'live replies'
       this.handlers.onStatus(`connected · ${mode} · ${msg.players.length} on the street`)
       return
     }

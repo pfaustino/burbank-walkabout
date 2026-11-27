@@ -47,10 +47,12 @@ export type SpeechMsg = {
   audio?: string
 }
 
+export type ReplyMode = 'local' | 'openrouter' | 'nvidia'
+
 export type WelcomeMsg = {
   type: 'welcome'
   id: string
-  replies: 'local' | 'openrouter'
+  replies: ReplyMode
 }
 
 export type SnapshotMsg = {

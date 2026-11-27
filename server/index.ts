@@ -9,7 +9,7 @@ import peopleJson from '../data/people.json' with { type: 'json' }
 import { CROWD_SEED, createCrowd, crowdCount, crowdIndex, crowdPose, type CrowdFile } from '../src/actors/crowdSim.ts'
 import { createPeople, stepPeople, type PeopleFile, type PersonSim, type PersonVoice } from '../src/actors/peopleSim.ts'
 import { talkHash } from '../src/dialog/fallback.ts'
-import { npcReply, remember, type DialogTurn } from './dialog.ts'
+import { npcReply, remember, replyMode, replyModel, type DialogTurn } from './dialog.ts'
 import { fishEnabled, fishSpeech } from './fish.ts'
 import {
   parseClientMessage,
@@ -56,7 +56,7 @@ type Walker = {
 const walkers = new Map<string, Walker>()
 let nextId = 1
 
-const replies = process.env.DIALOG === 'local' || !process.env.OPENROUTER_API_KEY ? 'local' : 'openrouter'
+const replies = replyMode()
 
 const wss = openStreet()
 
@@ -417,7 +417,7 @@ function loadDotEnv(): void {
 }
 
 function openStreet(): WebSocketServer {
-  const line = `Burbank street listening on ${PORT} · replies: ${replies}${replies === 'openrouter' ? ` · ${process.env.OPENROUTER_MODEL || 'cognitivecomputations/dolphin-mistral-24b-venice-edition'}` : ''} · voices: ${fishEnabled() ? process.env.FISH_AUDIO_MODEL || 's2.1-pro-free' : 'browser'}`
+  const line = `Burbank street listening on ${PORT} · replies: ${replies}${replies === 'local' ? '' : ` · ${replyModel()}`} · voices: ${fishEnabled() ? process.env.FISH_AUDIO_MODEL || 's2.1-pro-free' : 'browser'}`
   if (!process.env.PORT) {
     console.log(line)
     return new WebSocketServer({ port: PORT, host: '0.0.0.0' })

@@ -143,12 +143,12 @@ The microphone stays in the browser. What you say is sent as text. While it is l
 
 1. Speech-to-text turns your voice into text (or you type).
 2. That text is the only thing sent up.
-3. The server asks OpenRouter when you are talking to a person on the sidewalk.
+3. The server asks NVIDIA NIM when `NVIDIA_API_KEY` is set, and otherwise OpenRouter when `OPENROUTER_API_KEY` is set.
 4. Fish Audio turns the reply into speech. Your browser plays that audio. With no Fish key, the browser's own voice reads the text.
 
-Copy `.env.example` to `.env` and set `OPENROUTER_API_KEY` and `FISH_AUDIO_API_KEY`. Without an OpenRouter key, people still answer from a short local script.
+Copy `.env.example` to `.env` and set a talk key plus `FISH_AUDIO_API_KEY`. Without either talk key, people still answer from a short local script.
 
-`OPENROUTER_MODEL` is any model id on your account. `DIALOG=local` skips the network even if a key is set.
+`NVIDIA_MODEL` and `OPENROUTER_MODEL` are model ids. `DIALOG=local` skips the network even if a key is set.
 
 ## Dev panel
 
